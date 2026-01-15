@@ -282,14 +282,17 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
    */
   protected async construct(processedData: ProcessedViaData): Promise<EDMDItem> {
     // # 创建过孔项目
+    const baseItem = this.createBaseItem(
+      ItemType.ASSEMBLY,
+      processedData.geometryType,
+      processedData.name,
+      this.getViaDescription(processedData)
+    );
+    
     const viaItem: EDMDItem = {
       id: this.generateItemId('VIA', processedData.id),
-      ...this.createBaseItem(
-        ItemType.ASSEMBLY,
-        processedData.geometryType,
-        processedData.name,
-        this.getViaDescription(processedData)
-      ),
+      ItemType: ItemType.ASSEMBLY,
+      ...baseItem,
       Identifier: this.createIdentifier('VIA', processedData.id)
     };
     

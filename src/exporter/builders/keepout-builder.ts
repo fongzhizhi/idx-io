@@ -337,14 +337,17 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
     }
     
     // # 创建禁止区项目
+    const baseItem = this.createBaseItem(
+      ItemType.ASSEMBLY,
+      processedData.geometryType,
+      processedData.name,
+      this.getKeepoutDescription(processedData)
+    );
+    
     const keepoutItem: EDMDItem = {
       id: this.generateItemId('KEEPOUT', processedData.id),
-      ...this.createBaseItem(
-        ItemType.ASSEMBLY,
-        processedData.geometryType,
-        processedData.name,
-        this.getKeepoutDescription(processedData)
-      ),
+      ItemType: ItemType.ASSEMBLY,
+      ...baseItem,
       Identifier: this.createIdentifier('KEEPOUT', processedData.id)
     };
     

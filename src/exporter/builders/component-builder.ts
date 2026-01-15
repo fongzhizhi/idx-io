@@ -407,14 +407,17 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
    */
   protected async construct(processedData: ProcessedComponentData): Promise<EDMDItem> {
     // # 创建顶层元件项目（装配体）
+    const baseItem = this.createBaseItem(
+      ItemType.ASSEMBLY,
+      processedData.geometryType,
+      processedData.refDes,
+      this.getComponentDescription(processedData)
+    );
+    
     const assemblyItem: EDMDItem = {
       id: this.generateItemId('COMPONENT', processedData.refDes),
-      ...this.createBaseItem(
-        ItemType.ASSEMBLY,
-        processedData.geometryType,
-        processedData.refDes,
-        this.getComponentDescription(processedData)
-      ),
+      ItemType: ItemType.ASSEMBLY,
+      ...baseItem,
       Identifier: this.createIdentifier('COMPONENT', processedData.refDes)
     };
     
@@ -580,14 +583,17 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
     processedData: ProcessedComponentData,
     assemblyItemId: string
   ): Promise<EDMDItem> {
+    const baseItem = this.createBaseItem(
+      ItemType.SINGLE,
+      undefined, // 定义项目不需要geometryType
+      processedData.partNumber,
+      `元件定义: ${processedData.partNumber} (${processedData.packageName})`
+    );
+    
     const componentItem: EDMDItem = {
       id: `${assemblyItemId}_DEF`,
-      ...this.createBaseItem(
-        ItemType.SINGLE,
-        undefined, // 定义项目不需要geometryType
-        processedData.partNumber,
-        `元件定义: ${processedData.partNumber} (${processedData.packageName})`
-      ),
+      ItemType: ItemType.SINGLE,
+      ...baseItem,
       PackageName: {
         SystemScope: this.config.creatorSystem,
         ObjectName: processedData.packageName

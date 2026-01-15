@@ -250,4 +250,3 @@ export class IDXExporter {
 // 导出类型和接口
 export { GlobalUnit } from '../types/core';
 export type { IDXExportConfig, ExportResult } from '../types/core';
-export type { BrowserExportResult };

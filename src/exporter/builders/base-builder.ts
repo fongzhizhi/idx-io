@@ -208,16 +208,17 @@ export abstract class BaseBuilder<TInput, TOutput> {
       // TODO(构建器负责人): 2024-03-20 添加构建结果缓存 [P1-IMPORTANT]
       return finalResult;
       
-    } catch (error) {
+    } catch (error: unknown) {
       // # 错误处理
       // BUSINESS: 构建错误必须包含足够信息用于调试
       if (error instanceof ValidationError || error instanceof BuildError) {
         throw error;
       }
       
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const buildError = new BuildError(
-        `构建过程中发生未预期错误: ${error.message}`,
-        { originalError: error, input }
+        `构建过程中发生未预期错误: ${errorMessage}`,
+        { originalError: error instanceof Error ? error : undefined, input }
       );
       this.context.addError('UNEXPECTED_ERROR', buildError.message);
       throw buildError;
