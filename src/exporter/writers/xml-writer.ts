@@ -98,6 +98,66 @@ export class XMLWriter {
   }
 
   /**
+   * 构建几何元素
+   */
+  private buildGeometricElement(parent: any, element: any): void {
+    if (element['xsi:type'] === 'd2:EDMDCartesianPoint') {
+      // 构建CartesianPoint
+      const pointElement = parent.ele('foundation:CartesianPoint', { 
+        id: element.id, 
+        'xsi:type': 'd2:EDMDCartesianPoint' 
+      });
+      
+      const xElement = pointElement.ele('d2:X');
+      xElement.ele('property:Value').txt(element.X['property:Value']);
+      
+      const yElement = pointElement.ele('d2:Y');
+      yElement.ele('property:Value').txt(element.Y['property:Value']);
+      
+    } else if (element.type === 'PolyLine') {
+      // 构建PolyLine
+      const polyElement = parent.ele('foundation:PolyLine', { id: element.id });
+      
+      if (element.Point && Array.isArray(element.Point)) {
+        element.Point.forEach((point: any) => {
+          polyElement.ele('d2:Point').txt(point['d2:Point']);
+        });
+      }
+    }
+  }
+
+  /**
+   * 构建曲线集2D
+   */
+  private buildCurveSet2D(parent: any, curveSet: any): void {
+    const curveSetElement = parent.ele('foundation:CurveSet2d', { 
+      id: curveSet.id, 
+      'xsi:type': curveSet['xsi:type'] 
+    });
+    
+    curveSetElement.ele('pdm:ShapeDescriptionType').txt(curveSet['pdm:ShapeDescriptionType']);
+    
+    const lowerBoundElement = curveSetElement.ele('d2:LowerBound');
+    lowerBoundElement.ele('property:Value').txt(curveSet['d2:LowerBound']['property:Value']);
+    
+    const upperBoundElement = curveSetElement.ele('d2:UpperBound');
+    upperBoundElement.ele('property:Value').txt(curveSet['d2:UpperBound']['property:Value']);
+    
+    curveSetElement.ele('d2:DetailedGeometricModelElement').txt(curveSet['d2:DetailedGeometricModelElement']);
+  }
+
+  /**
+   * 构建形状元素
+   */
+  private buildShapeElement(parent: any, shapeElement: any): void {
+    const shapeElementEl = parent.ele('foundation:ShapeElement', { id: shapeElement.id });
+    
+    shapeElementEl.ele('pdm:ShapeElementType').txt(shapeElement['pdm:ShapeElementType']);
+    shapeElementEl.ele('pdm:Inverted').txt(shapeElement['pdm:Inverted']);
+    shapeElementEl.ele('pdm:DefiningShape').txt(shapeElement['pdm:DefiningShape']);
+  }
+
+  /**
    * 构建形状
    */
   private buildShape(parent: any, shape: any): void {
@@ -198,6 +258,27 @@ export class XMLWriter {
    */
   private buildBody(root: any, body: EDMDDataSetBody): void {
     const bodyElement = root.ele('foundation:Body', { 'xsi:type': 'foundation:EDMDDataSetBody' });
+    
+    // 构建几何元素（按demo文件顺序）
+    if (body.GeometricElements && body.GeometricElements.length > 0) {
+      for (const element of body.GeometricElements) {
+        this.buildGeometricElement(bodyElement, element);
+      }
+    }
+    
+    // 构建曲线集
+    if (body.CurveSet2Ds && body.CurveSet2Ds.length > 0) {
+      for (const curveSet of body.CurveSet2Ds) {
+        this.buildCurveSet2D(bodyElement, curveSet);
+      }
+    }
+    
+    // 构建形状元素
+    if (body.ShapeElements && body.ShapeElements.length > 0) {
+      for (const shapeElement of body.ShapeElements) {
+        this.buildShapeElement(bodyElement, shapeElement);
+      }
+    }
     
     // 构建所有项目
     for (const item of body.Items) {

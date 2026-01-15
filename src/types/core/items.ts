@@ -128,6 +128,15 @@ export interface EDMDDataSetBody {
   
   /** 3D模型集合 */
   Models3D?: EDMD3DModel[];
+  
+  /** 几何元素集合（点、线、圆等） */
+  GeometricElements?: any[];
+  
+  /** 曲线集合 */
+  CurveSet2Ds?: any[];
+  
+  /** 形状元素集合 */
+  ShapeElements?: any[];
 }
 
 // ------------ 交易和变更历史 ------------

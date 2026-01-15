@@ -112,11 +112,30 @@ export class DatasetAssembler {
       Models3D: []
     };
 
+    // 存储独立的几何元素
+    const geometricElements: any[] = [];
+    const shapeElements: any[] = [];
+    const curveSet2Ds: any[] = [];
+
     // 1. 构建板轮廓
     const boardBuilder = this.builders.get('board');
     if (boardBuilder) {
       const boardItem = await boardBuilder.build(boardData);
       body.Items.push(boardItem);
+      
+      // 收集板子的几何元素
+      if (boardItem.geometricElements) {
+        geometricElements.push(...boardItem.geometricElements);
+        delete boardItem.geometricElements; // 清理临时属性
+      }
+      if (boardItem.shapeElements) {
+        shapeElements.push(...boardItem.shapeElements);
+        delete boardItem.shapeElements;
+      }
+      if (boardItem.curveSet2Ds) {
+        curveSet2Ds.push(...boardItem.curveSet2Ds);
+        delete boardItem.curveSet2Ds;
+      }
     }
 
     // 2. 构建层系统（如果有多层）
@@ -137,6 +156,20 @@ export class DatasetAssembler {
             const componentItem = await componentBuilder.build(component);
             body.Items.push(componentItem);
             
+            // 收集组件的几何元素
+            if (componentItem.geometricElements) {
+              geometricElements.push(...componentItem.geometricElements);
+              delete componentItem.geometricElements;
+            }
+            if (componentItem.shapeElements) {
+              shapeElements.push(...componentItem.shapeElements);
+              delete componentItem.shapeElements;
+            }
+            if (componentItem.curveSet2Ds) {
+              curveSet2Ds.push(...componentItem.curveSet2Ds);
+              delete componentItem.curveSet2Ds;
+            }
+            
             // 收集组件的形状和模型
             this.collectComponentArtifacts(componentItem, body);
           } catch (error) {
@@ -154,6 +187,20 @@ export class DatasetAssembler {
           if (holeBuilder) {
             const holeItem = await holeBuilder.build(hole);
             body.Items.push(holeItem);
+            
+            // 收集过孔的几何元素
+            if (holeItem.geometricElements) {
+              geometricElements.push(...holeItem.geometricElements);
+              delete holeItem.geometricElements;
+            }
+            if (holeItem.shapeElements) {
+              shapeElements.push(...holeItem.shapeElements);
+              delete holeItem.shapeElements;
+            }
+            if (holeItem.curveSet2Ds) {
+              curveSet2Ds.push(...holeItem.curveSet2Ds);
+              delete holeItem.curveSet2Ds;
+            }
           }
         } catch (error) {
           console.warn(`构建孔 ${hole.id} 时出错:`, error);
@@ -169,12 +216,36 @@ export class DatasetAssembler {
           if (keepoutBuilder) {
             const keepoutItem = await keepoutBuilder.build(keepout);
             body.Items.push(keepoutItem);
+            
+            // 收集禁止区的几何元素
+            if (keepoutItem.geometricElements) {
+              geometricElements.push(...keepoutItem.geometricElements);
+              delete keepoutItem.geometricElements;
+            }
+            if (keepoutItem.shapeElements) {
+              shapeElements.push(...keepoutItem.shapeElements);
+              delete keepoutItem.shapeElements;
+            }
+            if (keepoutItem.curveSet2Ds) {
+              curveSet2Ds.push(...keepoutItem.curveSet2Ds);
+              delete keepoutItem.curveSet2Ds;
+            }
           }
         } catch (error) {
           console.warn(`构建禁止区 ${keepout.id} 时出错:`, error);
         }
       }
     }
+
+    // 6. 将收集的几何元素添加到Body中（按demo文件的顺序）
+    // 先添加基础几何元素（点、线、圆等）
+    body.GeometricElements = geometricElements;
+    
+    // 再添加曲线集
+    body.CurveSet2Ds = curveSet2Ds;
+    
+    // 最后添加形状元素
+    body.ShapeElements = shapeElements;
 
     return body;
   }

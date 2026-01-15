@@ -255,7 +255,7 @@ function validateIntegratedXMLStructure(xmlContent: string) {
     { name: 'Single ItemType', pattern: /<pdm:ItemType>single<\/pdm:ItemType>/ },
     
     // 几何类型检查
-    { name: 'Board几何类型', pattern: /geometryType="BOARD"/ },
+    { name: 'Board几何类型', pattern: /geometryType="BOARD_OUTLINE"/ },
     { name: 'Component几何类型', pattern: /geometryType="COMPONENT"/ },
     { name: 'Via几何类型', pattern: /geometryType="VIA"/ },
     { name: 'Keepout几何类型', pattern: /geometryType="KEEPOUT_AREA/ },
@@ -279,9 +279,9 @@ function validateIntegratedXMLStructure(xmlContent: string) {
     
     // 形状元素检查
     { name: 'ShapeElement', pattern: /<foundation:ShapeElement/ },
-    { name: 'CurveSet2D', pattern: /<geometry\.d2:CurveSet2D/ },
-    { name: 'Circle', pattern: /<geometry\.d2:Circle/ },
-    { name: 'PolyLine', pattern: /<geometry\.d2:PolyLine/ }
+    { name: 'CurveSet2D', pattern: /<foundation:CurveSet2d/ },
+    { name: 'Circle', pattern: /<foundation:CircleCenter/ },
+    { name: 'PolyLine', pattern: /<foundation:PolyLine/ }
   ];
   
   let passedChecks = 0;

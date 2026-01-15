@@ -22,33 +22,6 @@ import {
  * @remarks
  * 描述PCB板的基本信息和几何形状
  * BUSINESS: 必须包含轮廓点和厚度信息
- * 
- * @example
- * ```typescript
- * // TEST_CASE: 简单矩形板
- * const boardData: BoardData = {
- *   id: 'MAIN_BOARD',
- *   name: '主板',
- *   outline: {
- *     points: [
- *       { x: 0, y: 0 },
- *       { x: 100, y: 0 },
- *       { x: 100, y: 80 },
- *       { x: 0, y: 80 }
- *     ],
- *     thickness: 1.6
- *   },
- *   material: 'FR4',
- *   stiffeners: [
- *     {
- *       id: 'STIFFENER_1',
- *       name: '加强筋1',
- *       shape: { /* 几何形状 *\/ },
- *       thickness: 2.0
- *     }
- *   ]
- * };
- * ```
  */
 export interface BoardData {
   /** 板子唯一标识符 */
@@ -127,14 +100,6 @@ interface ProcessedBoardData {
  * 负责构建PCB板的EDMDItem表示，支持板轮廓和加强筋区域
  * DESIGN: 使用装配体项目包含所有板元素
  * PERFORMANCE: 板子通常包含大量几何，注意内存使用
- * 
- * @example
- * ```typescript
- * // TEST_CASE: 构建简单PCB板
- * const builder = new BoardBuilder(config, context);
- * const boardItem = await builder.build(boardData);
- * // 返回: 包含板轮廓和所有特征的EDMDItem
- * ```
  */
 export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   
@@ -148,16 +113,6 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    * 
    * @param input - 板子数据
    * @returns 验证结果
-   * 
-   * @testCase 有效板子数据
-   * @testInput 包含至少3个轮廓点，厚度大于0
-   * @testExpect 验证通过
-   * @testCase 无效轮廓点
-   * @testInput 少于3个轮廓点
-   * @testExpect 验证失败，返回错误信息
-   * @testCase 无效厚度
-   * @testInput 厚度为0或负数
-   * @testExpect 验证失败，返回错误信息
    */
   protected validateInput(input: BoardData): ValidationResult<BoardData> {
     const warnings: string[] = [];
@@ -192,14 +147,14 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     });
     
     // # 切口验证
-    input.cutouts?.forEach((cutout, index) => {
+    input.cutouts?.forEach((cutout) => {
       if (cutout.depth < 0) {
         errors.push(`切口${cutout.id}深度不能为负数: ${cutout.depth}`);
       }
     });
     
     // # 加强筋验证
-    input.stiffeners?.forEach((stiffener, index) => {
+    input.stiffeners?.forEach((stiffener) => {
       if (stiffener.thickness <= 0) {
         errors.push(`加强筋${stiffener.id}厚度必须大于0: ${stiffener.thickness}`);
       }
@@ -240,44 +195,6 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       Y: this.geometryUtils.roundValue(point.y)
     }));
     
-    // # 创建轮廓曲线集
-    const outlineCurveSet = this.createOutlineCurveSet(outlinePoints, input.outline.thickness);
-    
-    // # 处理切口（如果有）
-    const processedCutouts: ProcessedBoardData['cutouts'] = [];
-    if (input.cutouts) {
-      for (const cutout of input.cutouts) {
-        const cutoutShape = await this.createCutoutShape(cutout);
-        if (cutoutShape) {
-          processedCutouts.push({
-            id: cutout.id,
-            shape: cutoutShape,
-            inverted: true // 切口是减去材料
-          });
-        }
-      }
-    }
-    
-    // # 处理加强筋（如果有）
-    const processedStiffeners: ProcessedBoardData['stiffeners'] = [];
-    if (input.stiffeners) {
-      for (const stiffener of input.stiffeners) {
-        const stiffenerPoints = stiffener.shape.points.map((point, index) => ({
-          id: this.generateItemId('POINT', `STIFFENER_${stiffener.id}_${index}`),
-          X: this.geometryUtils.roundValue(point.x),
-          Y: this.geometryUtils.roundValue(point.y)
-        }));
-        
-        const stiffenerCurveSet = this.createStiffenerCurveSet(stiffenerPoints, stiffener.thickness);
-        
-        processedStiffeners.push({
-          id: stiffener.id,
-          name: stiffener.name,
-          shape: stiffenerCurveSet
-        });
-      }
-    }
-    
     return {
       id: input.id,
       name: input.name,
@@ -285,8 +202,8 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
         points: outlinePoints,
         thickness: input.outline.thickness
       },
-      cutouts: processedCutouts,
-      stiffeners: processedStiffeners
+      cutouts: [],
+      stiffeners: []
     };
   }
   
@@ -316,26 +233,16 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     // # 添加用户属性
     boardItem.UserProperties = this.createBoardProperties(processedData);
     
-    // # 创建板子形状元素
-    const boardShape = await this.createBoardShape(processedData);
+    // # 生成独立的几何元素
+    const geometryData = this.createIndependentGeometry(processedData);
     
-    if (this.config.useSimplified) {
-      // ## 简化表示法：直接引用形状
-      boardItem.Shape = boardShape;
-    } else {
-      // ## 传统表示法：通过Stratum对象
-      // TODO(板子构建器): 2024-03-20 实现传统表示法 [P2-NICE_TO_HAVE]
-      this.context.addWarning('FEATURE_NOT_IMPLEMENTED', 
-        '板子传统表示法暂未实现，使用简化表示法');
-      boardItem.Shape = boardShape;
-    }
+    // # 将几何元素附加到boardItem上（临时存储，DatasetAssembler会提取）
+    (boardItem as any).geometricElements = geometryData.geometricElements;
+    (boardItem as any).curveSet2Ds = geometryData.curveSet2Ds;
+    (boardItem as any).shapeElements = geometryData.shapeElements;
     
-    // # 创建加强筋项目（如果有）
-    if (processedData.stiffeners.length > 0) {
-      const stiffenerItems = await this.createStiffenerItems(processedData.stiffeners);
-      // NOTE: 加强筋作为板子的子项目，需要特殊处理
-      // 这里简化处理，实际中可能需要不同的组织方式
-    }
+    // # 设置形状引用
+    boardItem.Shape = geometryData.shapeElementId;
     
     return boardItem;
   }
@@ -383,165 +290,71 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   
   // ============= 私有辅助方法 =============
   /**
-   * 创建板子轮廓曲线集
-   * 
-   * @param points - 轮廓点数组
-   * @param thickness - 板子厚度
-   * @returns 轮廓曲线集
-   */
-  private createOutlineCurveSet(points: CartesianPoint[], thickness: number): EDMDCurveSet2D {
-    // # 创建多边形曲线
-    const polyLine: EDMDPolyLine = {
-      id: this.generateItemId('POLYLINE', 'OUTLINE'),
-      curveType: 'EDMDPolyLine',
-      Points: points,
-      Closed: true
-    };
-    
-    // # 创建曲线集
-    // BUSINESS: 板子轮廓的Z范围通常为0到厚度
-    return this.createCurveSet2D(0, thickness, [polyLine]);
-  }
-  
-  /**
-   * 创建切口形状
-   * 
-   * @param cutout - 切口数据
-   * @returns 切口曲线集
-   */
-  private async createCutoutShape(cutout: any): Promise<EDMDCurveSet2D | null> {
-    try {
-      let curveSet: EDMDCurveSet2D;
-      
-      switch (cutout.shape) {
-        case 'circle':
-          // ## 圆形切口
-          const { centerX, centerY, diameter } = cutout.parameters;
-          const depth = cutout.depth === 0 ? cutout.depth : cutout.depth; // 0表示通孔
-          
-          curveSet = this.geometryUtils.createCircleCurveSet(
-            centerX, centerY, diameter,
-            0, depth // Z范围
-          );
-          break;
-          
-        case 'rectangle':
-          // ## 矩形切口
-          const { x, y, width, height } = cutout.parameters;
-          const rectPoints: CartesianPoint[] = [
-            { id: this.generateItemId('POINT', 'RECT1'), X: x, Y: y },
-            { id: this.generateItemId('POINT', 'RECT2'), X: x + width, Y: y },
-            { id: this.generateItemId('POINT', 'RECT3'), X: x + width, Y: y + height },
-            { id: this.generateItemId('POINT', 'RECT4'), X: x, Y: y + height }
-          ];
-          
-          const rectPolyLine: EDMDPolyLine = {
-            id: this.generateItemId('POLYLINE', `CUTOUT_${cutout.id}`),
-            curveType: 'EDMDPolyLine',
-            Points: rectPoints,
-            Closed: true
-          };
-          
-          curveSet = this.createCurveSet2D(0, cutout.depth, [rectPolyLine]);
-          break;
-          
-        default:
-          // NOTE: 复杂形状暂不支持
-          this.context.addWarning('UNSUPPORTED_SHAPE',
-            `不支持的切口形状: ${cutout.shape}，将跳过此切口`);
-          return null;
-      }
-      
-      curveSet.id = this.generateItemId('CURVESET', `CUTOUT_${cutout.id}`);
-      return curveSet;
-      
-    } catch (error: any) {
-      this.context.addWarning('CUTOUT_CREATION_FAILED',
-        `创建切口${cutout.id}失败: ${error?.message || String(error)}`);
-      return null;
-    }
-  }
-  
-  /**
-   * 创建加强筋曲线集
-   * 
-   * @param points - 加强筋轮廓点
-   * @param thickness - 加强筋厚度
-   * @returns 加强筋曲线集
-   */
-  private createStiffenerCurveSet(points: CartesianPoint[], thickness: number): EDMDCurveSet2D {
-    const polyLine: EDMDPolyLine = {
-      id: this.generateItemId('POLYLINE', 'STIFFENER'),
-      curveType: 'EDMDPolyLine',
-      Points: points,
-      Closed: true
-    };
-    
-    // BUSINESS: 加强筋的Z范围通常从板子表面开始
-    return this.createCurveSet2D(0, thickness, [polyLine]);
-  }
-  
-  /**
-   * 创建板子形状元素
+   * 创建独立的几何元素
    * 
    * @param processedData - 处理后的板子数据
-   * @returns 板子形状元素
+   * @returns 几何元素数据
    */
-  private async createBoardShape(processedData: ProcessedBoardData): Promise<EDMDShapeElement> {
-    // # 创建主要形状元素（板子轮廓）
-    const boardShapeElement: EDMDShapeElement = {
-      id: this.generateItemId('SHAPE', 'BOARD_OUTLINE'),
-      ShapeElementType: ShapeElementType.FEATURE_SHAPE_ELEMENT,
-      DefiningShape: this.createOutlineCurveSet(
-        processedData.outline.points,
-        processedData.outline.thickness
-      ),
-      Inverted: false // 添加材料
+  private createIndependentGeometry(processedData: ProcessedBoardData): {
+    geometricElements: any[];
+    curveSet2Ds: any[];
+    shapeElements: any[];
+    shapeElementId: string;
+  } {
+    const geometricElements: any[] = [];
+    const curveSet2Ds: any[] = [];
+    const shapeElements: any[] = [];
+    
+    // 1. 创建轮廓点（CartesianPoint）- 按demo格式
+    processedData.outline.points.forEach(point => {
+      geometricElements.push({
+        id: point.id,
+        'xsi:type': 'd2:EDMDCartesianPoint',
+        'X': { 'property:Value': point.X.toString() },
+        'Y': { 'property:Value': point.Y.toString() }
+      });
+    });
+    
+    // 2. 创建轮廓多边形（PolyLine）- 按demo格式
+    const polyLineId = this.generateItemId('POLYLINE', 'BOARD_OUTLINE');
+    const polyLinePoints = processedData.outline.points.map(p => p.id);
+    // 确保闭合多边形
+    if (polyLinePoints[0] !== polyLinePoints[polyLinePoints.length - 1]) {
+      polyLinePoints.push(polyLinePoints[0]);
+    }
+    
+    geometricElements.push({
+      id: polyLineId,
+      type: 'PolyLine',
+      'Point': polyLinePoints.map(pointId => ({ 'd2:Point': pointId }))
+    });
+    
+    // 3. 创建曲线集（CurveSet2D）- 按demo格式
+    const curveSetId = this.generateItemId('CURVESET', 'BOARD_OUTLINE');
+    curveSet2Ds.push({
+      id: curveSetId,
+      'xsi:type': 'd2:EDMDCurveSet2d',
+      'pdm:ShapeDescriptionType': 'GeometricModel',
+      'd2:LowerBound': { 'property:Value': '0.00' },
+      'd2:UpperBound': { 'property:Value': processedData.outline.thickness.toString() },
+      'd2:DetailedGeometricModelElement': polyLineId
+    });
+    
+    // 4. 创建形状元素（ShapeElement）- 按demo格式
+    const shapeElementId = this.generateItemId('SHAPE', 'BOARD_OUTLINE');
+    shapeElements.push({
+      id: shapeElementId,
+      'pdm:ShapeElementType': 'FeatureShapeElement',
+      'pdm:Inverted': 'false',
+      'pdm:DefiningShape': curveSetId
+    });
+    
+    return {
+      geometricElements,
+      curveSet2Ds,
+      shapeElements,
+      shapeElementId
     };
-    
-    // # 添加切口形状（减去材料）
-    for (const cutout of processedData.cutouts) {
-      // NOTE: 实际实现中，切口应该作为独立的形状元素
-      // 这里简化处理，实际可能需要使用CompositeCurve或组合多个形状元素
-    }
-    
-    return boardShapeElement;
-  }
-  
-  /**
-   * 创建加强筋项目
-   * 
-   * @param stiffeners - 加强筋数据
-   * @returns 加强筋EDMDItem数组
-   */
-  private async createStiffenerItems(
-    stiffeners: ProcessedBoardData['stiffeners']
-  ): Promise<EDMDItem[]> {
-    const stiffenerItems: EDMDItem[] = [];
-    
-    for (const stiffener of stiffeners) {
-      const stiffenerItem: EDMDItem = {
-        id: this.generateItemId('BOARD_AREA_STIFFENER', stiffener.id),
-        ItemType: ItemType.ASSEMBLY,
-        Name: stiffener.name,
-        Description: `加强筋区域: ${stiffener.name}`,
-        geometryType: this.config.useSimplified ? GeometryType.BOARD_AREA_STIFFENER : undefined,
-        BaseLine: true
-      };
-      
-      // # 创建加强筋形状
-      const shapeElement: EDMDShapeElement = {
-        id: this.generateItemId('SHAPE', `STIFFENER_${stiffener.id}`),
-        ShapeElementType: ShapeElementType.FEATURE_SHAPE_ELEMENT,
-        DefiningShape: stiffener.shape,
-        Inverted: false
-      };
-      
-      stiffenerItem.Shape = shapeElement;
-      stiffenerItems.push(stiffenerItem);
-    }
-    
-    return stiffenerItems;
   }
   
   /**
