@@ -338,16 +338,28 @@ export class DatasetAssembler {
     if (boardData.layers) {
       const layerBuilder = this.builders.get('layer');
       if (layerBuilder) {
-        for (const layer of boardData.layers) {
-          try {
-            const layerItem = await layerBuilder.build([layer]);
-            if (Array.isArray(layerItem)) {
-              result.items.push(...layerItem);
-            } else {
-              result.items.push(layerItem);
+        try {
+          // LayerBuilder.build() 接受 LayerData[] 并返回 EDMDItem[]
+          const layerItems = await layerBuilder.build(boardData.layers);
+          if (Array.isArray(layerItems)) {
+            result.items.push(...layerItems);
+          } else {
+            result.items.push(layerItems);
+          }
+        } catch (error) {
+          console.warn('构建层数据时出错:', error);
+          // 如果批量构建失败，尝试逐个构建
+          for (const layer of boardData.layers) {
+            try {
+              const layerItem = await layerBuilder.build([layer]);
+              if (Array.isArray(layerItem)) {
+                result.items.push(...layerItem);
+              } else {
+                result.items.push(layerItem);
+              }
+            } catch (error) {
+              console.warn(`构建层 ${layer.id} 时出错:`, error);
             }
-          } catch (error) {
-            console.warn(`构建层 ${layer.id} 时出错:`, error);
           }
         }
       }

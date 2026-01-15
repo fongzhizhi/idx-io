@@ -6,7 +6,7 @@
 
 ## Tasks
 
-- [ ] 1. 修复和扩展数据接口定义
+- [~] 1. 修复和扩展数据接口定义
   - [x] 1.1 扩展ExportSourceData接口支持所有数据类型
     - 在src/exporter/index.ts中扩展ExportSourceData接口
     - 添加components、holes、keepouts、layers、layerStackup可选属性
@@ -27,7 +27,7 @@
     - 测试所有接口的类型兼容性
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 2. 实现LayerBuilder构建器
+- [~] 2. 实现LayerBuilder构建器
   - [x] 2.1 创建LayerBuilder类
     - 创建src/exporter/builders/layer-builder.ts文件
     - 继承BaseBuilder实现层数据处理逻辑
@@ -39,7 +39,7 @@
     - 实现层厚度和材料属性的XML序列化
     - _Requirements: 2.2, 2.3, 2.4_
   
-  - [ ] 2.3 集成LayerBuilder到构建器注册表
+  - [x] 2.3 集成LayerBuilder到构建器注册表
     - 在src/exporter/index.ts的BuilderRegistryImpl中注册LayerBuilder
     - 更新DatasetAssembler支持层数据处理
     - _Requirements: 2.1_
