@@ -259,7 +259,7 @@ export class IDXExporter {
   /**
    * 主要导出方法 - 返回XML内容而不是写入文件
    */
-  async export(data: ExportSourceData): Promise<BrowserExportResult> {
+  async export(data: ExportSourceData | ExtendedExportSourceData): Promise<BrowserExportResult> {
     const context = new ExportContextImpl();
     const startTime = Date.now();
     
@@ -406,7 +406,10 @@ export class IDXExporter {
     ).length;
   }
   
-  private async buildDataset(data: ExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
+  private async buildDataset(data: ExportSourceData | ExtendedExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
+    // Convert ExtendedExportSourceData to ExportSourceData if needed
+    const normalizedData = this.normalizeExportData(data);
+    
     const builderConfig: BuilderConfig = {
       useSimplified: this.config.geometry.useSimplified,
       defaultUnit: this.config.geometry.defaultUnit,
@@ -437,12 +440,12 @@ export class IDXExporter {
     
     // 合并数据到BoardData结构中以保持向后兼容性
     const enrichedBoardData: BoardData = {
-      ...data.board,
-      components: data.components || data.board.components,
-      holes: data.holes || data.board.holes,
-      keepouts: data.keepouts || data.board.keepouts,
-      layers: data.layers || data.board.layers,
-      layerStackup: data.layerStackup || data.board.layerStackup
+      ...normalizedData.board,
+      components: normalizedData.components || normalizedData.board.components,
+      holes: normalizedData.holes || normalizedData.board.holes,
+      keepouts: normalizedData.keepouts || normalizedData.board.keepouts,
+      layers: normalizedData.layers || normalizedData.board.layers,
+      layerStackup: normalizedData.layerStackup || normalizedData.board.layerStackup
     };
     
     // 使用组装器构建Body
@@ -459,6 +462,191 @@ export class IDXExporter {
     };
     
     return dataset;
+  }
+  
+  /**
+   * 标准化导出数据，将ExtendedExportSourceData转换为ExportSourceData
+   */
+  private normalizeExportData(data: ExportSourceData | ExtendedExportSourceData): ExportSourceData {
+    // 如果已经是ExportSourceData格式，直接返回
+    if (this.isLegacyExportSourceData(data)) {
+      return data;
+    }
+    
+    // 转换ExtendedExportSourceData到ExportSourceData
+    const extendedData = data as ExtendedExportSourceData;
+    
+    return {
+      board: {
+        id: extendedData.board.id,
+        name: extendedData.board.name,
+        outline: extendedData.board.outline,
+        components: this.convertComponents(extendedData.components || extendedData.board.components),
+        holes: this.convertHoles(extendedData.holes || extendedData.board.holes),
+        keepouts: this.convertKeepouts(extendedData.keepouts || extendedData.board.keepouts),
+        layers: this.convertLayers(extendedData.layers || extendedData.board.layers),
+        layerStackup: this.convertLayerStackup(extendedData.layerStackup || extendedData.board.layerStackup),
+        properties: extendedData.board.properties
+      },
+      components: this.convertComponents(extendedData.components),
+      holes: this.convertHoles(extendedData.holes),
+      keepouts: this.convertKeepouts(extendedData.keepouts),
+      layers: this.convertLayers(extendedData.layers),
+      layerStackup: this.convertLayerStackup(extendedData.layerStackup)
+    };
+  }
+  
+  /**
+   * 检查是否为旧版ExportSourceData接口
+   */
+  private isLegacyExportSourceData(data: any): data is ExportSourceData {
+    // 简单的类型检查：新接口的组件有pins属性，旧接口没有
+    if (data.components && data.components.length > 0) {
+      const firstComponent = data.components[0];
+      // 如果有pins属性，说明是新接口
+      return !firstComponent.pins;
+    }
+    return true; // 默认认为是旧接口
+  }
+  
+  /**
+   * 转换组件数据
+   */
+  private convertComponents(components?: NewComponentData[]): ComponentData[] | undefined {
+    if (!components) return undefined;
+    
+    return components.map(comp => ({
+      refDes: comp.refDes,
+      partNumber: comp.partNumber,
+      packageName: comp.packageName,
+      position: {
+        x: comp.position.x,
+        y: comp.position.y,
+        z: comp.position.z,
+        rotation: comp.position.rotation
+      },
+      dimensions: comp.dimensions,
+      layer: comp.layer,
+      isMechanical: comp.isMechanical,
+      electrical: comp.electrical,
+      thermal: comp.thermal,
+      model3D: comp.model3D,
+      pins: comp.pins,
+      properties: comp.properties
+    }));
+  }
+  
+  /**
+   * 转换孔数据
+   */
+  private convertHoles(holes?: NewHoleData[]): HoleData[] | undefined {
+    if (!holes) return undefined;
+    
+    return holes.map(hole => ({
+      id: hole.id,
+      name: hole.id,
+      position: hole.position,
+      diameter: hole.diameter,
+      viaType: this.mapHoleTypeToViaType(hole.type, hole.viaType),
+      startLayer: hole.startLayer || 'L1',
+      endLayer: hole.endLayer || 'L4',
+      padDiameter: hole.padDiameter,
+      antiPadDiameter: hole.antiPadDiameter,
+      netName: hole.netName,
+      properties: hole.properties
+    }));
+  }
+  
+  /**
+   * 映射孔类型到过孔类型
+   */
+  private mapHoleTypeToViaType(type: 'plated' | 'non-plated', viaType?: string): 'plated' | 'non-plated' | 'filled' | 'micro' {
+    if (viaType) {
+      switch (viaType) {
+        case 'through': return 'plated';
+        case 'blind': return 'plated';
+        case 'buried': return 'plated';
+        case 'micro': return 'micro';
+        default: return type;
+      }
+    }
+    return type;
+  }
+  
+  /**
+   * 转换禁止区数据
+   */
+  private convertKeepouts(keepouts?: NewKeepoutData[]): KeepoutData[] | undefined {
+    if (!keepouts) return undefined;
+    
+    return keepouts.map(keepout => ({
+      id: keepout.id,
+      name: keepout.id,
+      constraintType: this.mapKeepoutType(keepout.type),
+      purpose: keepout.purpose || 'other',
+      shape: {
+        type: keepout.geometry.type,
+        points: keepout.geometry.points || [],
+        radius: keepout.geometry.radius
+      },
+      height: keepout.height ? {
+        min: keepout.height.min,
+        max: keepout.height.max === 'infinity' ? 'infinity' : keepout.height.max
+      } : undefined,
+      layer: keepout.layers[0] || 'ALL',
+      enabled: keepout.enabled !== false,
+      properties: keepout.properties
+    }));
+  }
+  
+  /**
+   * 映射禁止区类型
+   */
+  private mapKeepoutType(type: string): 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other' {
+    switch (type) {
+      case 'trace': return 'route';
+      case 'component': return 'component';
+      case 'via': return 'via';
+      case 'testpoint': return 'testpoint';
+      case 'thermal': return 'thermal';
+      default: return 'other';
+    }
+  }
+  
+  /**
+   * 转换层数据
+   */
+  private convertLayers(layers?: NewLayerData[]): LayerData[] | undefined {
+    if (!layers) return undefined;
+    
+    return layers.map(layer => ({
+      id: layer.id,
+      name: layer.name,
+      type: layer.type,
+      thickness: layer.thickness,
+      material: layer.material,
+      copperWeight: layer.copperWeight,
+      dielectricConstant: layer.dielectricConstant,
+      properties: layer.properties
+    }));
+  }
+  
+  /**
+   * 转换层叠结构数据
+   */
+  private convertLayerStackup(layerStackup?: NewLayerStackupData): LayerStackupData | undefined {
+    if (!layerStackup) return undefined;
+    
+    return {
+      id: layerStackup.id,
+      name: layerStackup.name,
+      totalThickness: layerStackup.totalThickness,
+      layers: layerStackup.layers.map(layer => ({
+        layerId: layer.layerId,
+        position: layer.position,
+        thickness: layer.thickness
+      }))
+    };
   }
   
   private mergeConfig(config: Partial<IDXExportConfig>): IDXExportConfig {

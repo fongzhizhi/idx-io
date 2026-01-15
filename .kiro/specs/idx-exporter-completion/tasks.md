@@ -124,13 +124,13 @@
     - **Property 10: Error recovery and warning handling**
     - **Validates: Requirements 5.3, 5.5**
 
-- [ ] 7. 修复示例文件
-  - [ ] 7.1 修复export-basic.ts示例
+- [x] 7. 修复示例文件
+  - [x] 7.1 修复export-basic.ts示例
     - 更新examples/export-basic.ts使用新的ExportSourceData接口
     - 确保示例能够正确编译和运行
     - _Requirements: 1.2, 1.3_
   
-  - [ ] 7.2 修复export-with-layers.ts示例
+  - [x] 7.2 修复export-with-layers.ts示例
     - 更新examples/export-with-layers.ts使用LayerBuilder功能
     - 添加完整的多层板数据示例
     - _Requirements: 1.4_

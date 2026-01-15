@@ -1,6 +1,7 @@
 // ============= 基础导出示例 - 浏览器版本 =============
 
-import { IDXExporter, GlobalUnit, ExportSourceData, BrowserExportResult } from '../src';
+import { IDXExporter, GlobalUnit, BrowserExportResult } from '../src';
+import { ExtendedExportSourceData } from '../src/types/data-models';
 
 async function exportSimpleBoard() {
   // 创建导出器配置
@@ -29,8 +30,8 @@ async function exportSimpleBoard() {
     }
   });
 
-  // 准备PCB数据（简化示例）
-  const boardData: ExportSourceData = {
+  // 准备PCB数据（使用新的ExtendedExportSourceData接口）
+  const boardData: ExtendedExportSourceData = {
     board: {
       id: 'BOARD_001',
       name: 'MainBoard',
@@ -44,9 +45,42 @@ async function exportSimpleBoard() {
         thickness: 1.6
       }
     },
-    components: [],
-    holes: [],
-    keepouts: []
+    // 可选的顶级数据数组（也可以在board中定义）
+    components: [
+      {
+        refDes: 'R1',
+        partNumber: 'RES_1K_0603',
+        packageName: '0603',
+        position: { x: 10, y: 10, z: 0, rotation: 0 },
+        dimensions: { width: 1.6, height: 0.8, thickness: 0.5 },
+        layer: 'TOP'
+      }
+    ],
+    holes: [
+      {
+        id: 'VIA_001',
+        type: 'plated',
+        position: { x: 20, y: 20 },
+        diameter: 0.2,
+        platingThickness: 0.025,
+        startLayer: 'L1',
+        endLayer: 'L4',
+        netName: 'VCC'
+      }
+    ],
+    keepouts: [
+      {
+        id: 'KEEPOUT_001',
+        type: 'component',
+        geometry: {
+          type: 'rectangle',
+          center: { x: 50, y: 40 },
+          width: 10,
+          height: 8
+        },
+        layers: ['TOP']
+      }
+    ]
   };
 
   try {
@@ -57,8 +91,10 @@ async function exportSimpleBoard() {
       console.log('✅ 导出成功！');
       console.log(`📄 生成文件: ${result.fileName}`);
       console.log(`📊 统计信息:`);
+      console.log(`   总项目数: ${result.statistics.totalItems}`);
       console.log(`   组件数量: ${result.statistics.components}`);
       console.log(`   孔数量: ${result.statistics.holes}`);
+      console.log(`   禁止区数量: ${result.statistics.keepouts}`);
       console.log(`   文件大小: ${result.statistics.fileSize} 字节`);
       console.log(`   导出耗时: ${result.statistics.exportDuration}ms`);
       
