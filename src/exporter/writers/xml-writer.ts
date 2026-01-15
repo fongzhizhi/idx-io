@@ -109,11 +109,6 @@ export class XMLWriter {
         newline: this.options.newline
       });
       
-      // 添加XML声明
-      if (this.options.includeDeclaration) {
-        return `<?xml version="1.0" encoding="${this.options.encoding}"?>${this.options.newline}${xml}`;
-      }
-      
       return xml;
       
     } catch (error: any) {

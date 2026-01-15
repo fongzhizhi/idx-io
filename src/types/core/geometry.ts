@@ -3,12 +3,16 @@
 // REF: Section 7.1
 // NOTE: 所有几何类型都遵循"translation body"概念
 
-import { EDMDObject, CartesianPoint, EDMDLengthProperty } from './common';
-import { ShapeElementType, BendTypeEnum, BendSide } from './enums';
+import { EDMDObject, CartesianPoint, EDMDLengthProperty, EDMDUserSimpleProperty, EDMDTransformation } from "./common";
+import { ShapeElementType, KeepConstraintPurpose, InterStratumFeatureType, AssemblyComponentType, FunctionalItemShapeType, StratumType, StratumSurfaceDesignation, TechnologyType, LayerPurpose, BendTypeEnum, BendSide } from "./enums";
 
 // ------------ 基础曲线类型 ------------
 /**
  * 几何曲线的基接口
+ * 
+ * @remarks
+ * 所有曲线类型都扩展自这个接口
+ * DESIGN: 使用继承层次，便于类型检查和扩展
  */
 export interface EDMDCurve extends EDMDObject {
   /** 曲线类型标识 */
@@ -17,6 +21,10 @@ export interface EDMDCurve extends EDMDObject {
 
 /**
  * 圆弧曲线
+ * 
+ * @remarks
+ * 通过起点、终点和中间点定义圆弧
+ * REF: Section 7.1.1
  */
 export interface EDMDArc extends EDMDCurve {
   curveType: 'EDMDArc';
@@ -27,6 +35,10 @@ export interface EDMDArc extends EDMDCurve {
 
 /**
  * B样条曲线
+ * 
+ * @remarks
+ * 用于表示复杂自由曲线
+ * REF: Section 7.1.2
  */
 export interface EDMDBSplineCurve extends EDMDCurve {
   curveType: 'EDMDBSplineCurve';
@@ -38,6 +50,10 @@ export interface EDMDBSplineCurve extends EDMDCurve {
 
 /**
  * 通过三点定义的圆
+ * 
+ * @remarks
+ * 三个点确定一个圆
+ * REF: Section 7.1.3
  */
 export interface EDMDCircle3Point extends EDMDCurve {
   curveType: 'EDMDCircle3Point';
@@ -48,6 +64,10 @@ export interface EDMDCircle3Point extends EDMDCurve {
 
 /**
  * 通过圆心和直径定义的圆
+ * 
+ * @remarks
+ * 最常见的圆表示方法
+ * REF: Section 7.1.4
  */
 export interface EDMDCircleCenter extends EDMDCurve {
   curveType: 'EDMDCircleCenter';
@@ -57,6 +77,10 @@ export interface EDMDCircleCenter extends EDMDCurve {
 
 /**
  * 椭圆曲线
+ * 
+ * @remarks
+ * 通过中心点、半长轴和半短轴定义
+ * REF: Section 7.1.5
  */
 export interface EDMDEllipse extends EDMDCurve {
   curveType: 'EDMDEllipse';
@@ -67,6 +91,10 @@ export interface EDMDEllipse extends EDMDCurve {
 
 /**
  * 抛物线曲线
+ * 
+ * @remarks
+ * 通过焦点和顶点定义
+ * REF: Section 7.1.6
  */
 export interface EDMDParabola extends EDMDCurve {
   curveType: 'EDMDParabola';
@@ -76,27 +104,39 @@ export interface EDMDParabola extends EDMDCurve {
 
 /**
  * 折线（多段线）
+ * 
+ * @remarks
+ * 由一系列点连接的线段组成
+ * REF: Section 7.1.7
+ * BUSINESS: 常用于PCB轮廓和走线
  */
 export interface EDMDPolyLine extends EDMDCurve {
   curveType: 'EDMDPolyLine';
   Points: CartesianPoint[];
-  Thickness?: EDMDLengthProperty;
-  Closed?: boolean;
+  Thickness?: EDMDLengthProperty;  // 用于表示走线宽度
+  Closed?: boolean;  // 是否闭合形成多边形
 }
 
 /**
  * 复合曲线
+ * 
+ * @remarks
+ * 由多个曲线段组合而成
+ * REF: Section 7.1.8
  */
 export interface EDMDCompositeCurve extends EDMDCurve {
   curveType: 'EDMDCompositeCurve';
   Segments: Array<{
     Curve: EDMDCurve;
-    SameSense: boolean;
+    SameSense: boolean;  // 方向是否一致
   }>;
 }
 
 /**
  * 直线段
+ * 
+ * @remarks
+ * 通过点和向量定义直线
  */
 export interface EDMDLine extends EDMDCurve {
   curveType: 'EDMDLine';
@@ -107,6 +147,11 @@ export interface EDMDLine extends EDMDCurve {
 // ============= 2.5D几何体类型 =============
 /**
  * 2D曲线集合，用于定义"translation body"
+ * 
+ * @remarks
+ * 核心的2.5D几何表示：2D曲线 + Z轴范围
+ * DESIGN: 通过上下界定义几何体的高度范围
+ * REF: Section 7.1
  */
 export interface EDMDCurveSet2D extends EDMDObject {
   /** 形状描述类型 */
@@ -119,7 +164,7 @@ export interface EDMDCurveSet2D extends EDMDObject {
   UpperBound: EDMDLengthProperty;
   
   /** 组成曲线集的详细几何元素 */
-  DetailedGeometricModelElement: Array<EDMDCurve | string>;
+  DetailedGeometricModelElement: Array<EDMDCurve | string>;  // string用于引用已定义的曲线
   
   /** 可选的厚度属性，用于特殊几何（如走线） */
   Thickness?: EDMDLengthProperty;
@@ -127,6 +172,10 @@ export interface EDMDCurveSet2D extends EDMDObject {
 
 /**
  * 形状元素，连接曲线集和具体项目
+ * 
+ * @remarks
+ * 形状元素定义了曲线集如何应用于项目（添加或减去材料）
+ * REF: Section 4.1.2.1
  */
 export interface EDMDShapeElement extends EDMDObject {
   /** 形状元素类型 */
@@ -141,6 +190,10 @@ export interface EDMDShapeElement extends EDMDObject {
 
 /**
  * 外部文件形状表示
+ * 
+ * @remarks
+ * 通过外部文件隐式表示形状（如STEP、STL文件）
+ * REF: Section 7.1.9
  */
 export interface EDMDExtShape extends EDMDObject {
   /** 文件位置URI */
@@ -153,7 +206,197 @@ export interface EDMDExtShape extends EDMDObject {
   FormatVersion?: string;
 }
 
-// ============= 所有曲线类型的联合 =============
+// ============= 特殊形状类型 =============
+/**
+ * 保持区域形状
+ * 
+ * @remarks
+ * 定义禁止或限制区域
+ * REF: Section 6.5
+ */
+export interface EDMDKeepOut extends EDMDObject {
+  /** 保持区域约束目的 */
+  Purpose: KeepConstraintPurpose;
+  
+  /** 引用的形状元素 */
+  ShapeElement: EDMDShapeElement;
+  
+  /** 可选的附加属性 */
+  Properties?: EDMDUserSimpleProperty[];
+}
+
+/**
+ * 保持内部区域形状
+ * 
+ * @remarks
+ * 定义必须包含内容的区域
+ */
+export interface EDMDKeepIn extends EDMDObject {
+  /** 保持区域约束目的 */
+  Purpose: KeepConstraintPurpose;
+  
+  /** 引用的形状元素 */
+  ShapeElement: EDMDShapeElement;
+}
+
+/**
+ * 层间特征形状
+ * 
+ * @remarks
+ * 跨越多个层的特征，如孔和过孔
+ * REF: Section 6.3
+ */
+export interface EDMDInterStratumFeature extends EDMDObject {
+  /** 层间特征类型 */
+  InterStratumFeatureType: InterStratumFeatureType;
+  
+  /** 引用的形状元素 */
+  ShapeElement: EDMDShapeElement;
+  
+  /** 相关的地层（层） */
+  Stratum?: EDMDStratum;
+}
+
+/**
+ * 装配组件形状
+ * 
+ * @remarks
+ * 定义电气或机械组件
+ * REF: Section 6.2
+ */
+export interface EDMDAssemblyComponent extends EDMDObject {
+  /** 装配组件类型 */
+  AssemblyComponentType: AssemblyComponentType;
+  
+  /** 引用的形状元素 */
+  ShapeElement: EDMDShapeElement;
+}
+
+/**
+ * 功能项目形状
+ * 
+ * @remarks
+ * 具有特殊功能的形状区域
+ * REF: Section 6.1.2.3
+ */
+export interface EDMDFunctionalItemShape extends EDMDObject {
+  /** 功能形状类型 */
+  FunctionalItemShapeType: FunctionalItemShapeType;
+  
+  /** 引用的形状元素 */
+  ShapeElement: EDMDShapeElement;
+  
+  /** 可选的附加属性 */
+  Properties?: EDMDUserSimpleProperty[];
+}
+
+/**
+ * 地层（层）形状
+ * 
+ * @remarks
+ * PCB层的几何表示
+ * REF: Section 6.1.2
+ */
+export interface EDMDStratum extends EDMDObject {
+  /** 地层类型 */
+  StratumType: StratumType;
+  
+  /** 地层表面指定 */
+  StratumSurfaceDesignation?: StratumSurfaceDesignation;
+  
+  /** 引用的形状元素 */
+  ShapeElement: EDMDShapeElement | EDMDShapeElement[];
+  
+  /** 相关的地层技术 */
+  StratumTechnology?: EDMDStratumTechnology;
+}
+
+/**
+ * 地层技术定义
+ * 
+ * @remarks
+ * 定义层的技术和目的
+ * REF: Section 6.8
+ */
+export interface EDMDStratumTechnology extends EDMDObject {
+  /** 技术类型 */
+  TechnologyType: TechnologyType;
+  
+  /** 层目的 */
+  LayerPurpose: LayerPurpose;
+}
+
+/**
+ * 弯曲形状
+ * 
+ * @remarks
+ * 用于柔性板的弯曲区域
+ * REF: Section 6.1.2.4
+ */
+export interface EDMDBend extends EDMDObject {
+  /** 弯曲类型 */
+  BendType: BendType;
+  
+  /** 弯曲线定义 */
+  BendLine: EDMDLine;
+  
+  /** 弯曲区域形状元素 */
+  ShapeElement: EDMDShapeElement;
+}
+
+/**
+ * 圆形弯曲类型
+ * 
+ * @remarks
+ * 目前唯一支持的弯曲类型
+ */
+export interface EDMCircularBendType {
+  BendType: BendTypeEnum.CIRCULAR_BEND;
+  InnerSide: BendSide;
+  InnerRadius: EDMDLengthProperty;
+  InnerAngle: EDMDLengthProperty;  // 角度，单位度
+}
+
+export type BendType = EDMCircularBendType;
+
+// ============= 3D模型引用类型 =============
+/**
+ * 3D模型引用
+ * 
+ * @remarks
+ * IDXv4.0支持引用外部3D模型文件
+ * REF: Section 6.2.1.3
+ */
+export interface EDMD3DModel extends EDMDObject {
+  /** 模型标识符（文件名或文档ID） */
+  ModelIdentifier: string;
+  
+  /** 模型版本/配置 */
+  ModelVersion?: string;
+  
+  /** 模型位置（相对路径） */
+  ModelLocation?: string;
+  
+  /** MCAD格式（SolidWorks, NX, STEP等） */
+  MCADFormat: string;
+  
+  /** MCAD格式版本 */
+  MCADFormatVersion?: string;
+  
+  /** 变换矩阵（对齐模型与足迹） */
+  Transformation?: EDMDTransformation;
+  
+  /** 变换参考（替代变换矩阵） */
+  TransformationReference?: string;
+}
+
+// ============= 几何类型联合 =============
+/**
+ * 所有曲线类型的联合
+ * 
+ * @remarks
+ * 用于类型安全的曲线处理
+ */
 export type CurveType = 
   | EDMDArc 
   | EDMDBSplineCurve 
@@ -167,8 +410,18 @@ export type CurveType =
 
 /**
  * 所有形状类型的联合
+ * 
+ * @remarks
+ * 用于类型安全的形状处理
  */
 export type ShapeType = 
   | EDMDCurveSet2D 
   | EDMDShapeElement 
-  | EDMDExtShape;
+  | EDMDExtShape 
+  | EDMDKeepOut 
+  | EDMDKeepIn 
+  | EDMDInterStratumFeature 
+  | EDMDAssemblyComponent 
+  | EDMDFunctionalItemShape 
+  | EDMDStratum 
+  | EDMDBend;

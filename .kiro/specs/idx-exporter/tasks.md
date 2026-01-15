@@ -154,20 +154,25 @@
 ## 2. XML序列化实现
 
 ### 2.1 XML写入器
-- [ ] 2.1.1 实现XMLWriter类
-  - [ ] 2.1.1.1 实现根元素和命名空间处理
-  - [ ] 2.1.1.2 实现Header序列化
-  - [ ] 2.1.1.3 实现Body序列化
-  - [ ] 2.1.1.4 实现ProcessInstruction序列化
-- [ ] 2.1.2 实现EDMDItem序列化
-  - [ ] 2.1.2.1 实现基础项目属性序列化
-  - [ ] 2.1.2.2 实现ItemInstance序列化
-  - [ ] 2.1.2.3 实现UserProperty序列化
-  - [ ] 2.1.2.4 实现Transformation序列化
-- [ ] 2.1.3 实现几何形状序列化
-  - [ ] 2.1.3.1 实现ShapeElement序列化
-  - [ ] 2.1.3.2 实现CurveSet2D序列化
-  - [ ] 2.1.3.3 实现各种曲线类型序列化
+- [x] 2.1.1 实现XMLWriter类
+  - [x] 2.1.1.1 实现根元素和命名空间处理
+  - [x] 2.1.1.2 实现Header序列化
+  - [x] 2.1.1.3 实现Body序列化
+  - [x] 2.1.1.4 实现ProcessInstruction序列化
+- [x] 2.1.2 实现EDMDItem序列化
+  - [x] 2.1.2.1 实现基础项目属性序列化
+  - [x] 2.1.2.2 实现ItemInstance序列化
+  - [x] 2.1.2.3 实现UserProperty序列化
+  - [x] 2.1.2.4 实现Transformation序列化
+- [x] 2.1.3 实现几何形状序列化
+  - [x] 2.1.3.1 实现ShapeElement序列化
+  - [x] 2.1.3.2 实现CurveSet2D序列化
+  - [x] 2.1.3.3 实现各种曲线类型序列化
+- [ ] 2.1.4 编写XMLWriter单元测试
+  - [ ] 2.1.4.1 测试XML结构正确性
+  - [ ] 2.1.4.2 测试命名空间声明
+  - [ ] 2.1.4.3 Write property test for XML structure validation **Validates: Requirements 2.2.1**
+
 - [ ] 2.1.4 编写XMLWriter单元测试
   - [ ] 2.1.4.1 测试XML结构正确性
   - [ ] 2.1.4.2 测试命名空间声明
