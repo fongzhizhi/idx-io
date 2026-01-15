@@ -300,14 +300,14 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
     viaItem.UserProperties = this.createViaProperties(processedData);
     
     // # 创建过孔形状
-    const viaShape = await this.createViaShape(processedData);
+    const shapeElementId = await this.createViaShape(processedData);
     
     if (this.config.useSimplified) {
       // ## 简化表示法：直接引用形状
-      viaItem.Shape = viaShape;
+      viaItem.Shape = shapeElementId; // 使用href引用
     } else {
       // ## 传统表示法：通过InterStratumFeature对象
-      const interStratumFeature = this.createInterStratumFeature(processedData, viaShape);
+      const interStratumFeature = this.createInterStratumFeature(processedData, shapeElementId);
       viaItem.Shape = interStratumFeature;
     }
     
@@ -356,6 +356,22 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
       Value: 'true'
     };
     
+    // # 将临时存储的几何元素移动到输出项目
+    const currentItem = this.getCurrentBuildingItem();
+    if (currentItem) {
+      if (currentItem.geometricElements) {
+        output.geometricElements = currentItem.geometricElements;
+      }
+      if (currentItem.curveSet2Ds) {
+        output.curveSet2Ds = currentItem.curveSet2Ds;
+      }
+      if (currentItem.shapeElements) {
+        output.shapeElements = currentItem.shapeElements;
+      }
+      // 清理临时存储
+      this.context.currentBuildingItem = null;
+    }
+    
     // # 记录构建统计
     this.context.addWarning('VIA_BUILT',
       `过孔构建完成: ${output.Name} (类型: ${output.geometryType})`);
@@ -365,67 +381,126 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
   
   // ============= 私有辅助方法 =============
   /**
-   * 创建过孔形状
+   * 创建过孔独立几何元素
    * 
    * @param processedData - 处理后的过孔数据
-   * @returns 过孔形状元素
+   * @returns 独立几何元素集合
    */
-  private async createViaShape(processedData: ProcessedViaData): Promise<EDMDShapeElement> {
-    // # 创建圆形曲线
-    const circle: EDMDCircleCenter = {
-      id: this.generateItemId('CIRCLE', `VIA_${processedData.id}`),
-      curveType: 'EDMDCircleCenter',
-      CenterPoint: {
-        id: this.generateItemId('POINT', `VIA_CENTER_${processedData.id}`),
-        X: processedData.position.x,
-        Y: processedData.position.y
+  private createIndependentGeometry(processedData: ProcessedViaData): {
+    geometricElements: any[];
+    curveSet2Ds: any[];
+    shapeElements: any[];
+    shapeElementId: string;
+  } {
+    const geometricElements: any[] = [];
+    const curveSet2Ds: any[] = [];
+    const shapeElements: any[] = [];
+    
+    // # 创建中心点
+    const centerPoint = {
+      id: this.generateItemId('POINT', `VIA_CENTER_${processedData.id}`),
+      'xsi:type': 'd2:EDMDCartesianPoint',
+      X: {
+        'property:Value': processedData.position.x.toString()
       },
-      Diameter: this.createLengthProperty(processedData.diameter)
+      Y: {
+        'property:Value': processedData.position.y.toString()
+      }
     };
+    geometricElements.push(centerPoint);
     
-    // # 创建曲线集
-    const curveSet: EDMDCurveSet2D = this.createCurveSet2D(
-      processedData.lowerBound,
-      processedData.upperBound,
-      [circle]
-    );
-    
-    curveSet.id = this.generateItemId('CURVESET', `VIA_${processedData.id}`);
-    
-    // # 创建形状元素
-    const shapeElement: EDMDShapeElement = {
-      id: this.generateItemId('SHAPE', `VIA_${processedData.id}`),
-      ShapeElementType: ShapeElementType.FEATURE_SHAPE_ELEMENT,
-      DefiningShape: curveSet,
-      Inverted: false
+    // # 创建CircleCenter
+    const circleCenter = {
+      id: this.generateItemId('CIRCLE', `VIA_${processedData.id}`),
+      type: 'CircleCenter',
+      CenterPoint: centerPoint.id,
+      Diameter: {
+        'property:Value': processedData.diameter.toString()
+      }
     };
+    geometricElements.push(circleCenter);
     
-    // # 特殊处理：填充孔
-    if (processedData.viaType === 'filled') {
-      // BUSINESS: 填充孔可能需要额外的属性或不同的形状类型
-      shapeElement.ShapeElementType = ShapeElementType.PART_MOUNTING_FEATURE;
+    // # 创建CurveSet2D
+    const curveSet2D = {
+      id: this.generateItemId('CURVESET', `VIA_${processedData.id}`),
+      'xsi:type': 'd2:EDMDCurveSet2D',
+      'pdm:ShapeDescriptionType': 'OUTLINE',
+      'd2:LowerBound': {
+        'property:Value': processedData.lowerBound.toString()
+      },
+      'd2:UpperBound': {
+        'property:Value': processedData.upperBound.toString()
+      },
+      'd2:DetailedGeometricModelElement': circleCenter.id
+    };
+    curveSet2Ds.push(curveSet2D);
+    
+    // # 创建ShapeElement
+    const shapeElementId = this.generateItemId('SHAPE', `VIA_${processedData.id}`);
+    const shapeElement = {
+      id: shapeElementId,
+      'pdm:ShapeElementType': 'FeatureShapeElement',
+      'pdm:Inverted': 'false',
+      'pdm:DefiningShape': curveSet2D.id
+    };
+    shapeElements.push(shapeElement);
+    
+    return {
+      geometricElements,
+      curveSet2Ds,
+      shapeElements,
+      shapeElementId
+    };
+  }
+
+  /**
+   * 创建过孔形状（更新为使用独立几何元素）
+   * 
+   * @param processedData - 处理后的过孔数据
+   * @returns 形状元素ID引用
+   */
+  private async createViaShape(processedData: ProcessedViaData): Promise<string> {
+    // 创建独立几何元素并返回形状元素ID
+    const geometry = this.createIndependentGeometry(processedData);
+    
+    // 将几何元素附加到当前构建的项目上（临时存储）
+    const currentItem = this.getCurrentBuildingItem();
+    if (currentItem) {
+      currentItem.geometricElements = geometry.geometricElements;
+      currentItem.curveSet2Ds = geometry.curveSet2Ds;
+      currentItem.shapeElements = geometry.shapeElements;
     }
     
-    return shapeElement;
+    return geometry.shapeElementId;
+  }
+  
+  /**
+   * 获取当前正在构建的项目（用于临时存储几何元素）
+   */
+  private getCurrentBuildingItem(): any {
+    if (!this.context.currentBuildingItem) {
+      this.context.currentBuildingItem = {};
+    }
+    return this.context.currentBuildingItem;
   }
   
   /**
    * 创建InterStratumFeature（传统表示法）
    * 
    * @param processedData - 处理后的过孔数据
-   * @param shapeElement - 形状元素
+   * @param shapeElementId - 形状元素ID
    * @returns InterStratumFeature对象
    */
   private createInterStratumFeature(
     processedData: ProcessedViaData,
-    shapeElement: EDMDShapeElement
+    shapeElementId: string
   ): any {
     const viaConfig = this.viaTypeMap[processedData.viaType];
     
     return {
       id: this.generateItemId('INTERSTRATUM', processedData.id),
       InterStratumFeatureType: viaConfig.interStratumType,
-      ShapeElement: shapeElement,
+      ShapeElement: shapeElementId, // 使用ID引用
       // NOTE: 实际实现中需要添加Stratum引用
       Stratum: null // 待实现
     };

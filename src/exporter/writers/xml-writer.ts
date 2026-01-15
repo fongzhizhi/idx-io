@@ -123,6 +123,14 @@ export class XMLWriter {
           polyElement.ele('d2:Point').txt(point['d2:Point']);
         });
       }
+    } else if (element.type === 'CircleCenter') {
+      // 构建CircleCenter
+      const circleElement = parent.ele('foundation:CircleCenter', { id: element.id });
+      
+      circleElement.ele('d2:CenterPoint').txt(element.CenterPoint);
+      
+      const diameterElement = circleElement.ele('d2:Diameter');
+      diameterElement.ele('property:Value').txt(element.Diameter['property:Value']);
     }
   }
 
@@ -352,8 +360,9 @@ export class XMLWriter {
       if (typeof item.Shape === 'string') {
         itemElement.ele('pdm:Shape').att('href', `#${item.Shape}`);
       } else {
-        // 内联形状 - 实际中可能复杂，这里简化处理
-        itemElement.ele('pdm:Shape').txt('INLINE_SHAPE');
+        // 对于复杂形状对象，需要根据具体类型处理
+        // 这里暂时跳过，实际实现中应该根据形状类型进行序列化
+        console.warn(`项目${item.id}包含复杂形状对象，暂时跳过序列化`);
       }
     }
     

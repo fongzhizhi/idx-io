@@ -477,6 +477,22 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       Value: 'true'
     };
     
+    // # 将临时存储的几何元素移动到输出项目
+    const currentItem = this.getCurrentBuildingItem();
+    if (currentItem) {
+      if (currentItem.geometricElements) {
+        output.geometricElements = currentItem.geometricElements;
+      }
+      if (currentItem.curveSet2Ds) {
+        output.curveSet2Ds = currentItem.curveSet2Ds;
+      }
+      if (currentItem.shapeElements) {
+        output.shapeElements = currentItem.shapeElements;
+      }
+      // 清理临时存储
+      this.context.currentBuildingItem = null;
+    }
+    
     // # 记录构建统计
     this.context.addWarning('COMPONENT_BUILT',
       `元件构建完成: ${output.Name} (位号: ${output.Name}, 封装: ${output.UserProperties.find(p => p.Key.ObjectName === 'PKGNAME')?.Value || '未知'})`);
@@ -515,8 +531,9 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       // 使用外部3D模型
       componentItem.EDMD3DModel = this.create3DModelReference(processedData.model3D);
     } else {
-      // 使用2.5D几何
-      componentItem.Shape = this.createComponentShape(processedData);
+      // 使用2.5D几何 - 返回形状元素ID引用
+      const shapeElementId = this.createComponentShape(processedData);
+      componentItem.Shape = shapeElementId; // 使用href引用
     }
     
     // # 添加引脚定义
@@ -638,31 +655,123 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   }
   
   /**
-   * 创建元件2.5D形状
+   * 创建元件独立几何元素
    * 
    * @param processedData - 处理后的元件数据
-   * @returns 元件形状元素
+   * @returns 独立几何元素集合
    */
-  private createComponentShape(processedData: ProcessedComponentData): EDMDShapeElement {
-    // # 创建边界框曲线集
-    const curveSet = this.geometryUtils.createBoundingBoxCurveSet(
-      processedData.dimensions.width,
-      processedData.dimensions.height,
-      processedData.dimensions.thickness,
-      0 // 相对于元件局部坐标系
-    );
+  private createIndependentGeometry(processedData: ProcessedComponentData): {
+    geometricElements: any[];
+    curveSet2Ds: any[];
+    shapeElements: any[];
+    shapeElementId: string;
+  } {
+    const geometricElements: any[] = [];
+    const curveSet2Ds: any[] = [];
+    const shapeElements: any[] = [];
     
-    curveSet.id = this.generateItemId('CURVESET', `COMP_${processedData.refDes}`);
+    // # 创建边界框的四个角点
+    const halfWidth = processedData.dimensions.width / 2;
+    const halfHeight = processedData.dimensions.height / 2;
     
-    // # 创建形状元素
-    const shapeElement: EDMDShapeElement = {
-      id: this.generateItemId('SHAPE', `COMP_${processedData.refDes}`),
-      ShapeElementType: ShapeElementType.FEATURE_SHAPE_ELEMENT,
-      DefiningShape: curveSet,
-      Inverted: false
+    const points = [
+      { x: -halfWidth, y: -halfHeight }, // 左下角
+      { x: halfWidth, y: -halfHeight },  // 右下角
+      { x: halfWidth, y: halfHeight },   // 右上角
+      { x: -halfWidth, y: halfHeight }   // 左上角
+    ];
+    
+    // # 创建CartesianPoint元素
+    const cartesianPoints: any[] = [];
+    points.forEach((point, index) => {
+      const cartesianPoint = {
+        id: this.generateItemId('POINT', `COMP_${processedData.refDes}_P${index}`),
+        'xsi:type': 'd2:EDMDCartesianPoint',
+        X: {
+          'property:Value': point.x.toString()
+        },
+        Y: {
+          'property:Value': point.y.toString()
+        }
+      };
+      geometricElements.push(cartesianPoint);
+      cartesianPoints.push(cartesianPoint);
+    });
+    
+    // # 创建PolyLine（矩形轮廓）
+    const polyLine = {
+      id: this.generateItemId('POLYLINE', `COMP_${processedData.refDes}`),
+      type: 'PolyLine',
+      Point: cartesianPoints.map(point => ({
+        'd2:Point': point.id
+      }))
     };
+    geometricElements.push(polyLine);
     
-    return shapeElement;
+    // # 创建CurveSet2D
+    const curveSet2D = {
+      id: this.generateItemId('CURVESET', `COMP_${processedData.refDes}`),
+      'xsi:type': 'd2:EDMDCurveSet2D',
+      'pdm:ShapeDescriptionType': 'OUTLINE',
+      'd2:LowerBound': {
+        'property:Value': '0.0'
+      },
+      'd2:UpperBound': {
+        'property:Value': processedData.dimensions.thickness.toString()
+      },
+      'd2:DetailedGeometricModelElement': polyLine.id
+    };
+    curveSet2Ds.push(curveSet2D);
+    
+    // # 创建ShapeElement
+    const shapeElementId = this.generateItemId('SHAPE', `COMP_${processedData.refDes}`);
+    const shapeElement = {
+      id: shapeElementId,
+      'pdm:ShapeElementType': 'FeatureShapeElement',
+      'pdm:Inverted': 'false',
+      'pdm:DefiningShape': curveSet2D.id
+    };
+    shapeElements.push(shapeElement);
+    
+    return {
+      geometricElements,
+      curveSet2Ds,
+      shapeElements,
+      shapeElementId
+    };
+  }
+
+  /**
+   * 创建元件2.5D形状（更新为使用独立几何元素）
+   * 
+   * @param processedData - 处理后的元件数据
+   * @returns 形状元素ID引用
+   */
+  private createComponentShape(processedData: ProcessedComponentData): string {
+    // 创建独立几何元素并返回形状元素ID
+    const geometry = this.createIndependentGeometry(processedData);
+    
+    // 将几何元素附加到当前构建的项目上（临时存储）
+    const currentItem = this.getCurrentBuildingItem();
+    if (currentItem) {
+      currentItem.geometricElements = geometry.geometricElements;
+      currentItem.curveSet2Ds = geometry.curveSet2Ds;
+      currentItem.shapeElements = geometry.shapeElements;
+    }
+    
+    return geometry.shapeElementId;
+  }
+  
+  /**
+   * 获取当前正在构建的项目（用于临时存储几何元素）
+   */
+  private getCurrentBuildingItem(): any {
+    // 这是一个临时方法，用于在构建过程中存储几何元素
+    // 实际实现中可能需要更复杂的状态管理
+    if (!this.context.currentBuildingItem) {
+      this.context.currentBuildingItem = {};
+    }
+    return this.context.currentBuildingItem;
   }
   
   /**

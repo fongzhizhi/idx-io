@@ -71,6 +71,9 @@ export interface BuilderContext {
   
   /** 生成唯一ID */
   generateId(type: string, identifier?: string): string;
+  
+  /** 当前正在构建的项目（用于临时存储几何元素） */
+  currentBuildingItem?: any;
 }
 
 /**

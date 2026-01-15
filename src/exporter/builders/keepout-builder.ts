@@ -355,14 +355,14 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
     keepoutItem.UserProperties = this.createKeepoutProperties(processedData);
     
     // # 创建禁止区形状
-    const keepoutShape = await this.createKeepoutShape(processedData);
+    const shapeElementId = await this.createKeepoutShape(processedData);
     
     if (this.config.useSimplified) {
       // ## 简化表示法：直接引用形状
-      keepoutItem.Shape = keepoutShape;
+      keepoutItem.Shape = shapeElementId; // 使用href引用
     } else {
       // ## 传统表示法：通过EDMDKeepOut对象
-      const keepoutObject = this.createKeepoutObject(processedData, keepoutShape);
+      const keepoutObject = this.createKeepoutObject(processedData, shapeElementId);
       keepoutItem.Shape = keepoutObject;
     }
     
@@ -427,6 +427,22 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
       Value: 'true'
     };
     
+    // # 将临时存储的几何元素移动到输出项目
+    const currentItem = this.getCurrentBuildingItem();
+    if (currentItem) {
+      if (currentItem.geometricElements) {
+        output.geometricElements = currentItem.geometricElements;
+      }
+      if (currentItem.curveSet2Ds) {
+        output.curveSet2Ds = currentItem.curveSet2Ds;
+      }
+      if (currentItem.shapeElements) {
+        output.shapeElements = currentItem.shapeElements;
+      }
+      // 清理临时存储
+      this.context.currentBuildingItem = null;
+    }
+    
     // # 记录构建统计
     this.context.addWarning('KEEPOUT_BUILT',
       `禁止区构建完成: ${output.Name} (类型: ${output.geometryType}, 层: ${output.AssembleToName})`);
@@ -436,85 +452,167 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
   
   // ============= 私有辅助方法 =============
   /**
-   * 创建禁止区形状
+   * 创建禁止区独立几何元素
    * 
    * @param processedData - 处理后的禁止区数据
-   * @returns 禁止区形状元素
+   * @returns 独立几何元素集合
    */
-  private async createKeepoutShape(processedData: ProcessedKeepoutData): Promise<EDMDShapeElement> {
-    let curveSet: EDMDCurveSet2D;
+  private createIndependentGeometry(processedData: ProcessedKeepoutData): {
+    geometricElements: any[];
+    curveSet2Ds: any[];
+    shapeElements: any[];
+    shapeElementId: string;
+  } {
+    const geometricElements: any[] = [];
+    const curveSet2Ds: any[] = [];
+    const shapeElements: any[] = [];
+    
+    let geometricElement: any;
     
     switch (processedData.shape.type) {
       case 'rectangle':
       case 'polygon':
-        // ## 多边形或矩形
-        const polyLine: EDMDPolyLine = {
-          id: this.generateItemId('POLYLINE', `KEEPOUT_${processedData.id}`),
-          curveType: 'EDMDPolyLine',
-          Points: processedData.shape.points,
-          Closed: true
-        };
+        // ## 多边形或矩形 - 创建CartesianPoint和PolyLine
+        const cartesianPoints: any[] = [];
+        processedData.shape.points.forEach((point, index) => {
+          const cartesianPoint = {
+            id: this.generateItemId('POINT', `KEEPOUT_${processedData.id}_P${index}`),
+            'xsi:type': 'd2:EDMDCartesianPoint',
+            X: {
+              'property:Value': point.X.toString()
+            },
+            Y: {
+              'property:Value': point.Y.toString()
+            }
+          };
+          geometricElements.push(cartesianPoint);
+          cartesianPoints.push(cartesianPoint);
+        });
         
-        curveSet = this.createCurveSet2D(
-          processedData.lowerBound,
-          processedData.upperBound,
-          [polyLine]
-        );
+        // 创建PolyLine
+        geometricElement = {
+          id: this.generateItemId('POLYLINE', `KEEPOUT_${processedData.id}`),
+          type: 'PolyLine',
+          Point: cartesianPoints.map(point => ({
+            'd2:Point': point.id
+          }))
+        };
+        geometricElements.push(geometricElement);
         break;
         
       case 'circle':
-        // ## 圆形
+        // ## 圆形 - 创建中心点和CircleCenter
         if (!processedData.shape.radius || processedData.shape.points.length === 0) {
           throw new ValidationError(`圆形禁止区${processedData.id}缺少半径或中心点`);
         }
         
-        const center = processedData.shape.points[0];
-        const circle: EDMDCircleCenter = {
-          id: this.generateItemId('CIRCLE', `KEEPOUT_${processedData.id}`),
-          curveType: 'EDMDCircleCenter',
-          CenterPoint: center,
-          Diameter: this.createLengthProperty(processedData.shape.radius * 2)
+        const centerPoint = processedData.shape.points[0];
+        const center = {
+          id: this.generateItemId('POINT', `KEEPOUT_CENTER_${processedData.id}`),
+          'xsi:type': 'd2:EDMDCartesianPoint',
+          X: {
+            'property:Value': centerPoint.X.toString()
+          },
+          Y: {
+            'property:Value': centerPoint.Y.toString()
+          }
         };
+        geometricElements.push(center);
         
-        curveSet = this.createCurveSet2D(
-          processedData.lowerBound,
-          processedData.upperBound,
-          [circle]
-        );
+        geometricElement = {
+          id: this.generateItemId('CIRCLE', `KEEPOUT_${processedData.id}`),
+          type: 'CircleCenter',
+          CenterPoint: center.id,
+          Diameter: {
+            'property:Value': (processedData.shape.radius * 2).toString()
+          }
+        };
+        geometricElements.push(geometricElement);
         break;
         
       default:
         throw new ValidationError(`不支持的形状类型: ${processedData.shape.type}`);
     }
     
-    curveSet.id = this.generateItemId('CURVESET', `KEEPOUT_${processedData.id}`);
-    
-    // # 创建形状元素
-    const shapeElement: EDMDShapeElement = {
-      id: this.generateItemId('SHAPE', `KEEPOUT_${processedData.id}`),
-      ShapeElementType: ShapeElementType.FEATURE_SHAPE_ELEMENT,
-      DefiningShape: curveSet,
-      Inverted: false // 禁止区是"正"区域
+    // # 创建CurveSet2D
+    const curveSet2D = {
+      id: this.generateItemId('CURVESET', `KEEPOUT_${processedData.id}`),
+      'xsi:type': 'd2:EDMDCurveSet2D',
+      'pdm:ShapeDescriptionType': 'OUTLINE',
+      'd2:LowerBound': {
+        'property:Value': processedData.lowerBound.toString()
+      },
+      'd2:UpperBound': {
+        'property:Value': processedData.upperBound.toString()
+      },
+      'd2:DetailedGeometricModelElement': geometricElement.id
     };
+    curveSet2Ds.push(curveSet2D);
     
-    return shapeElement;
+    // # 创建ShapeElement
+    const shapeElementId = this.generateItemId('SHAPE', `KEEPOUT_${processedData.id}`);
+    const shapeElement = {
+      id: shapeElementId,
+      'pdm:ShapeElementType': 'FeatureShapeElement',
+      'pdm:Inverted': 'false',
+      'pdm:DefiningShape': curveSet2D.id
+    };
+    shapeElements.push(shapeElement);
+    
+    return {
+      geometricElements,
+      curveSet2Ds,
+      shapeElements,
+      shapeElementId
+    };
+  }
+
+  /**
+   * 创建禁止区形状（更新为使用独立几何元素）
+   * 
+   * @param processedData - 处理后的禁止区数据
+   * @returns 形状元素ID引用
+   */
+  private async createKeepoutShape(processedData: ProcessedKeepoutData): Promise<string> {
+    // 创建独立几何元素并返回形状元素ID
+    const geometry = this.createIndependentGeometry(processedData);
+    
+    // 将几何元素附加到当前构建的项目上（临时存储）
+    const currentItem = this.getCurrentBuildingItem();
+    if (currentItem) {
+      currentItem.geometricElements = geometry.geometricElements;
+      currentItem.curveSet2Ds = geometry.curveSet2Ds;
+      currentItem.shapeElements = geometry.shapeElements;
+    }
+    
+    return geometry.shapeElementId;
+  }
+  
+  /**
+   * 获取当前正在构建的项目（用于临时存储几何元素）
+   */
+  private getCurrentBuildingItem(): any {
+    if (!this.context.currentBuildingItem) {
+      this.context.currentBuildingItem = {};
+    }
+    return this.context.currentBuildingItem;
   }
   
   /**
    * 创建EDMDKeepOut对象（传统表示法）
    * 
    * @param processedData - 处理后的禁止区数据
-   * @param shapeElement - 形状元素
+   * @param shapeElementId - 形状元素ID
    * @returns EDMDKeepOut对象
    */
   private createKeepoutObject(
     processedData: ProcessedKeepoutData,
-    shapeElement: EDMDShapeElement
+    shapeElementId: string
   ): any {
     return {
       id: this.generateItemId('KEEPOUT_OBJ', processedData.id),
       Purpose: processedData.purpose,
-      ShapeElement: shapeElement,
+      ShapeElement: shapeElementId, // 使用ID引用
       Properties: processedData.properties ? this.convertProperties(processedData.properties) : []
     };
   }

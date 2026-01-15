@@ -87,6 +87,15 @@ export interface EDMDItem extends EDMDObject {
   
   /** 项目实例（仅当ItemType为ASSEMBLY时） */
   ItemInstances?: EDMDItemInstance[];
+  
+  /** 临时存储的几何元素（用于构建过程） */
+  geometricElements?: any[];
+  
+  /** 临时存储的曲线集（用于构建过程） */
+  curveSet2Ds?: any[];
+  
+  /** 临时存储的形状元素（用于构建过程） */
+  shapeElements?: any[];
 }
 
 // ------------ 组件引脚类型 ------------
