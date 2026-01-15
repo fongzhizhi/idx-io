@@ -7,7 +7,9 @@
 
 import { 
   EDMDObject, EDMDLengthProperty, CartesianPoint, 
-  GeometryType, ItemType, GlobalUnit 
+  GeometryType, ItemType, GlobalUnit, EDMDItem,
+  EDMDIdentifier, EDMDCurveSet2D, EDMDPolyLine,
+  EDMDCircleCenter
 } from '../../types/core';
 
 // # 基础构建器接口定义

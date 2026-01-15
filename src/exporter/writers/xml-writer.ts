@@ -201,7 +201,9 @@ export class XMLWriter {
     
     // 构建3D模型（如果有）
     if (body.Models3D && body.Models3D.length > 0) {
-      // TODO: 实现3D模型序列化
+      for (const model of body.Models3D) {
+        this.build3DModel(bodyEle, model);
+      }
     }
   }
   
@@ -276,6 +278,16 @@ export class XMLWriter {
       itemEle.ele('pdm:AssembleToName').txt(item.AssembleToName);
     }
     
+    // BaseLine
+    if (item.BaseLine !== undefined) {
+      if (typeof item.BaseLine === 'boolean') {
+        itemEle.ele('pdm:BaseLine').txt(item.BaseLine.toString());
+      } else {
+        // 如果是EDMDUserSimpleProperty类型
+        this.buildUserProperty(itemEle, item.BaseLine);
+      }
+    }
+    
     // UserProperties
     if (item.UserProperties && item.UserProperties.length > 0) {
       for (const prop of item.UserProperties) {
@@ -298,6 +310,24 @@ export class XMLWriter {
       } else {
         // 内联形状
         this.buildShapeElement(itemEle.ele('pdm:Shape'), item.Shape as EDMDShapeElement);
+      }
+    }
+    
+    // EDMD3DModel
+    if (item.EDMD3DModel) {
+      if (typeof item.EDMD3DModel === 'string') {
+        // 引用3D模型
+        itemEle.ele('pdm:EDMD3DModel').att('href', `#${item.EDMD3DModel}`);
+      } else {
+        // 内联3D模型
+        this.build3DModel(itemEle.ele('pdm:EDMD3DModel'), item.EDMD3DModel);
+      }
+    }
+    
+    // PackagePins
+    if (item.PackagePins && item.PackagePins.length > 0) {
+      for (const pin of item.PackagePins) {
+        this.buildPackagePin(itemEle, pin);
       }
     }
   }
@@ -487,9 +517,122 @@ export class XMLWriter {
       case 'EDMDCircleCenter':
         this.buildCircleCenter(parent, curve as EDMDCircleCenter);
         break;
-      // TODO: 添加其他曲线类型支持
+      case 'EDMDArc':
+        this.buildArc(parent, curve);
+        break;
+      case 'EDMDBSplineCurve':
+        this.buildBSplineCurve(parent, curve);
+        break;
+      case 'EDMDCompositeCurve':
+        this.buildCompositeCurve(parent, curve);
+        break;
+      case 'EDMDEllipse':
+        this.buildEllipse(parent, curve);
+        break;
+      case 'EDMDCircle3Point':
+        this.buildCircle3Point(parent, curve);
+        break;
+      case 'EDMDParabola':
+        this.buildParabola(parent, curve);
+        break;
+      case 'EDMDLine':
+        this.buildLine(parent, curve);
+        break;
       default:
         console.warn(`不支持的曲线类型: ${curve.curveType}`);
+    }
+  }
+  
+  /**
+   * 构建Circle3Point元素
+   */
+  private buildCircle3Point(parent: XMLBuilder, circle: any): void {
+    const circleEle = parent.ele('foundation:Circle3Point', {
+      id: circle.id,
+      'xsi:type': 'd2:EDMDCircle3Point'
+    });
+    
+    // Point1
+    if (circle.Point1) {
+      if (typeof circle.Point1 === 'string') {
+        circleEle.ele('d2:Point1').att('href', `#${circle.Point1}`);
+      } else {
+        this.buildCartesianPoint(circleEle.ele('d2:Point1'), circle.Point1);
+      }
+    }
+    
+    // Point2
+    if (circle.Point2) {
+      if (typeof circle.Point2 === 'string') {
+        circleEle.ele('d2:Point2').att('href', `#${circle.Point2}`);
+      } else {
+        this.buildCartesianPoint(circleEle.ele('d2:Point2'), circle.Point2);
+      }
+    }
+    
+    // Point3
+    if (circle.Point3) {
+      if (typeof circle.Point3 === 'string') {
+        circleEle.ele('d2:Point3').att('href', `#${circle.Point3}`);
+      } else {
+        this.buildCartesianPoint(circleEle.ele('d2:Point3'), circle.Point3);
+      }
+    }
+  }
+  
+  /**
+   * 构建Parabola元素
+   */
+  private buildParabola(parent: XMLBuilder, parabola: any): void {
+    const parabolaEle = parent.ele('foundation:Parabola', {
+      id: parabola.id,
+      'xsi:type': 'd2:EDMDParabola'
+    });
+    
+    // Focus
+    if (parabola.Focus) {
+      if (typeof parabola.Focus === 'string') {
+        parabolaEle.ele('d2:Focus').att('href', `#${parabola.Focus}`);
+      } else {
+        this.buildCartesianPoint(parabolaEle.ele('d2:Focus'), parabola.Focus);
+      }
+    }
+    
+    // Apex
+    if (parabola.Apex) {
+      if (typeof parabola.Apex === 'string') {
+        parabolaEle.ele('d2:Apex').att('href', `#${parabola.Apex}`);
+      } else {
+        this.buildCartesianPoint(parabolaEle.ele('d2:Apex'), parabola.Apex);
+      }
+    }
+  }
+  
+  /**
+   * 构建Line元素
+   */
+  private buildLine(parent: XMLBuilder, line: any): void {
+    const lineEle = parent.ele('foundation:Line', {
+      id: line.id,
+      'xsi:type': 'd2:EDMDLine'
+    });
+    
+    // Point
+    if (line.Point) {
+      if (typeof line.Point === 'string') {
+        lineEle.ele('d2:Point').att('href', `#${line.Point}`);
+      } else {
+        this.buildCartesianPoint(lineEle.ele('d2:Point'), line.Point);
+      }
+    }
+    
+    // Vector
+    if (line.Vector) {
+      if (typeof line.Vector === 'string') {
+        lineEle.ele('d2:Vector').att('href', `#${line.Vector}`);
+      } else {
+        this.buildCartesianPoint(lineEle.ele('d2:Vector'), line.Vector);
+      }
     }
   }
   
@@ -505,6 +648,11 @@ export class XMLWriter {
     // Thickness（可选）
     if (polyLine.Thickness) {
       this.buildLengthProperty(polyEle.ele('d2:Thickness'), polyLine.Thickness);
+    }
+    
+    // Closed（可选）
+    if (polyLine.Closed !== undefined) {
+      polyEle.ele('d2:Closed').txt(polyLine.Closed.toString());
     }
     
     // Points
@@ -558,10 +706,203 @@ export class XMLWriter {
    * 构建LengthProperty元素
    */
   private buildLengthProperty(parent: XMLBuilder, length: EDMDLengthProperty): void {
-    const propEle = parent.ele('property:Value').txt(length.Value.toString());
+    // FIXED: LengthProperty应该直接输出值，不需要额外的property:Value包装
+    parent.txt(length.Value.toString());
     
     if (length.Unit) {
-      propEle.att('unit', length.Unit);
+      parent.att('unit', length.Unit);
+    }
+  }
+  
+  /**
+   * 构建Arc元素
+   */
+  private buildArc(parent: XMLBuilder, arc: any): void {
+    const arcEle = parent.ele('foundation:Arc', {
+      id: arc.id,
+      'xsi:type': 'd2:EDMDArc'
+    });
+    
+    // StartPoint
+    if (arc.StartPoint) {
+      if (typeof arc.StartPoint === 'string') {
+        arcEle.ele('d2:StartPoint').att('href', `#${arc.StartPoint}`);
+      } else {
+        this.buildCartesianPoint(arcEle.ele('d2:StartPoint'), arc.StartPoint);
+      }
+    }
+    
+    // EndPoint
+    if (arc.EndPoint) {
+      if (typeof arc.EndPoint === 'string') {
+        arcEle.ele('d2:EndPoint').att('href', `#${arc.EndPoint}`);
+      } else {
+        this.buildCartesianPoint(arcEle.ele('d2:EndPoint'), arc.EndPoint);
+      }
+    }
+    
+    // IntermediatePoint
+    if (arc.IntermediatePoint) {
+      if (typeof arc.IntermediatePoint === 'string') {
+        arcEle.ele('d2:IntermediatePoint').att('href', `#${arc.IntermediatePoint}`);
+      } else {
+        this.buildCartesianPoint(arcEle.ele('d2:IntermediatePoint'), arc.IntermediatePoint);
+      }
+    }
+  }
+  
+  /**
+   * 构建BSplineCurve元素
+   */
+  private buildBSplineCurve(parent: XMLBuilder, bspline: any): void {
+    const bsplineEle = parent.ele('foundation:BSplineCurve', {
+      id: bspline.id,
+      'xsi:type': 'd2:EDMDBSplineCurve'
+    });
+    
+    // Degree
+    bsplineEle.ele('d2:Degree').txt(bspline.Degree.toString());
+    
+    // ClosedCurve（可选）
+    if (bspline.ClosedCurve !== undefined) {
+      bsplineEle.ele('d2:ClosedCurve').txt(bspline.ClosedCurve.toString());
+    }
+    
+    // SelfIntersect（可选）
+    if (bspline.SelfIntersect !== undefined) {
+      bsplineEle.ele('d2:SelfIntersect').txt(bspline.SelfIntersect.toString());
+    }
+    
+    // ControlPoints
+    if (bspline.ControlPoints && bspline.ControlPoints.length > 0) {
+      for (const point of bspline.ControlPoints) {
+        if (typeof point === 'string') {
+          bsplineEle.ele('d2:ControlPoint').att('href', `#${point}`);
+        } else {
+          this.buildCartesianPoint(bsplineEle.ele('d2:ControlPoint'), point);
+        }
+      }
+    }
+  }
+  
+  /**
+   * 构建CompositeCurve元素
+   */
+  private buildCompositeCurve(parent: XMLBuilder, composite: any): void {
+    const compositeEle = parent.ele('foundation:CompositeCurve', {
+      id: composite.id,
+      'xsi:type': 'd2:EDMDCompositeCurve'
+    });
+    
+    // Segments
+    if (composite.Segments && composite.Segments.length > 0) {
+      for (const segment of composite.Segments) {
+        const segmentEle = compositeEle.ele('d2:Segment');
+        
+        // Curve
+        if (typeof segment.Curve === 'string') {
+          segmentEle.ele('d2:Curve').att('href', `#${segment.Curve}`);
+        } else {
+          this.buildCurve(segmentEle.ele('d2:Curve'), segment.Curve);
+        }
+        
+        // SameSense
+        segmentEle.ele('d2:SameSense').txt(segment.SameSense.toString());
+      }
+    }
+  }
+  
+  /**
+   * 构建Ellipse元素
+   */
+  private buildEllipse(parent: XMLBuilder, ellipse: any): void {
+    const ellipseEle = parent.ele('foundation:Ellipse', {
+      id: ellipse.id,
+      'xsi:type': 'd2:EDMDEllipse'
+    });
+    
+    // CenterPoint
+    if (ellipse.CenterPoint) {
+      if (typeof ellipse.CenterPoint === 'string') {
+        ellipseEle.ele('d2:CenterPoint').att('href', `#${ellipse.CenterPoint}`);
+      } else {
+        this.buildCartesianPoint(ellipseEle.ele('d2:CenterPoint'), ellipse.CenterPoint);
+      }
+    }
+    
+    // SemiMajorAxis
+    this.buildLengthProperty(ellipseEle.ele('d2:SemiMajorAxis'), ellipse.SemiMajorAxis);
+    
+    // SemiMinorAxis
+    this.buildLengthProperty(ellipseEle.ele('d2:SemiMinorAxis'), ellipse.SemiMinorAxis);
+  }
+  
+  /**
+   * 构建3DModel元素
+   */
+  private build3DModel(parent: XMLBuilder, model: any): void {
+    const modelEle = parent.ele('foundation:3DModel', {
+      id: model.id,
+      'xsi:type': 'pdm:EDMD3DModel'
+    });
+    
+    // ModelIdentifier
+    modelEle.ele('pdm:ModelIdentifier').txt(model.ModelIdentifier);
+    
+    // MCADFormat
+    modelEle.ele('pdm:MCADFormat').txt(model.MCADFormat);
+    
+    // ModelVersion（可选）
+    if (model.ModelVersion) {
+      modelEle.ele('pdm:ModelVersion').txt(model.ModelVersion);
+    }
+    
+    // ModelLocation（可选）
+    if (model.ModelLocation) {
+      modelEle.ele('pdm:ModelLocation').txt(model.ModelLocation);
+    }
+    
+    // MCADFormatVersion（可选）
+    if (model.MCADFormatVersion) {
+      modelEle.ele('pdm:MCADFormatVersion').txt(model.MCADFormatVersion);
+    }
+    
+    // Transformation（可选）
+    if (model.Transformation) {
+      this.buildTransformation(modelEle, model.Transformation);
+    }
+  }
+  
+  /**
+   * 构建PackagePin元素
+   */
+  private buildPackagePin(parent: XMLBuilder, pin: any): void {
+    const pinEle = parent.ele('pdm:PackagePin', {
+      id: `PIN_${pin.pinNumber}`
+    });
+    
+    // pinNumber
+    pinEle.ele('pdm:pinNumber').txt(pin.pinNumber);
+    
+    // primary
+    pinEle.ele('pdm:primary').txt(pin.primary.toString());
+    
+    // Point
+    if (pin.Point) {
+      if (typeof pin.Point === 'string') {
+        pinEle.ele('pdm:Point').att('href', `#${pin.Point}`);
+      } else {
+        this.buildCartesianPoint(pinEle.ele('pdm:Point'), pin.Point);
+      }
+    }
+    
+    // Shape
+    if (pin.Shape) {
+      if (typeof pin.Shape === 'string') {
+        pinEle.ele('pdm:Shape').att('href', `#${pin.Shape}`);
+      } else {
+        this.buildShapeElement(pinEle.ele('pdm:Shape'), pin.Shape);
+      }
     }
   }
 }

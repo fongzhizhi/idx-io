@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDX导出器 - 浏览器示例</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .output {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .warning {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <h1>IDX导出器 - 浏览器示例</h1>
+    
+    <div class="container">
+        <h2>简单PCB板导出</h2>
+        <p>点击下面的按钮导出一个简单的矩形PCB板设计为IDX格式。</p>
+        
+        <button id="exportBtn" onclick="exportSimpleBoard()">导出IDX文件</button>
+        <button id="previewBtn" onclick="previewXML()">预览XML内容</button>
+        
+        <div id="output" class="output" style="display: none;"></div>
+        <div id="downloadArea" style="margin-top: 15px;"></div>
+    </div>
+
+    <div class="container">
+        <h2>使用说明</h2>
+        <ol>
+            <li>点击"导出IDX文件"按钮生成IDX文件并自动下载</li>
+            <li>点击"预览XML内容"按钮查看生成的XML内容</li>
+            <li>下载的.idx文件可以导入到支持IDX格式的MCAD软件中</li>
+        </ol>
+    </div>
+
+    <!-- 这里应该引入编译后的JavaScript文件 -->
+    <script>
+        // 注意：在实际使用中，您需要：
+        // 1. 使用webpack或其他打包工具编译TypeScript代码
+        // 2. 引入编译后的JavaScript文件
+        // 3. 确保所有依赖项都已正确打包
+        
+        // 模拟的导出器类（实际使用时应该从编译后的模块导入）
+        class MockIDXExporter {
+            constructor(config) {
+                this.config = config;
+            }
+            
+            async export(data) {
+                // 模拟导出过程
+                const xmlContent = this.generateMockXML(data);
+                const fileName = `${this.config.output.designName}_BASELINE_${new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19)}.idx`;
+                
+                return {
+                    success: true,
+                    xmlContent,
+                    fileName,
+                    files: [{
+                        type: 'BASELINE',
+                        name: fileName,
+                        path: '',
+                        timestamp: new Date().toISOString(),
+                        designName: this.config.output.designName,
+                        sequence: 1
+                    }],
+                    statistics: {
+                        totalItems: 1,
+                        components: 0,
+                        holes: 0,
+                        keepouts: 0,
+                        layers: 0,
+                        fileSize: xmlContent.length,
+                        exportDuration: 50
+                    },
+                    issues: []
+                };
+            }
+            
+            generateMockXML(data) {
+                return `<?xml version="1.0" encoding="UTF-8"?>
+<foundation:EDMDDataSet xmlns:foundation="http://www.prostep.org/EDMD/Foundation"
+                       xmlns:pdm="http://www.prostep.org/EDMD/PDM"
+                       xmlns:d2="http://www.prostep.org/EDMD/2D"
+                       xmlns:property="http://www.prostep.org/EDMD/Property"
+                       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <foundation:Header xsi:type="foundation:EDMDHeader">
+    <foundation:CreatorSystem>${this.config.collaboration.creatorSystem}</foundation:CreatorSystem>
+    <foundation:CreatorCompany>${this.config.collaboration.creatorCompany}</foundation:CreatorCompany>
+    <foundation:GlobalUnitLength>mm</foundation:GlobalUnitLength>
+    <foundation:CreationDateTime>${new Date().toISOString()}</foundation:CreationDateTime>
+    <foundation:ModifiedDateTime>${new Date().toISOString()}</foundation:ModifiedDateTime>
+  </foundation:Header>
+  <foundation:Body xsi:type="foundation:EDMDDataSetBody">
+    <foundation:Item id="${data.board.id}">
+      <foundation:Name>${data.board.name}</foundation:Name>
+      <pdm:ItemType>BOARD_OUTLINE</pdm:ItemType>
+      <pdm:Shape>
+        <foundation:ShapeElement id="SHAPE_${data.board.id}">
+          <pdm:ShapeElementType>BOARD_OUTLINE</pdm:ShapeElementType>
+          <pdm:DefiningShape>
+            <foundation:CurveSet2d id="CURVESET_${data.board.id}" xsi:type="d2:EDMDCurveSet2d">
+              <pdm:ShapeDescriptionType>BOARD_OUTLINE</pdm:ShapeDescriptionType>
+              <d2:LowerBound>0</d2:LowerBound>
+              <d2:UpperBound>${data.board.outline.thickness}</d2:UpperBound>
+              <d2:DetailedGeometricModelElement>
+                <foundation:PolyLine id="POLYLINE_${data.board.id}" xsi:type="d2:EDMDPolyLine">
+                  <d2:Closed>true</d2:Closed>
+                  ${data.board.outline.points.map((point, index) => 
+                    `<d2:Point>
+                       <foundation:CartesianPoint id="POINT_${data.board.id}_${index}" xsi:type="d2:EDMDCartesianPoint">
+                         <d2:X>${point.x}</d2:X>
+                         <d2:Y>${point.y}</d2:Y>
+                       </foundation:CartesianPoint>
+                     </d2:Point>`
+                  ).join('\n                  ')}
+                </foundation:PolyLine>
+              </d2:DetailedGeometricModelElement>
+            </foundation:CurveSet2d>
+          </pdm:DefiningShape>
+          <pdm:Inverted>false</pdm:Inverted>
+        </foundation:ShapeElement>
+      </pdm:Shape>
+    </foundation:Item>
+  </foundation:Body>
+  <foundation:ProcessInstruction id="INSTRUCTION_001" xsi:type="computational:EDMDProcessInstructionSendInformation"/>
+</foundation:EDMDDataSet>`;
+            }
+            
+            createDownloadBlob(xmlContent) {
+                return new Blob([xmlContent], { type: 'application/xml;charset=utf-8' });
+            }
+            
+            createDownloadUrl(xmlContent) {
+                const blob = this.createDownloadBlob(xmlContent);
+                return URL.createObjectURL(blob);
+            }
+        }
+
+        // 全局变量
+        let currentExporter = null;
+        let currentResult = null;
+
+        async function exportSimpleBoard() {
+            const btn = document.getElementById('exportBtn');
+            const output = document.getElementById('output');
+            const downloadArea = document.getElementById('downloadArea');
+            
+            btn.disabled = true;
+            btn.textContent = '导出中...';
+            output.style.display = 'block';
+            output.innerHTML = '正在生成IDX文件...';
+            
+            try {
+                // 创建导出器
+                currentExporter = new MockIDXExporter({
+                    output: {
+                        designName: 'SimpleBoard',
+                        compress: false,
+                        namingPattern: '{designName}_{type}.idx'
+                    },
+                    protocolVersion: '4.5',
+                    geometry: {
+                        useSimplified: true,
+                        defaultUnit: 'mm',
+                        precision: 6
+                    },
+                    collaboration: {
+                        creatorSystem: 'IDX-IO Browser Demo',
+                        creatorCompany: 'Demo Company',
+                        includeNonCollaborative: false,
+                        includeLayerStackup: false
+                    },
+                    validation: {
+                        enabled: false,
+                        strictness: 'normal'
+                    }
+                });
+
+                // 准备PCB数据
+                const boardData = {
+                    board: {
+                        id: 'BOARD_001',
+                        name: 'MainBoard',
+                        outline: {
+                            points: [
+                                { x: 0, y: 0 },
+                                { x: 100, y: 0 },
+                                { x: 100, y: 80 },
+                                { x: 0, y: 80 }
+                            ],
+                            thickness: 1.6,
+                            material: 'FR4',
+                            finish: 'HASL'
+                        }
+                    },
+                    components: [],
+                    holes: [],
+                    keepouts: []
+                };
+
+                // 执行导出
+                currentResult = await currentExporter.export(boardData);
+                
+                if (currentResult.success) {
+                    output.innerHTML = `<span class="success">✅ 导出成功！</span>
+📄 文件名: ${currentResult.fileName}
+📊 统计信息:
+   组件数量: ${currentResult.statistics.components}
+   孔数量: ${currentResult.statistics.holes}
+   文件大小: ${currentResult.statistics.fileSize} 字节
+   导出耗时: ${currentResult.statistics.exportDuration}ms`;
+
+                    // 创建下载链接
+                    const downloadUrl = currentExporter.createDownloadUrl(currentResult.xmlContent);
+                    downloadArea.innerHTML = `
+                        <a href="${downloadUrl}" download="${currentResult.fileName}" 
+                           style="display: inline-block; background: #28a745; color: white; 
+                                  padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                            📥 下载 ${currentResult.fileName}
+                        </a>
+                        <p style="margin-top: 10px; font-size: 14px; color: #666;">
+                            文件已准备就绪，点击上方链接下载到本地。
+                        </p>
+                    `;
+                    
+                    // 自动触发下载（可选）
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = currentResult.fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                } else {
+                    output.innerHTML = `<span class="error">❌ 导出失败:</span>\n${currentResult.issues.map(issue => `${issue.type}: ${issue.message}`).join('\n')}`;
+                    downloadArea.innerHTML = '';
+                }
+                
+            } catch (error) {
+                output.innerHTML = `<span class="error">💥 导出过程中发生错误:</span>\n${error.message}`;
+                downloadArea.innerHTML = '';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '导出IDX文件';
+            }
+        }
+
+        function previewXML() {
+            const output = document.getElementById('output');
+            
+            if (!currentResult || !currentResult.success) {
+                output.style.display = 'block';
+                output.innerHTML = '<span class="warning">⚠️ 请先执行导出操作</span>';
+                return;
+            }
+            
+            output.style.display = 'block';
+            output.innerHTML = `<span class="success">📝 XML内容预览:</span>\n\n${currentResult.xmlContent}`;
+        }
+    </script>
+</body>
+</html>

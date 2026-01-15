@@ -10,10 +10,10 @@ IDX（ECAD/MCAD Collaboration）是由prostep ivip国际协会制定的、基于
 ### 1.2 技术栈
 - TypeScript 5.0+
 - xmlbuilder2（XML构建）
-- fast-xml-parser（XML解析，预留给未来导入功能）
-- jszip（ZIP压缩，支持.idz格式）
-- ajv（JSON Schema验证）
+- 浏览器环境支持（Blob API用于文件下载）
 - jest（测试框架）
+
+**注意**: 本项目专为浏览器环境设计，不包含Node.js文件系统操作。
 
 ### 1.3 参考文档
 - `resources/idx/IDXv4.5建模与输出简明指南.md`
@@ -104,25 +104,26 @@ IDX（ECAD/MCAD Collaboration）是由prostep ivip国际协会制定的、基于
 - 支持复合曲线（CompositeCurve）序列化
 - 正确设置CurveSet2D的Z轴范围（LowerBound/UpperBound）
 
-### 2.3 文件输出功能
+### 2.3 浏览器文件输出功能
 
-#### 2.3.1 文件写入
-**用户故事**: 作为用户，我需要将导出的数据保存为.idx文件。
+#### 2.3.1 XML内容生成
+**用户故事**: 作为浏览器用户，我需要将导出的数据生成为XML字符串，并提供下载功能。
 
 **验收标准**:
-- 支持指定输出目录
-- 支持自定义文件命名模式
+- 生成符合IDX规范的XML字符串
 - 支持UTF-8编码
-- 文件写入失败时提供清晰的错误信息
+- 提供建议的文件名
+- 生成失败时提供清晰的错误信息
 
-#### 2.3.2 压缩功能
-**用户故事**: 作为用户，我需要将导出的文件压缩为.idz格式以减小文件大小。
+#### 2.3.2 浏览器下载功能
+**用户故事**: 作为浏览器用户，我需要将生成的IDX文件下载到本地。
 
 **验收标准**:
-- 支持ZIP压缩
-- 压缩后的文件扩展名为.idz
-- 支持配置是否启用压缩
-- 压缩不影响XML内容的正确性
+- 使用Blob API创建下载对象
+- 支持创建下载URL
+- 支持自动触发下载
+- 正确设置MIME类型为application/xml
+- 下载的文件可被MCAD软件正确读取
 
 ### 2.4 数据验证功能
 
@@ -151,7 +152,7 @@ IDX（ECAD/MCAD Collaboration）是由prostep ivip国际协会制定的、基于
 **用户故事**: 作为用户，我需要配置导出行为以满足不同的使用场景。
 
 **验收标准**:
-- 支持配置输出目录和文件命名模式
+- 支持配置设计名称和文件命名模式
 - 支持配置协议版本（默认4.5）
 - 支持配置几何表示方式（简化/传统）
 - 支持配置默认单位（mm/inch）
@@ -159,6 +160,7 @@ IDX（ECAD/MCAD Collaboration）是由prostep ivip国际协会制定的、基于
 - 支持配置创建者信息（系统名称、公司名称）
 - 支持配置是否包含非协作数据
 - 支持配置是否包含层叠信息
+- 支持配置验证选项（启用/禁用、严格程度）
 
 ### 2.6 错误处理和日志
 
@@ -203,6 +205,8 @@ IDX（ECAD/MCAD Collaboration）是由prostep ivip国际协会制定的、基于
 - 生成的IDX文件符合IDX v4.5规范
 - 支持IDX v4.0的简化表示法（geometryType）
 - 生成的文件可被主流MCAD软件读取（SolidWorks, NX, Creo等）
+- 支持现代浏览器（Chrome 80+, Firefox 75+, Safari 13+, Edge 80+）
+- 支持Blob API和URL.createObjectURL API
 
 ## 4. 约束条件
 
@@ -210,6 +214,8 @@ IDX（ECAD/MCAD Collaboration）是由prostep ivip国际协会制定的、基于
 - 必须使用TypeScript 5.0+
 - 必须使用xmlbuilder2进行XML构建
 - 必须遵循IDX v4.5规范
+- 必须在浏览器环境中运行，不依赖Node.js文件系统API
+- 必须使用浏览器原生API（Blob, URL.createObjectURL）进行文件下载
 
 ### 4.2 业务约束
 - 当前版本仅实现导出功能，不包含导入

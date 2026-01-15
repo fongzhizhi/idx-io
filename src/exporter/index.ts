@@ -4,7 +4,6 @@ import { IDXExportConfig, ExportResult, GlobalUnit, EDMDDataSet, EDMDHeader, IDX
 import { BoardBuilder, BoardData } from './builders/board-builder';
 import { BuilderConfig, BuilderContext } from './builders/base-builder';
 import { XMLWriter } from './writers/xml-writer';
-import { FileWriter } from './writers/file-writer';
 
 /**
  * 导出源数据接口
@@ -57,68 +56,71 @@ class ExportContextImpl implements BuilderContext {
 }
 
 /**
- * IDX导出器主类
+ * 浏览器导出结果接口
+ */
+export interface BrowserExportResult extends ExportResult {
+  /** XML内容字符串 */
+  xmlContent: string;
+  /** 建议的文件名 */
+  fileName: string;
+}
+
+/**
+ * IDX导出器主类 - 浏览器版本
  */
 export class IDXExporter {
   private config: IDXExportConfig;
   private xmlWriter: XMLWriter;
-  private fileWriter: FileWriter;
   
   constructor(config: Partial<IDXExportConfig> = {}) {
     this.config = this.mergeConfig(config);
     
-    // 初始化写入器
+    // 初始化XML写入器
     this.xmlWriter = new XMLWriter({
       prettyPrint: true,
       encoding: 'UTF-8'
     });
-    
-    this.fileWriter = new FileWriter({
-      outputDirectory: this.config.output.directory,
-      designName: this.config.output.designName,
-      namingPattern: this.config.output.namingPattern,
-      overwrite: true
-    });
   }
   
   /**
-   * 主要导出方法
+   * 主要导出方法 - 返回XML内容而不是写入文件
    */
-  async export(data: ExportSourceData): Promise<ExportResult> {
+  async export(data: ExportSourceData): Promise<BrowserExportResult> {
     const context = new ExportContextImpl();
     const startTime = Date.now();
     
     try {
-      // 1. 验证输出目录
-      const canWrite = await this.fileWriter.checkOutputDirectory();
-      if (!canWrite) {
-        throw new Error(`无法写入输出目录: ${this.config.output.directory}`);
-      }
-      
-      // 2. 构建数据集
+      // 1. 构建数据集
       const dataset = await this.buildDataset(data, context);
       
-      // 3. 序列化为XML
+      // 2. 序列化为XML
       const xmlContent = this.xmlWriter.serialize(dataset);
       
-      // 4. 写入文件
-      const writeResult = await this.fileWriter.writeFile(
-        xmlContent, 
-        IDXFileType.BASELINE
-      );
+      // 3. 生成文件名
+      const fileName = this.generateFileName(IDXFileType.BASELINE);
       
       const exportDuration = Date.now() - startTime;
+      const xmlSize = new Blob([xmlContent]).size;
       
       return {
         success: true,
-        files: [writeResult.metadata],
+        xmlContent,
+        fileName,
+        files: [{
+          type: IDXFileType.BASELINE,
+          name: fileName,
+          path: '', // 浏览器环境下无实际路径
+          timestamp: new Date().toISOString(),
+          designName: this.config.output.designName,
+          sequence: 1
+        }],
         statistics: {
           totalItems: dataset.Body.Items.length,
           components: data.components?.length || 0,
           holes: data.holes?.length || 0,
           keepouts: data.keepouts?.length || 0,
           layers: 0,
-          fileSize: writeResult.fileSize,
+          fileSize: xmlSize,
           exportDuration
         },
         issues: [
@@ -131,6 +133,8 @@ export class IDXExporter {
       
       return {
         success: false,
+        xmlContent: '',
+        fileName: '',
         files: [],
         statistics: {
           totalItems: 0,
@@ -148,6 +152,35 @@ export class IDXExporter {
         }]
       };
     }
+  }
+  
+  /**
+   * 生成下载用的Blob对象
+   */
+  createDownloadBlob(xmlContent: string): Blob {
+    return new Blob([xmlContent], { 
+      type: 'application/xml;charset=utf-8' 
+    });
+  }
+  
+  /**
+   * 生成下载链接
+   */
+  createDownloadUrl(xmlContent: string): string {
+    const blob = this.createDownloadBlob(xmlContent);
+    return URL.createObjectURL(blob);
+  }
+  
+  /**
+   * 生成文件名
+   */
+  private generateFileName(fileType: IDXFileType): string {
+    const timestamp = new Date().toISOString()
+      .replace(/[:.]/g, '-')
+      .replace('T', '_')
+      .substring(0, 19);
+    
+    return `${this.config.output.designName}_${fileType}_${timestamp}.idx`;
   }
   
   private async buildDataset(data: ExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
@@ -205,6 +238,10 @@ export class IDXExporter {
         creatorCompany: config.collaboration?.creatorCompany || '',
         includeNonCollaborative: config.collaboration?.includeNonCollaborative || false,
         includeLayerStackup: config.collaboration?.includeLayerStackup || false
+      },
+      validation: {
+        enabled: config.validation?.enabled || false,
+        strictness: config.validation?.strictness || 'normal'
       }
     };
   }
@@ -213,3 +250,4 @@ export class IDXExporter {
 // 导出类型和接口
 export { GlobalUnit } from '../types/core';
 export type { IDXExportConfig, ExportResult } from '../types/core';
+export type { BrowserExportResult };
