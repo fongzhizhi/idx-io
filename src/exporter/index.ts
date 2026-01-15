@@ -1,8 +1,10 @@
 // ============= IDX导出器主入口 =============
 
-import { IDXExportConfig, ExportResult, GlobalUnit, EDMDDataSet, EDMDHeader } from '../types/core';
+import { IDXExportConfig, ExportResult, GlobalUnit, EDMDDataSet, EDMDHeader, IDXFileType } from '../types/core';
 import { BoardBuilder, BoardData } from './builders/board-builder';
 import { BuilderConfig, BuilderContext } from './builders/base-builder';
+import { XMLWriter } from './writers/xml-writer';
+import { FileWriter } from './writers/file-writer';
 
 /**
  * 导出源数据接口
@@ -59,9 +61,24 @@ class ExportContextImpl implements BuilderContext {
  */
 export class IDXExporter {
   private config: IDXExportConfig;
+  private xmlWriter: XMLWriter;
+  private fileWriter: FileWriter;
   
   constructor(config: Partial<IDXExportConfig> = {}) {
     this.config = this.mergeConfig(config);
+    
+    // 初始化写入器
+    this.xmlWriter = new XMLWriter({
+      prettyPrint: true,
+      encoding: 'UTF-8'
+    });
+    
+    this.fileWriter = new FileWriter({
+      outputDirectory: this.config.output.directory,
+      designName: this.config.output.designName,
+      namingPattern: this.config.output.namingPattern,
+      overwrite: true
+    });
   }
   
   /**
@@ -72,29 +89,36 @@ export class IDXExporter {
     const startTime = Date.now();
     
     try {
-      // 构建数据集
+      // 1. 验证输出目录
+      const canWrite = await this.fileWriter.checkOutputDirectory();
+      if (!canWrite) {
+        throw new Error(`无法写入输出目录: ${this.config.output.directory}`);
+      }
+      
+      // 2. 构建数据集
       const dataset = await this.buildDataset(data, context);
       
-      // 这里应该调用XML写入器，暂时返回模拟结果
+      // 3. 序列化为XML
+      const xmlContent = this.xmlWriter.serialize(dataset);
+      
+      // 4. 写入文件
+      const writeResult = await this.fileWriter.writeFile(
+        xmlContent, 
+        IDXFileType.BASELINE
+      );
+      
       const exportDuration = Date.now() - startTime;
       
       return {
         success: true,
-        files: [{
-          type: 'baseline' as any,
-          name: this.config.output.designName,
-          path: `${this.config.output.directory}/${this.config.output.designName}.idx`,
-          timestamp: new Date().toISOString(),
-          designName: this.config.output.designName,
-          sequence: 1
-        }],
+        files: [writeResult.metadata],
         statistics: {
-          totalItems: 1,
+          totalItems: dataset.Body.Items.length,
           components: data.components?.length || 0,
           holes: data.holes?.length || 0,
           keepouts: data.keepouts?.length || 0,
           layers: 0,
-          fileSize: 0,
+          fileSize: writeResult.fileSize,
           exportDuration
         },
         issues: [
@@ -103,6 +127,8 @@ export class IDXExporter {
         ]
       };
     } catch (error: any) {
+      const exportDuration = Date.now() - startTime;
+      
       return {
         success: false,
         files: [],
@@ -113,7 +139,7 @@ export class IDXExporter {
           keepouts: 0,
           layers: 0,
           fileSize: 0,
-          exportDuration: Date.now() - startTime
+          exportDuration
         },
         issues: [{
           type: 'error',

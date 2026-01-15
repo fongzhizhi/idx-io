@@ -1,5 +1,90 @@
 # IDX导出器 - 任务列表
 
+## 0. 基础设施（已完成）
+
+### 0.1 核心类型系统 ✅
+- [x] 0.1.1 实现基础类型（common.ts）
+  - [x] EDMDObject基接口
+  - [x] CartesianPoint和CartesianPoint3D
+  - [x] EDMDIdentifier和EDMName
+  - [x] EDMDTransformation2D和3D
+  - [x] EDMDHeader和GlobalUnit
+  - [x] EDMDUserSimpleProperty
+- [x] 0.1.2 实现枚举类型（enums.ts）
+  - [x] ItemType和GeometryType
+  - [x] LayerPurpose和StratumType
+  - [x] KeepConstraintPurpose
+  - [x] ShapeElementType和FunctionalItemShapeType
+- [x] 0.1.3 实现几何类型（geometry.ts）
+  - [x] 所有曲线类型（Arc, BSpline, Circle, Ellipse, PolyLine等）
+  - [x] EDMDCurveSet2D
+  - [x] EDMDShapeElement
+  - [x] EDMDExtShape
+- [x] 0.1.4 实现项目类型（items.ts）
+  - [x] EDMDItem
+  - [x] EDMDItemInstance
+  - [x] PackagePin
+  - [x] EDMD3DModel
+  - [x] EDMDDataSetBody
+- [x] 0.1.5 实现消息类型（messages.ts）
+  - [x] EDMDDataSet
+  - [x] EDMDProcessInstruction
+  - [x] SendInformationMessage和SendChangesMessage
+  - [x] IDXExportConfig和ExportResult
+
+### 0.2 基础构建器框架 ✅
+- [x] 0.2.1 实现BaseBuilder抽象类
+  - [x] 构建器配置接口（BuilderConfig）
+  - [x] 构建器上下文接口（BuilderContext）
+  - [x] 验证结果接口（ValidationResult）
+  - [x] 模板方法模式（build流程）
+  - [x] 通用工具方法（generateItemId, createBaseItem等）
+- [x] 0.2.2 实现GeometryUtils工具类
+  - [x] roundValue方法
+  - [x] createBoundingBoxCurveSet方法
+  - [x] createCircleCurveSet方法
+- [x] 0.2.3 实现自定义错误类型
+  - [x] ValidationError
+  - [x] BuildError
+
+### 0.3 板构建器 ✅
+- [x] 0.3.1 实现BoardBuilder类
+  - [x] BoardData接口定义
+  - [x] 输入验证逻辑
+  - [x] 预处理逻辑（点坐标转换）
+  - [x] 构建逻辑（创建EDMDItem）
+  - [x] 后处理逻辑（添加时间戳属性）
+  - [x] 加强筋区域支持
+- [x] 0.3.2 实现板形状生成
+  - [x] 板轮廓PolyLine生成
+  - [x] CurveSet2D生成
+  - [x] ShapeElement生成
+- [x] 0.3.3 实现板属性生成
+  - [x] 厚度属性
+  - [x] 点数量属性
+  - [x] 构建时间戳
+
+### 0.4 主导出器框架 ✅
+- [x] 0.4.1 实现IDXExporter类
+  - [x] 配置管理（mergeConfig）
+  - [x] 导出方法（export）
+  - [x] 数据集构建（buildDataset）
+- [x] 0.4.2 实现ExportContextImpl
+  - [x] 序列号管理
+  - [x] 警告和错误收集
+  - [x] ID生成
+- [x] 0.4.3 实现主入口导出
+  - [x] src/index.ts导出配置
+  - [x] src/exporter/index.ts导出配置
+
+### 0.5 基础示例 ✅
+- [x] 0.5.1 实现基础导出示例
+  - [x] examples/export-basic.ts
+  - [x] 简单PCB板导出示例
+  - [x] 配置示例
+  - [x] 错误处理示例
+  - [x] 结果输出示例
+
 ## 1. 核心构建器实现
 
 ### 1.1 组件构建器

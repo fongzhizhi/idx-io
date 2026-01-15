@@ -150,14 +150,17 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   }
   
   protected async construct(processedData: ProcessedBoardData): Promise<EDMDItem> {
+    const baseItem = this.createBaseItem(
+      ItemType.ASSEMBLY,
+      GeometryType.BOARD_OUTLINE,
+      processedData.name,
+      `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`
+    );
+    
     const boardItem: EDMDItem = {
       id: this.generateItemId('BOARD', processedData.id),
-      ...this.createBaseItem(
-        ItemType.ASSEMBLY,
-        GeometryType.BOARD_OUTLINE,
-        processedData.name,
-        `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`
-      ),
+      ...baseItem,
+      ItemType: ItemType.ASSEMBLY,  // 确保ItemType被明确设置
       Identifier: this.createIdentifier('BOARD', processedData.id)
     };
     
