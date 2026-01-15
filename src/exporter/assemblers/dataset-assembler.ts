@@ -24,7 +24,101 @@ export interface LayerSystemAssembly {
 }
 
 /**
- * 板数据接口（简化版本）
+ * 组件数据接口
+ */
+export interface ComponentData {
+  refDes: string;
+  partNumber: string;
+  packageName: string;
+  position: {
+    x: number;
+    y: number;
+    z?: number;
+    rotation: number;
+  };
+  dimensions: {
+    width: number;
+    height: number;
+    thickness: number;
+  };
+  layer: string;
+  isMechanical?: boolean;
+  electrical?: any;
+  thermal?: any;
+  model3D?: any;
+  pins?: any[];
+  properties?: Record<string, any>;
+}
+
+/**
+ * 孔数据接口
+ */
+export interface HoleData {
+  id: string;
+  name?: string;
+  position: { x: number; y: number };
+  diameter: number;
+  viaType: 'plated' | 'non-plated' | 'filled' | 'micro';
+  startLayer: string;
+  endLayer: string;
+  padDiameter?: number;
+  antiPadDiameter?: number;
+  netName?: string;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 禁止区数据接口
+ */
+export interface KeepoutData {
+  id: string;
+  name?: string;
+  constraintType: 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other';
+  purpose: any;
+  shape: {
+    type: 'rectangle' | 'circle' | 'polygon';
+    points: Array<{ x: number; y: number }>;
+    radius?: number;
+  };
+  height?: {
+    min: number;
+    max: number | 'infinity';
+  };
+  layer: string;
+  enabled?: boolean;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 层数据接口
+ */
+export interface LayerData {
+  id: string;
+  name: string;
+  type: 'SIGNAL' | 'PLANE' | 'SOLDERMASK' | 'SILKSCREEN' | 'DIELECTRIC' | 'OTHERSIGNAL';
+  thickness: number;
+  material?: string;
+  copperWeight?: number;
+  dielectricConstant?: number;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 层叠结构数据接口
+ */
+export interface LayerStackupData {
+  id: string;
+  name: string;
+  totalThickness?: number;
+  layers: Array<{
+    layerId: string;
+    position: number;
+    thickness: number;
+  }>;
+}
+
+/**
+ * 板数据接口（完善版本）
  */
 export interface BoardData {
   id: string;
@@ -33,63 +127,13 @@ export interface BoardData {
     points: Array<{ x: number; y: number }>;
     thickness: number;
   };
-  layers?: any[];
-  components?: Array<{
-    refDes: string;
-    partNumber: string;
-    packageName: string;
-    position: {
-      x: number;
-      y: number;
-      z?: number;
-      rotation: number;
-    };
-    dimensions: {
-      width: number;
-      height: number;
-      thickness: number;
-    };
-    layer: string;
-    isMechanical?: boolean;
-    electrical?: any;
-    thermal?: any;
-    model3D?: any;
-    pins?: any[];
-    properties?: Record<string, any>;
-  }>;
-  holes?: Array<{
-    id: string;
-    name?: string;
-    position: { x: number; y: number };
-    diameter: number;
-    viaType: 'plated' | 'non-plated' | 'filled' | 'micro';
-    startLayer: string;
-    endLayer: string;
-    padDiameter?: number;
-    antiPadDiameter?: number;
-    netName?: string;
-    properties?: Record<string, any>;
-  }>;
-  keepouts?: Array<{
-    id: string;
-    name?: string;
-    constraintType: 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other';
-    purpose: any;
-    shape: {
-      type: 'rectangle' | 'circle' | 'polygon';
-      points: Array<{ x: number; y: number }>;
-      radius?: number;
-    };
-    height?: {
-      min: number;
-      max: number | 'infinity';
-    };
-    layer: string;
-    enabled?: boolean;
-    properties?: Record<string, any>;
-  }>;
-  layerStackup?: any;
+  layers?: LayerData[];
+  layerStackup?: LayerStackupData;
+  components?: ComponentData[];
+  holes?: HoleData[];
+  keepouts?: KeepoutData[];
   layerZones?: any[];
+  properties?: Record<string, any>;
 }
 
 // src/exporter/assemblers/dataset-assembler.ts
@@ -259,23 +303,53 @@ export class DatasetAssembler {
       shapes: []
     };
 
-    // 构建物理层
-    if (boardData.layers) {
-      for (const layer of boardData.layers) {
-        const layerBuilder = this.builders.get('layer');
-        if (layerBuilder) {
-          const layerItem = await layerBuilder.build(layer);
-          result.items.push(layerItem);
+    // 如果同时有层数据和层叠结构，使用buildWithStackup方法
+    if (boardData.layers && boardData.layerStackup && this.config.includeLayerStackup) {
+      const layerBuilder = this.builders.get('layer');
+      if (layerBuilder && typeof layerBuilder.buildWithStackup === 'function') {
+        try {
+          const layerItems = await layerBuilder.buildWithStackup({
+            layers: boardData.layers,
+            layerStackup: boardData.layerStackup
+          });
+          result.items.push(...layerItems);
+        } catch (error) {
+          console.warn('构建层叠结构时出错:', error);
+          // 降级处理：只构建层数据
+          await this.buildLayersOnly(boardData, result);
         }
+      } else {
+        // 如果不支持buildWithStackup，降级处理
+        await this.buildLayersOnly(boardData, result);
       }
+    } else {
+      // 只有层数据，没有层叠结构
+      await this.buildLayersOnly(boardData, result);
     }
 
-    // 构建层堆叠
-    if (boardData.layerStackup) {
-      const stackupBuilder = this.builders.get('stackup');
-      if (stackupBuilder) {
-        const stackupItem = await stackupBuilder.build(boardData.layerStackup);
-        result.items.push(stackupItem);
+    return result;
+  }
+  
+  /**
+   * 只构建层数据（不包含层叠结构）
+   */
+  private async buildLayersOnly(boardData: BoardData, result: LayerSystemAssembly): Promise<void> {
+    // 构建物理层
+    if (boardData.layers) {
+      const layerBuilder = this.builders.get('layer');
+      if (layerBuilder) {
+        for (const layer of boardData.layers) {
+          try {
+            const layerItem = await layerBuilder.build([layer]);
+            if (Array.isArray(layerItem)) {
+              result.items.push(...layerItem);
+            } else {
+              result.items.push(layerItem);
+            }
+          } catch (error) {
+            console.warn(`构建层 ${layer.id} 时出错:`, error);
+          }
+        }
       }
     }
 
@@ -284,13 +358,15 @@ export class DatasetAssembler {
       for (const zone of boardData.layerZones) {
         const zoneBuilder = this.builders.get('layer-zone');
         if (zoneBuilder) {
-          const zoneItem = await zoneBuilder.build(zone);
-          result.items.push(zoneItem);
+          try {
+            const zoneItem = await zoneBuilder.build(zone);
+            result.items.push(zoneItem);
+          } catch (error) {
+            console.warn(`构建层区域时出错:`, error);
+          }
         }
       }
     }
-
-    return result;
   }
 
   /**

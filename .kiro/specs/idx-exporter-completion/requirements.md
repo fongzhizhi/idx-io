@@ -2,113 +2,97 @@
 
 ## Introduction
 
-The IDX exporter has achieved 96.2% validation passing (25/26 checks) with comprehensive independent geometry element implementation. This specification addresses the remaining core functionality gaps to achieve 100% completion, focusing on the Single ItemType issue, example file corrections, and any missing core features identified through analysis.
+IDX导出器已经完成了大部分核心功能，当前验证通过率达到96.2%（25/26）。本规范专注于完善剩余的核心功能，包括修复示例文件的类型错误、实现完整的层支持功能、优化XML结构以达到100%验证通过率、完善数据接口和类型定义，以及增强错误处理和验证机制。
 
 ## Glossary
 
-- **IDX_Exporter**: The system that converts PCB design data to IDXv4.5 format
-- **ItemType**: The classification of items as either "assembly" (collections) or "single" (individual definitions)
-- **Geometry_Element**: Independent geometric definitions (points, lines, curves) that can be referenced by multiple items
-- **Component_Definition**: Reusable component templates that should use "single" ItemType
-- **Assembly_Instance**: Specific placements of components that should use "assembly" ItemType
-- **Validation_Test**: Automated checks that verify XML structure compliance with IDXv4.5 specification
-- **Example_File**: Demonstration code showing proper usage of the exporter API
+- **IDX_Exporter**: IDX格式文件导出器系统
+- **ExportSourceData**: 导出源数据接口，定义输入数据的结构
+- **BoardData**: 板数据接口，包含PCB板的基本信息
+- **LayerBuilder**: 层构建器，负责处理PCB层数据
+- **XMLWriter**: XML写入器，负责序列化数据为XML格式
+- **ValidationEngine**: 验证引擎，负责数据验证和错误检查
+- **TypeDefinition**: 类型定义，包含所有数据接口和类型声明
 
 ## Requirements
 
-### Requirement 1: Single ItemType Implementation
+### Requirement 1: 修复示例文件类型错误
 
-**User Story:** As a PCB designer, I want component definitions to use the correct "single" ItemType, so that the exported IDX files comply with IDXv4.5 specification standards.
-
-#### Acceptance Criteria
-
-1. WHEN the system exports component definitions, THE IDX_Exporter SHALL generate items with ItemType "single"
-2. WHEN the system exports component instances (placements), THE IDX_Exporter SHALL generate items with ItemType "assembly"
-3. WHEN the system exports board geometry definitions, THE IDX_Exporter SHALL generate items with ItemType "single"
-4. WHEN the system exports via/hole definitions, THE IDX_Exporter SHALL generate items with ItemType "single"
-5. WHEN the system exports keepout definitions, THE IDX_Exporter SHALL generate items with ItemType "single"
-6. WHEN validation tests run, THE Validation_Test SHALL pass the "Single ItemType" check
-
-### Requirement 2: Example File Corrections
-
-**User Story:** As a developer integrating the IDX exporter, I want working example files, so that I can understand proper API usage without TypeScript errors.
+**User Story:** 作为开发者，我希望示例文件能够正确编译和运行，以便我能够快速了解如何使用IDX导出器。
 
 #### Acceptance Criteria
 
-1. WHEN developers examine export-basic.ts, THE Example_File SHALL compile without TypeScript errors
-2. WHEN the ExportSourceData interface is used, THE IDX_Exporter SHALL accept components, holes, and keepouts properties
-3. WHEN export-with-layers.ts is executed, THE Example_File SHALL demonstrate layer functionality without runtime errors
-4. WHEN example files are run, THE IDX_Exporter SHALL generate valid IDX output
-5. WHEN developers follow example patterns, THE IDX_Exporter SHALL provide clear error messages for invalid data
+1. WHEN ExportSourceData接口被使用时，THE IDX_Exporter SHALL 支持components、holes、keepouts等可选属性
+2. WHEN 示例文件被编译时，THE TypeDefinition SHALL 不产生任何类型错误
+3. WHEN export-basic.ts示例运行时，THE IDX_Exporter SHALL 成功导出基础板数据
+4. WHEN export-with-layers.ts示例运行时，THE IDX_Exporter SHALL 成功处理多层板数据
 
-### Requirement 3: Data Interface Completeness
+### Requirement 2: 实现完整的层支持功能
 
-**User Story:** As a developer, I want complete data interfaces that match the example usage, so that I can export all supported PCB elements.
-
-#### Acceptance Criteria
-
-1. WHEN ExportSourceData is defined, THE IDX_Exporter SHALL include components, holes, and keepouts as optional properties
-2. WHEN BoardData interface is used, THE IDX_Exporter SHALL support all properties referenced in example files
-3. WHEN component data is provided, THE IDX_Exporter SHALL accept all component properties shown in examples
-4. WHEN layer data is provided, THE IDX_Exporter SHALL process layer stackup information correctly
-5. WHEN invalid data structures are provided, THE IDX_Exporter SHALL return descriptive error messages
-
-### Requirement 4: Layer Stackup Functionality
-
-**User Story:** As a PCB designer, I want to export multi-layer board designs with proper layer stackup, so that mechanical CAD systems can understand the board structure.
+**User Story:** 作为PCB设计师，我希望能够导出多层板设计，包括层叠结构信息，以便与其他工具进行协作。
 
 #### Acceptance Criteria
 
-1. WHEN layer stackup data is provided, THE IDX_Exporter SHALL generate layer items with correct Z-coordinates
-2. WHEN includeLayerStackup is enabled, THE IDX_Exporter SHALL export physical layer definitions
-3. WHEN layer thickness is specified, THE IDX_Exporter SHALL calculate cumulative Z-positions correctly
-4. WHEN layer materials are defined, THE IDX_Exporter SHALL include material properties in the output
-5. WHEN layer stackup is exported, THE IDX_Exporter SHALL maintain layer ordering from bottom to top
+1. WHEN LayerBuilder被调用时，THE IDX_Exporter SHALL 创建符合IDX规范的层定义
+2. WHEN 多层板数据被处理时，THE IDX_Exporter SHALL 正确处理层叠结构（layer stackup）
+3. WHEN 层数据包含厚度信息时，THE IDX_Exporter SHALL 在XML中正确表示层厚度
+4. WHEN 层数据包含材料信息时，THE IDX_Exporter SHALL 在XML中包含材料属性
+5. WHEN includeLayerStackup配置为true时，THE IDX_Exporter SHALL 在输出中包含完整的层叠信息
 
-### Requirement 5: Validation Completeness
+### Requirement 3: 优化XML结构以达到100%验证通过率
 
-**User Story:** As a quality assurance engineer, I want 100% validation passing, so that exported IDX files meet all specification requirements.
-
-#### Acceptance Criteria
-
-1. WHEN validation tests execute, THE Validation_Test SHALL achieve 100% pass rate (26/26 checks)
-2. WHEN XML structure is validated, THE IDX_Exporter SHALL generate compliant IDXv4.5 format
-3. WHEN geometry elements are validated, THE IDX_Exporter SHALL include all required geometric definitions
-4. WHEN item relationships are validated, THE IDX_Exporter SHALL maintain proper reference integrity
-5. WHEN namespace validation occurs, THE IDX_Exporter SHALL use correct XML namespaces and prefixes
-
-### Requirement 6: Component Definition vs Instance Separation
-
-**User Story:** As a PCB designer, I want clear separation between component definitions and component instances, so that the IDX file structure follows industry standards.
+**User Story:** 作为质量保证工程师，我希望导出的IDX文件能够100%通过验证，以确保与其他工具的完全兼容性。
 
 #### Acceptance Criteria
 
-1. WHEN component templates are defined, THE IDX_Exporter SHALL create definition items with ItemType "single"
-2. WHEN component instances are placed, THE IDX_Exporter SHALL create assembly items that reference definitions
-3. WHEN multiple instances use the same component, THE IDX_Exporter SHALL reuse the single definition
-4. WHEN component properties are exported, THE IDX_Exporter SHALL separate definition properties from instance properties
-5. WHEN geometry is defined, THE IDX_Exporter SHALL allow definition geometry to be referenced by multiple instances
+1. WHEN 组件被导出时，THE XMLWriter SHALL 使用正确的ItemType值（single而不是assembly）
+2. WHEN XML结构被生成时，THE ValidationEngine SHALL 验证所有必需的属性都存在
+3. WHEN IDX文件被验证时，THE IDX_Exporter SHALL 通过所有26项验证检查
+4. WHEN XML被序列化时，THE XMLWriter SHALL 确保所有元素符合IDX 4.5规范
 
-### Requirement 7: Error Handling and Diagnostics
+### Requirement 4: 完善数据接口和类型定义
 
-**User Story:** As a developer, I want clear error messages and diagnostics, so that I can quickly identify and fix data issues.
-
-#### Acceptance Criteria
-
-1. WHEN invalid data is provided, THE IDX_Exporter SHALL return specific error messages indicating the problem
-2. WHEN required properties are missing, THE IDX_Exporter SHALL identify which properties are needed
-3. WHEN data validation fails, THE IDX_Exporter SHALL provide context about the failing item
-4. WHEN export warnings occur, THE IDX_Exporter SHALL collect and report all issues without stopping export
-5. WHEN debugging is needed, THE IDX_Exporter SHALL provide detailed logging of the export process
-
-### Requirement 8: API Consistency and Documentation
-
-**User Story:** As a developer, I want consistent API interfaces and clear documentation, so that I can integrate the exporter efficiently.
+**User Story:** 作为API用户，我希望有清晰完整的数据接口定义，以便我能够正确构造输入数据。
 
 #### Acceptance Criteria
 
-1. WHEN interfaces are defined, THE IDX_Exporter SHALL maintain consistent naming conventions across all types
-2. WHEN optional properties are used, THE IDX_Exporter SHALL handle undefined values gracefully
-3. WHEN default values are needed, THE IDX_Exporter SHALL apply sensible defaults for missing properties
-4. WHEN type definitions are exported, THE IDX_Exporter SHALL provide complete TypeScript interfaces
-5. WHEN API changes are made, THE IDX_Exporter SHALL maintain backward compatibility where possible
+1. WHEN ExportSourceData接口被定义时，THE TypeDefinition SHALL 包含components、holes、keepouts等可选属性
+2. WHEN BoardData接口被使用时，THE TypeDefinition SHALL 支持所有必需和可选的板属性
+3. WHEN 组件数据被定义时，THE TypeDefinition SHALL 包含完整的组件属性结构
+4. WHEN 孔数据被定义时，THE TypeDefinition SHALL 区分镀孔和非镀孔类型
+5. WHEN 禁止区数据被定义时，THE TypeDefinition SHALL 包含几何形状和约束信息
+
+### Requirement 5: 增强错误处理和验证机制
+
+**User Story:** 作为系统集成者，我希望在数据有问题时能够获得清晰的错误信息和恢复建议，以便快速定位和解决问题。
+
+#### Acceptance Criteria
+
+1. WHEN 输入数据缺少必需字段时，THE ValidationEngine SHALL 返回具体的错误信息
+2. WHEN 数据格式不正确时，THE ValidationEngine SHALL 提供详细的验证失败原因
+3. WHEN 导出过程中发生错误时，THE IDX_Exporter SHALL 提供错误恢复建议
+4. WHEN 数据验证失败时，THE ValidationEngine SHALL 指出具体的问题位置和修复方法
+5. WHEN 警告条件被检测到时，THE IDX_Exporter SHALL 记录警告但继续处理
+
+### Requirement 6: 解析和序列化一致性
+
+**User Story:** 作为数据处理工程师，我希望导出的数据能够被正确解析，以确保数据的完整性和一致性。
+
+#### Acceptance Criteria
+
+1. WHEN IDX文件被导出时，THE XMLWriter SHALL 生成有效的XML结构
+2. WHEN XML数据被序列化时，THE XMLWriter SHALL 保持数据的精度和格式
+3. THE XMLWriter SHALL 格式化XML输出以提高可读性
+4. FOR ALL 有效的板数据对象，序列化然后反序列化应该产生等价的对象（round-trip property）
+
+### Requirement 7: XML可读性增强
+
+**User Story:** 作为开发者和调试人员，我希望导出的XML文件包含有意义的注释，以便更好地理解文件结构和内容。
+
+#### Acceptance Criteria
+
+1. WHEN XML文件被生成时，THE XMLWriter SHALL 在关键部分添加描述性注释
+2. WHEN 组件数据被序列化时，THE XMLWriter SHALL 添加组件信息的注释说明
+3. WHEN 层数据被序列化时，THE XMLWriter SHALL 添加层结构的注释说明
+4. WHEN 几何数据被序列化时，THE XMLWriter SHALL 添加几何类型和参数的注释说明
+5. THE XMLWriter SHALL 在文件头部添加生成信息和版本注释

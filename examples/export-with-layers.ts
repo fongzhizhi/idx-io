@@ -1,5 +1,5 @@
 // examples/export-with-layers.ts
-import { IDXExporter, GlobalUnit } from '../src/exporter';
+import { IDXExporter, GlobalUnit, ExportSourceData } from '../src/exporter';
 
 async function exportMultiLayerBoard() {
   const exporter = new IDXExporter({
@@ -16,17 +16,19 @@ async function exportMultiLayerBoard() {
     }
   });
 
-  const boardData = {
-    id: 'MULTILAYER_BOARD',
-    name: 'Multi-Layer Board',
-    outline: {
-      points: [
-        { x: 0, y: 0 },
-        { x: 100, y: 0 },
-        { x: 100, y: 80 },
-        { x: 0, y: 80 }
-      ],
-      thickness: 1.6
+  const boardData: ExportSourceData = {
+    board: {
+      id: 'MULTILAYER_BOARD',
+      name: 'Multi-Layer Board',
+      outline: {
+        points: [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 80 },
+          { x: 0, y: 80 }
+        ],
+        thickness: 1.6
+      }
     },
     layers: [
       {
@@ -59,14 +61,14 @@ async function exportMultiLayerBoard() {
       layers: [
         { layerId: 'TOP_SOLDERMASK', position: 1, thickness: 0.02 },
         { layerId: 'TOP_COPPER', position: 2, thickness: 0.035 },
-        { layerId: 'DIEL_1', position: 3, thickness: 0.1 },
+        { layerId: 'DIEL_1', position: 3, thickness: 0.1 }
         // ... 更多层
       ]
-    },
-    // ... 组件、孔等数据
+    }
+    // ... 组件、孔等数据可以在这里添加
   };
 
-  const result = await exporter.export({ board: boardData });
+  const result = await exporter.export(boardData);
   
   if (result.success) {
     console.log('✅ 多层板导出成功！');

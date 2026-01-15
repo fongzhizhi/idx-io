@@ -1,19 +1,139 @@
 // ============= IDX导出器主入口 =============
 
 import { IDXExportConfig, ExportResult, GlobalUnit, EDMDDataSet, EDMDHeader, IDXFileType } from '../types/core';
+import { 
+  ComponentData as NewComponentData, 
+  HoleData as NewHoleData, 
+  KeepoutData as NewKeepoutData, 
+  LayerData as NewLayerData, 
+  LayerStackupData as NewLayerStackupData,
+  ExtendedExportSourceData
+} from '../types/data-models';
 import { BoardBuilder } from './builders/board-builder';
 import { ComponentBuilder } from './builders/component-builder';
 import { ViaBuilder } from './builders/via-builder';
 import { KeepoutBuilder } from './builders/keepout-builder';
+import { LayerBuilder } from './builders/layer-builder';
 import { BuilderConfig, BuilderContext } from './builders/base-builder';
 import { XMLWriter } from './writers/xml-writer';
 import { DatasetAssembler, BoardData, BuilderRegistry, AssemblerConfig } from './assemblers/dataset-assembler';
 
 /**
+ * 组件数据接口
+ * @deprecated 使用 ../types/data-models.ts 中的 ComponentData 接口
+ * @remarks 保留此接口以维持向后兼容性
+ */
+export interface ComponentData {
+  refDes: string;
+  partNumber: string;
+  packageName: string;
+  position: {
+    x: number;
+    y: number;
+    z?: number;
+    rotation: number;
+  };
+  dimensions: {
+    width: number;
+    height: number;
+    thickness: number;
+  };
+  layer: string;
+  isMechanical?: boolean;
+  electrical?: any;
+  thermal?: any;
+  model3D?: any;
+  pins?: any[];
+  properties?: Record<string, any>;
+}
+
+/**
+ * 孔数据接口
+ * @deprecated 使用 ../types/data-models.ts 中的 HoleData 接口
+ * @remarks 保留此接口以维持向后兼容性
+ */
+export interface HoleData {
+  id: string;
+  name?: string;
+  position: { x: number; y: number };
+  diameter: number;
+  viaType: 'plated' | 'non-plated' | 'filled' | 'micro';
+  startLayer: string;
+  endLayer: string;
+  padDiameter?: number;
+  antiPadDiameter?: number;
+  netName?: string;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 禁止区数据接口
+ * @deprecated 使用 ../types/data-models.ts 中的 KeepoutData 接口
+ * @remarks 保留此接口以维持向后兼容性
+ */
+export interface KeepoutData {
+  id: string;
+  name?: string;
+  constraintType: 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other';
+  purpose: any;
+  shape: {
+    type: 'rectangle' | 'circle' | 'polygon';
+    points: Array<{ x: number; y: number }>;
+    radius?: number;
+  };
+  height?: {
+    min: number;
+    max: number | 'infinity';
+  };
+  layer: string;
+  enabled?: boolean;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 层数据接口
+ * @deprecated 使用 ../types/data-models.ts 中的 LayerData 接口
+ * @remarks 保留此接口以维持向后兼容性
+ */
+export interface LayerData {
+  id: string;
+  name: string;
+  type: 'SIGNAL' | 'PLANE' | 'SOLDERMASK' | 'SILKSCREEN' | 'DIELECTRIC' | 'OTHERSIGNAL';
+  thickness: number;
+  material?: string;
+  copperWeight?: number;
+  dielectricConstant?: number;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 层叠结构数据接口
+ * @deprecated 使用 ../types/data-models.ts 中的 LayerStackupData 接口
+ * @remarks 保留此接口以维持向后兼容性
+ */
+export interface LayerStackupData {
+  id: string;
+  name: string;
+  totalThickness?: number;
+  layers: Array<{
+    layerId: string;
+    position: number;
+    thickness: number;
+  }>;
+}
+
+/**
  * 导出源数据接口
+ * @deprecated 使用 ../types/data-models.ts 中的 ExtendedExportSourceData 接口
+ * @remarks 保留此接口以维持向后兼容性
  */
 export interface ExportSourceData {
   board: BoardData;
+  components?: ComponentData[];
+  holes?: HoleData[];
+  keepouts?: KeepoutData[];
+  layers?: LayerData[];
+  layerStackup?: LayerStackupData;
 }
 
 /**
@@ -69,6 +189,7 @@ class BuilderRegistryImpl implements BuilderRegistry {
     this.builders.set('plated-hole', new ViaBuilder(config, context));
     this.builders.set('non-plated-hole', new ViaBuilder(config, context));
     this.builders.set('keepout', new KeepoutBuilder(config, context));
+    this.builders.set('layer', new LayerBuilder(config, context));
   }
   
   get(type: string): any {
@@ -140,7 +261,7 @@ export class IDXExporter {
           components: this.countItemsByGeometryType(dataset, 'COMPONENT'),
           holes: this.countItemsByGeometryType(dataset, 'VIA') + this.countItemsByGeometryType(dataset, 'HOLE_NON_PLATED'),
           keepouts: this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA'),
-          layers: 0,
+          layers: this.countItemsByGeometryType(dataset, 'LAYER'),
           fileSize: xmlSize,
           exportDuration
         },
@@ -242,8 +363,18 @@ export class IDXExporter {
       ModifiedDateTime: new Date().toISOString()
     };
     
+    // 合并数据到BoardData结构中以保持向后兼容性
+    const enrichedBoardData: BoardData = {
+      ...data.board,
+      components: data.components || data.board.components,
+      holes: data.holes || data.board.holes,
+      keepouts: data.keepouts || data.board.keepouts,
+      layers: data.layers || data.board.layers,
+      layerStackup: data.layerStackup || data.board.layerStackup
+    };
+    
     // 使用组装器构建Body
-    const body = await assembler.assembleBaselineBody(data.board);
+    const body = await assembler.assembleBaselineBody(enrichedBoardData);
     
     // 构建数据集
     const dataset: EDMDDataSet = {
@@ -289,3 +420,20 @@ export class IDXExporter {
 // 导出类型和接口
 export { GlobalUnit } from '../types/core';
 export type { IDXExportConfig, ExportResult } from '../types/core';
+
+// 导出新的数据模型类型（推荐使用）
+export type { 
+  ComponentData as NewComponentData,
+  HoleData as NewHoleData,
+  KeepoutData as NewKeepoutData,
+  LayerData as NewLayerData,
+  LayerStackupData as NewLayerStackupData,
+  ExtendedExportSourceData,
+  ExtendedBoardData,
+  Position3D,
+  Dimensions3D,
+  PinData,
+  GeometryData,
+  LayerType,
+  LayerStackupEntry
+} from '../types/data-models';
