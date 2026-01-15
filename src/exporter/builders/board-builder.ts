@@ -305,12 +305,11 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     // # 创建顶层板子项目（装配体）
     const boardItem: EDMDItem = {
       id: this.generateItemId('BOARD', processedData.id),
-      ...this.createBaseItem(
-        ItemType.ASSEMBLY,
-        GeometryType.BOARD_OUTLINE,
-        processedData.name,
-        `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`
-      ),
+      ItemType: ItemType.ASSEMBLY,
+      Name: processedData.name,
+      Description: `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`,
+      geometryType: this.config.useSimplified ? GeometryType.BOARD_OUTLINE : undefined,
+      BaseLine: true,
       Identifier: this.createIdentifier('BOARD', processedData.id)
     };
     
@@ -370,6 +369,11 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       Value: new Date().toISOString()
     });
     
+    // # 添加基线标记 - 根据demo文件格式
+    output.Baseline = {
+      Value: 'true'
+    };
+    
     // # 记录构建统计
     this.context.addWarning('BOARD_BUILT', 
       `PCB板构建完成: ${output.Name} (ID: ${output.id})`);
@@ -405,7 +409,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    * @param cutout - 切口数据
    * @returns 切口曲线集
    */
-  private async createCutoutShape(cutout: BoardData['cutouts'][0]): Promise<EDMDCurveSet2D | null> {
+  private async createCutoutShape(cutout: any): Promise<EDMDCurveSet2D | null> {
     try {
       let curveSet: EDMDCurveSet2D;
       
@@ -451,9 +455,9 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       curveSet.id = this.generateItemId('CURVESET', `CUTOUT_${cutout.id}`);
       return curveSet;
       
-    } catch (error) {
+    } catch (error: any) {
       this.context.addWarning('CUTOUT_CREATION_FAILED',
-        `创建切口${cutout.id}失败: ${error.message}`);
+        `创建切口${cutout.id}失败: ${error?.message || String(error)}`);
       return null;
     }
   }
@@ -518,12 +522,11 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     for (const stiffener of stiffeners) {
       const stiffenerItem: EDMDItem = {
         id: this.generateItemId('BOARD_AREA_STIFFENER', stiffener.id),
-        ...this.createBaseItem(
-          ItemType.ASSEMBLY,
-          GeometryType.BOARD_AREA_STIFFENER,
-          stiffener.name,
-          `加强筋区域: ${stiffener.name}`
-        )
+        ItemType: ItemType.ASSEMBLY,
+        Name: stiffener.name,
+        Description: `加强筋区域: ${stiffener.name}`,
+        geometryType: this.config.useSimplified ? GeometryType.BOARD_AREA_STIFFENER : undefined,
+        BaseLine: true
       };
       
       // # 创建加强筋形状

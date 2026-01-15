@@ -41,9 +41,7 @@ async function exportSimpleBoard() {
           { x: 100, y: 80 },
           { x: 0, y: 80 }
         ],
-        thickness: 1.6,
-        material: 'FR4',
-        finish: 'HASL'
+        thickness: 1.6
       }
     },
     components: [],

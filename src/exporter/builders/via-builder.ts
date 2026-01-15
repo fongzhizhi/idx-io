@@ -351,6 +351,11 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
       Value: output.geometryType || 'UNKNOWN'
     });
     
+    // # 添加基线标记 - 根据demo文件格式
+    output.Baseline = {
+      Value: 'true'
+    };
+    
     // # 记录构建统计
     this.context.addWarning('VIA_BUILT',
       `过孔构建完成: ${output.Name} (类型: ${output.geometryType})`);

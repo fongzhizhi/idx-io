@@ -472,6 +472,11 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       Value: output.geometryType || 'UNKNOWN'
     });
     
+    // # 添加基线标记 - 根据demo文件格式
+    output.Baseline = {
+      Value: 'true'
+    };
+    
     // # 记录构建统计
     this.context.addWarning('COMPONENT_BUILT',
       `元件构建完成: ${output.Name} (位号: ${output.Name}, 封装: ${output.UserProperties.find(p => p.Key.ObjectName === 'PKGNAME')?.Value || '未知'})`);
@@ -567,8 +572,37 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
         SystemScope: this.config.creatorSystem,
         ObjectName: processedData.refDes
       },
-      Name: processedData.refDes,
-      Transformation: processedData.transformation
+      // 根据demo格式添加用户属性到实例中
+      UserProperties: [
+        {
+          Key: {
+            SystemScope: this.config.creatorSystem,
+            ObjectName: 'REFDES'
+          },
+          Value: processedData.refDes
+        },
+        {
+          Key: {
+            SystemScope: this.config.creatorSystem,
+            ObjectName: 'PLACED'
+          },
+          Value: 'true'
+        }
+      ],
+      // 修正变换矩阵格式，匹配demo
+      Transformation: {
+        TransformationType: 'd2',
+        xx: processedData.transformation.xx,
+        xy: processedData.transformation.xy,
+        yx: processedData.transformation.yx,
+        yy: processedData.transformation.yy,
+        tx: {
+          Value: processedData.position.x.toString()
+        },
+        ty: {
+          Value: processedData.position.y.toString()
+        }
+      }
     };
   }
   

@@ -1,18 +1,19 @@
 // ============= IDX导出器主入口 =============
 
 import { IDXExportConfig, ExportResult, GlobalUnit, EDMDDataSet, EDMDHeader, IDXFileType } from '../types/core';
-import { BoardBuilder, BoardData } from './builders/board-builder';
+import { BoardBuilder } from './builders/board-builder';
+import { ComponentBuilder } from './builders/component-builder';
+import { ViaBuilder } from './builders/via-builder';
+import { KeepoutBuilder } from './builders/keepout-builder';
 import { BuilderConfig, BuilderContext } from './builders/base-builder';
 import { XMLWriter } from './writers/xml-writer';
+import { DatasetAssembler, BoardData, BuilderRegistry, AssemblerConfig } from './assemblers/dataset-assembler';
 
 /**
  * 导出源数据接口
  */
 export interface ExportSourceData {
   board: BoardData;
-  components?: any[];
-  holes?: any[];
-  keepouts?: any[];
 }
 
 /**
@@ -52,6 +53,26 @@ class ExportContextImpl implements BuilderContext {
   
   getErrors() {
     return this.errors;
+  }
+}
+
+/**
+ * 构建器注册表实现
+ */
+class BuilderRegistryImpl implements BuilderRegistry {
+  private builders: Map<string, any> = new Map();
+  
+  constructor(private config: BuilderConfig, private context: BuilderContext) {
+    // 注册所有构建器
+    this.builders.set('board', new BoardBuilder(config, context));
+    this.builders.set('component', new ComponentBuilder(config, context));
+    this.builders.set('plated-hole', new ViaBuilder(config, context));
+    this.builders.set('non-plated-hole', new ViaBuilder(config, context));
+    this.builders.set('keepout', new KeepoutBuilder(config, context));
+  }
+  
+  get(type: string): any {
+    return this.builders.get(type);
   }
 }
 
@@ -116,9 +137,9 @@ export class IDXExporter {
         }],
         statistics: {
           totalItems: dataset.Body.Items.length,
-          components: data.components?.length || 0,
-          holes: data.holes?.length || 0,
-          keepouts: data.keepouts?.length || 0,
+          components: this.countItemsByGeometryType(dataset, 'COMPONENT'),
+          holes: this.countItemsByGeometryType(dataset, 'VIA') + this.countItemsByGeometryType(dataset, 'HOLE_NON_PLATED'),
+          keepouts: this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA'),
           layers: 0,
           fileSize: xmlSize,
           exportDuration
@@ -183,6 +204,15 @@ export class IDXExporter {
     return `${this.config.output.designName}_${fileType}_${timestamp}.idx`;
   }
   
+  /**
+   * 按几何类型统计项目数量
+   */
+  private countItemsByGeometryType(dataset: EDMDDataSet, geometryTypePrefix: string): number {
+    return dataset.Body.Items.filter(item => 
+      item.geometryType && item.geometryType.startsWith(geometryTypePrefix)
+    ).length;
+  }
+  
   private async buildDataset(data: ExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
     const builderConfig: BuilderConfig = {
       useSimplified: this.config.geometry.useSimplified,
@@ -191,9 +221,17 @@ export class IDXExporter {
       precision: this.config.geometry.precision
     };
     
-    // 构建板子
-    const boardBuilder = new BoardBuilder(builderConfig, context);
-    const boardItem = await boardBuilder.build(data.board);
+    // 创建构建器注册表
+    const builderRegistry = new BuilderRegistryImpl(builderConfig, context);
+    
+    // 创建组装器配置
+    const assemblerConfig: AssemblerConfig = {
+      useSimplified: this.config.geometry.useSimplified,
+      includeLayerStackup: this.config.collaboration.includeLayerStackup
+    };
+    
+    // 创建数据集组装器
+    const assembler = new DatasetAssembler(builderRegistry, assemblerConfig);
     
     // 构建头部
     const header: EDMDHeader = {
@@ -204,12 +242,13 @@ export class IDXExporter {
       ModifiedDateTime: new Date().toISOString()
     };
     
+    // 使用组装器构建Body
+    const body = await assembler.assembleBaselineBody(data.board);
+    
     // 构建数据集
     const dataset: EDMDDataSet = {
       Header: header,
-      Body: {
-        Items: [boardItem]
-      },
+      Body: body,
       ProcessInstruction: {
         id: 'INSTRUCTION_001',
         instructionType: 'SendInformation'

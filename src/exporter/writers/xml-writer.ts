@@ -1,7 +1,16 @@
-import { create } from "domain";
-import { XMLBuilder } from "fast-xml-parser";
-import { XMLWriterOptions } from "../..";
-import { EDMDDataSet, EDMDHeader, EDMDDataSetBody, EDMDItem, ItemType, EDMDIdentifier } from "../../types/core";
+import { create } from "xmlbuilder2";
+import { EDMDDataSet, EDMDHeader, EDMDDataSetBody, EDMDItem, ItemType, EDMDIdentifier, EDMDProcessInstruction } from "../../types/core";
+
+/**
+ * XML写入器选项
+ */
+export interface XMLWriterOptions {
+  /** 是否格式化输出 */
+  prettyPrint?: boolean;
+  
+  /** 字符编码 */
+  encoding?: string;
+}
 
 // src/exporter/writers/xml-writer.ts
 export class XMLWriter {
@@ -29,7 +38,17 @@ export class XMLWriter {
    * 将EDMDDataSet转换为XML字符串
    */
   serialize(dataset: EDMDDataSet): string {
-    const root = this.createRootElement(dataset);
+    const doc = create({ version: '1.0', encoding: this.encoding });
+    
+    // 创建根元素
+    const root = doc.ele('foundation:EDMDDataSet', this.namespaces);
+    
+    // 添加自定义命名空间
+    if (dataset.namespaces) {
+      Object.entries(dataset.namespaces).forEach(([key, value]) => {
+        root.att(key, value);
+      });
+    }
     
     // 构建Header
     this.buildHeader(root, dataset.Header);
@@ -45,36 +64,123 @@ export class XMLWriter {
       this.buildHistory(root, dataset.History);
     }
 
-    const xml = root.end({
+    return doc.end({
       prettyPrint: this.prettyPrint,
       indent: '  ',
       newline: '\n'
     });
-
-    return `<?xml version="1.0" encoding="${this.encoding}"?>\n${xml}`;
   }
 
   /**
-   * 构建根元素
+   * 构建ProcessInstruction
    */
-  private createRootElement(dataset: EDMDDataSet): XMLBuilder {
-    const root = create({ version: '1.0', encoding: this.encoding })
-      .ele('foundation:EDMDDataSet', this.namespaces);
-
-    // 添加自定义命名空间
-    if (dataset.namespaces) {
-      Object.entries(dataset.namespaces).forEach(([key, value]) => {
-        root.att(key, value);
-      });
+  private buildProcessInstruction(root: any, instruction: EDMDProcessInstruction): void {
+    const instructionElement = root.ele('foundation:ProcessInstruction', { 
+      'xsi:type': `foundation:EDMD${instruction.instructionType}`,
+      id: instruction.id
+    });
+    
+    instructionElement.ele('foundation:InstructionType').txt(instruction.instructionType);
+    
+    // 根据指令类型添加特定内容
+    if (instruction.instructionType === 'SendChanges') {
+      // 添加变更相关内容
+      // TODO: 实现变更指令的具体内容
     }
+  }
 
-    return root;
+  /**
+   * 构建History
+   */
+  private buildHistory(root: any, history: any[]): void {
+    // TODO: 实现历史记录构建
+    // 目前大多数实现不需要历史记录
+  }
+
+  /**
+   * 构建形状
+   */
+  private buildShape(parent: any, shape: any): void {
+    // TODO: 实现形状构建
+    // 这需要根据具体的形状类型来实现
+  }
+
+  /**
+   * 构建3D模型
+   */
+  private build3DModel(parent: any, model: any): void {
+    // TODO: 实现3D模型构建
+  }
+
+  /**
+   * 构建用户属性
+   */
+  private buildUserProperty(parent: any, prop: any): void {
+    const propElement = parent.ele('property:UserSimpleProperty');
+    
+    // 构建属性键
+    const keyElement = propElement.ele('property:Key');
+    keyElement.ele('foundation:SystemScope').txt(prop.Key.SystemScope);
+    keyElement.ele('foundation:ObjectName').txt(prop.Key.ObjectName);
+    
+    // 构建属性值
+    propElement.ele('property:Value').txt(prop.Value.toString());
+    
+    if (prop.IsChanged !== undefined) {
+      propElement.att('IsChanged', prop.IsChanged.toString());
+    }
+  }
+
+  /**
+   * 构建项目实例
+   */
+  private buildItemInstance(parent: any, instance: any): void {
+    const instanceElement = parent.ele('pdm:ItemInstance', { id: instance.id });
+    
+    instanceElement.ele('pdm:Item').att('href', `#${instance.Item}`);
+    
+    // 构建实例名称
+    const nameElement = instanceElement.ele('pdm:InstanceName');
+    nameElement.ele('foundation:SystemScope').txt(instance.InstanceName.SystemScope);
+    nameElement.ele('foundation:ObjectName').txt(instance.InstanceName.ObjectName);
+    
+    // 构建变换矩阵（如果有）
+    if (instance.Transformation) {
+      this.buildTransformation(instanceElement, instance.Transformation);
+    }
+  }
+
+  /**
+   * 构建变换矩阵
+   */
+  private buildTransformation(parent: any, transformation: any): void {
+    const transElement = parent.ele('pdm:Transformation', { 
+      'xsi:type': `d2:EDMDTransformation${transformation.TransformationType.toUpperCase()}` 
+    });
+    
+    if (transformation.TransformationType === 'd2') {
+      transElement.ele('d2:xx').txt(transformation.xx.toString());
+      transElement.ele('d2:xy').txt(transformation.xy.toString());
+      transElement.ele('d2:yx').txt(transformation.yx.toString());
+      transElement.ele('d2:yy').txt(transformation.yy.toString());
+      
+      const txElement = transElement.ele('d2:tx');
+      txElement.ele('foundation:Value').txt(transformation.tx.Value.toString());
+      
+      const tyElement = transElement.ele('d2:ty');
+      tyElement.ele('foundation:Value').txt(transformation.ty.Value.toString());
+      
+      if (transformation.zOffset) {
+        const zElement = transElement.ele('d2:zOffset');
+        zElement.ele('foundation:Value').txt(transformation.zOffset.Value.toString());
+      }
+    }
   }
 
   /**
    * 构建Header
    */
-  private buildHeader(root: XMLBuilder, header: EDMDHeader): void {
+  private buildHeader(root: any, header: EDMDHeader): void {
     const headerElement = root.ele('foundation:Header', { 'xsi:type': 'foundation:EDMDHeader' });
     
     if (header.Description) headerElement.ele('foundation:Description').txt(header.Description);
@@ -90,7 +196,7 @@ export class XMLWriter {
   /**
    * 构建Body
    */
-  private buildBody(root: XMLBuilder, body: EDMDDataSetBody): void {
+  private buildBody(root: any, body: EDMDDataSetBody): void {
     const bodyElement = root.ele('foundation:Body', { 'xsi:type': 'foundation:EDMDDataSetBody' });
     
     // 构建所有项目
@@ -116,7 +222,7 @@ export class XMLWriter {
   /**
    * 构建EDMDItem
    */
-  private buildItem(parent: XMLBuilder, item: EDMDItem): void {
+  private buildItem(parent: any, item: EDMDItem): void {
     const itemAttrs: Record<string, any> = { id: item.id };
     
     if (item.IsAttributeChanged !== undefined) {
@@ -169,12 +275,23 @@ export class XMLWriter {
         itemElement.ele('pdm:Shape').txt('INLINE_SHAPE');
       }
     }
+    
+    // 构建基线标记 - 根据demo格式
+    if (item.Baseline) {
+      const baselineElement = itemElement.ele('pdm:Baseline');
+      baselineElement.ele('property:Value').txt(item.Baseline.Value);
+    }
+    
+    // 构建装配到名称
+    if (item.AssembleToName) {
+      itemElement.ele('pdm:AssembleToName').txt(item.AssembleToName);
+    }
   }
 
   /**
    * 构建EDMDIdentifier
    */
-  private buildIdentifier(parent: XMLBuilder, identifier: EDMDIdentifier): void {
+  private buildIdentifier(parent: any, identifier: EDMDIdentifier): void {
     const idElement = parent.ele('pdm:Identifier', { 'xsi:type': 'foundation:EDMDIdentifier' });
     
     idElement.ele('foundation:SystemScope').txt(identifier.SystemScope);

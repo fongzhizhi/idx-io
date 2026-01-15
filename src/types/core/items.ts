@@ -68,6 +68,11 @@ export interface EDMDItem extends EDMDObject {
   /** 基线标记（是否属于基线） */
   BaseLine?: boolean | EDMDUserSimpleProperty;
   
+  /** 基线标记（demo格式） */
+  Baseline?: {
+    Value: string;
+  };
+  
   /** 项目形状 */
   Shape?: ShapeType | string;  // string用于引用已定义的形状
   

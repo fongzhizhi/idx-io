@@ -422,6 +422,11 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
       Value: output.BaseLine ? 'true' : 'false'
     });
     
+    // # 添加基线标记 - 根据demo文件格式
+    output.Baseline = {
+      Value: 'true'
+    };
+    
     // # 记录构建统计
     this.context.addWarning('KEEPOUT_BUILT',
       `禁止区构建完成: ${output.Name} (类型: ${output.geometryType}, 层: ${output.AssembleToName})`);
