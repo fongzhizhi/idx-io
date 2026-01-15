@@ -1,0 +1,2180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+
+
+-->
+<xs:schema xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" xmlns:property="http://www.prostep.org/ecad-mcad/edmd/4.0/property" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" elementFormDefault="qualified">
+	<xs:annotation>
+		<xs:documentation>
+			Author: Working Group ECAD-MCAD Collaboration
+			Purpose: EDMD-Schema 4.0
+			Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+			
+			prostep ivip Association
+			Dolivostr. 11
+			D-64293 Darmstadt, Germany
+		</xs:documentation>
+	</xs:annotation>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/property" schemaLocation="property.xsd"/>
+	
+	<xs:element name="EDMDItemShape" type="tns:EDMDItemShape" nillable="true"/>
+	<xs:complexType name="EDMDItemShape" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDItemShape an abstract super type for the definition of the 
+            shape of EMMDItem
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+					<xs:element name="ShapeElement" type="xs:IDREF" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Reference on the EDMDShapeElement, where the EDMDItemShape
+								is composed of. Has to refer to an EDMDShapeElement.
+								</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDKeepConstraint" type="tns:EDMDKeepConstraint" nillable="true"/>
+	<xs:complexType name="EDMDKeepConstraint" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            EDMDKeepConstraint is an EDMDItemShape, that describes a space for
+            placement constraints. The type is abstract super type for all placement
+            constraints.
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDItemShape">
+				<xs:sequence>
+					<xs:element name="Purpose" type="tns:EDMDKeepConstraintPurpose" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+							Purposes for the EDMDKeepOut
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="KeepConstraintCondition" type="property:EDMDConstrainedProperty" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+            Elements which properties violate the limits of the EDMDConstrainedProperty in the list
+            of ConstraintConditions violate the EDMDKeepConstraint. EDMDUserProperties has to be 
+            matched by key, which is a EDMDName, so context has to be considered. All other subtypes of
+            EDMDConstrainedProperty are matched by tag name.
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="EDMDKeepConstraintPurpose">
+		<xs:annotation>
+			<xs:documentation>
+            Predefined Puporses of an EDMDKeepOut
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Thermal">
+				<xs:annotation>
+					<xs:documentation>
+              specifies that keepout purpose is thermal
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="GenericClearance">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that keepout purpose is generic clearance
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Shock">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that keepout purpose is shock
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Vibration">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that keepout purpose is vibration
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ElectromagneticCompatibility">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that keepout purpose is electromagnetic compatibility
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ComponentPlacement">
+				<xs:annotation>
+					<xs:documentation>
+            Indicates components should not be placed in the keep out area.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Route">
+				<xs:annotation>
+					<xs:documentation>
+            Indicates routes should not be placed in the keep out area.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Via">
+				<xs:annotation>
+					<xs:documentation>
+            Indicates vias should not be placed in the keep out area.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="TestPoint">
+				<xs:annotation>
+					<xs:documentation>
+            Indicates test points should not be placed in the keep out area.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ValueLimit">
+				<xs:annotation>
+					<xs:documentation>
+            Indicate the EDMDKeepConstraint contains ConstraintProperties, 
+            that contains limits for properties. 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Plane"/>
+			<xs:enumeration value="Other">
+				<xs:annotation>
+					<xs:documentation>
+                        Indicate the EDMDKeepConstraint contains ConstraintProperties,
+                        which are not defined in schema.
+                    </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDTransformationType" type="tns:EDMDTransformationType"/>
+	<xs:simpleType name="EDMDTransformationType">
+		<xs:annotation>
+			<xs:documentation>
+            Type of a transformation, indicates the number of dimensions
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="d2">
+				<xs:annotation>
+					<xs:documentation>
+            2d - transformation
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="d3">
+				<xs:annotation>
+					<xs:documentation>
+            3d - transformation
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDShapeElement" type="tns:EDMDShapeElement" nillable="true"/>
+	<xs:complexType name="EDMDShapeElement" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            A shape_element is a portion of shape that has to be identified 
+            explicitly to be associated with other information.
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+					<xs:element name="ShapeElementType" type="tns:EDMDShapeElementType" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Type of EDMDShapeElement
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Inverted" type="xs:boolean" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Indicates the EDMDShapeElement is added or subtracted from the resulting shape. 
+            If inverted is false the ShapeElement and the rest of the shape are added (aggregation, OR-Operator), if inverted is
+            true the ShapeElement is substracted from the rest of the shape (NAND-Operator). 
+            Default value (if not set) is false.
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ShapeDescriptionTransformation" type="tns:EDMDTransformation" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Transformation between EDMDShapeElement and the description 
+            of the shape. If this element is not set, an identity matrix is assumed (so not transformation is needed).
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="DefiningShape" type="xs:IDREF">
+						<xs:annotation>
+							<xs:documentation>
+            The defining shape. Has to refer to an EDMDShapeDescription.
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="EDMDShapeElementType">
+		<xs:annotation>
+			<xs:documentation>
+            Type of an EDMDShapeElement
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="NonFeatureShapeElement">
+				<xs:annotation>
+					<xs:documentation>
+            A Non_feature_shape_element is a type of Shape_element that is 
+            not on the physical boundary of a Part_view_definition. 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="FeatureShapeElement">
+				<xs:annotation>
+					<xs:documentation>
+            A Shape_feature is a type of Shape_element.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PartFeature">
+				<xs:annotation>
+					<xs:documentation>
+            A Part_feature is a type of Shape_feature.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PartMountingFeature">
+				<xs:annotation>
+					<xs:documentation>
+            A Part_mounting_feature is a type of Part_feature and a type of 
+            Shape_feature  that is identified to facilitate tolerance 
+            specification when an occurrence of the associated part is used 
+            in an assembly
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ComponentTerminationPassageTemplateTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Component_termination_passage_template_terminal is a type of 
+            Shape_feature. A Component_termination_passage_template_terminal 
+            is one of a Component_termination_passage_template_interface_terminal 
+            or a Component_termination_passage_template_join_terminal.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ComponentTerminationPassageTemplateInterfaceTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Component_termination_passage_template_interface_terminal is a 
+            type of Component_termination_passage_template_terminal, an 
+            occurrence of which provides an interface capability to the next 
+            level of assembly.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ComponentTerminationPassageTemplateJoinTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Component_termination_passage_template_join_terminal is a type 
+            of Component_termination_passage_template_terminal, an occurrence 
+            of which provides a fabrication join capability, within an 
+            optionally constrained set of Stratum.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PrintedPartCrossSectionTemplateTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Printed_part_cross_section_template is a type of 
+            Template_definition that describes a cross sectional view of a 
+            Printed_part_template.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PrintedPartTemplateInterfaceTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Printed_part_template_interface_terminal is a type of 
+            Printed_part_template_terminal, an occurrence of which is an 
+            external access to the printed circuit board of which it is a 
+            component.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PrintedPartTemplateJoinTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Printed_part_template_join_terminal is a type of 
+            Printed_part_template_terminal an occurrence of which provides 
+            access to the functionality of the Printed_part_template from 
+            within a printed circuit board.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="StructuredPrintedPartTemplateTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Structured_printed_part_template_terminal is a type of 
+            Printed_part_template_terminal.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PrintedPartTemplateTerminal">
+				<xs:annotation>
+					<xs:documentation>
+             A Printed_part_template_terminal is a type of Shape_feature. 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PartToolingFeature">
+				<xs:annotation>
+					<xs:documentation>
+            A Part_tooling_feature is a type of Part_feature. 
+            A Part_tooling_feature may be one of a Fiducial_part_feature or a 
+            Tool_registration_mark, or additionally may be a Test_point_part_feature. 
+            A Part_tooling_feature identifies a feature for tooling purposes. 
+            A feature may be used for other purposes or may intrinsically be in a 
+            particular feature category, and in either of those cases the feature 
+            would be a Part_tooling_feature and also the other type of feature.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="FiducialPartFeature">
+				<xs:annotation>
+					<xs:documentation>
+            A Fiducial_part_feature is a type of Part_tooling_feature. 
+            A Fiducial_part_feature identifies a feature for product alignment with 
+            respect to a tool.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ThermalFeature">
+				<xs:annotation>
+					<xs:documentation>
+            A Thermal_feature is a type of Part_feature that is specified as having 
+            a role in the exchange of heat with the application environment
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="TestPointPartFeature">
+				<xs:annotation>
+					<xs:documentation>
+            A Test_point_part_feature is a type of Part_tooling_feature. 
+            A Test_point_part_feature identifies a feature for use with test 
+            instrumentation.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ConnectionZone">
+				<xs:annotation>
+					<xs:documentation>
+            A Connection_zone is an area on the surface of a design object that may be 
+            used to establish electrical or physical connectivity with another design 
+            object.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ComponentTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            Component_terminal is the defined conductive shape for 
+            conductors from other components to access electrical 
+            functionality of the AssemblyComponent.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="BareDieComponentTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            The Bare_die_component_terminal is the area on the bare die 
+            instance onto which an enterprise will place bond wires, 
+            joining the active areas on the die instance to the next 
+            level of assembly. It is not necessarily the shape of the 
+            land itself on the die.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Land">
+				<xs:annotation>
+					<xs:documentation>
+            A Land is a type of Stratum_feature_template_component. 
+            A Land may be a Contact_size_dependent_land, or an 
+            Inter_stratum_feature_dependent_land. A Land helps compose a 
+            Conductor or a Conductive_filled_area.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Package">
+				<xs:annotation>
+					<xs:documentation>
+            A Package is a type of a Part_usage_view. A Package describes 
+            a subset of the physical properties of a component. The subset 
+            is that subset specified by the application activity model in 
+            this part of ISO 10303 as being relevant to use that component 
+            in an assembly. Some items in that subset are mandatory for 
+            any instance of a Package and some items in that subset are 
+            optional due to being used for optional analysis. A Package 
+            includes no more than one package body and one or more package 
+            terminals.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PackageTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Package_terminal is a type of Part_feature an a type of 
+            Placed_feature. When the case or package body is used as a 
+            terminal then Package_terminal shall be populated to specify 
+            the feature of the Package_body that serves that purpose. 
+            The Package_terminal shall be in a sequence, with the initial 
+            member being Primary_reference_terminal, and each member that 
+            is not a Primary_reference_terminal shall reference a previous 
+            member in the sequence using the precedent_feature attribute 
+            inherited from Part_feature.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ViaTerminal">
+				<xs:annotation>
+					<xs:documentation>
+            A Via_terminal is associated with the larger diameter wall of 
+            the Via that geometrically approximates a hollow cylinder with 
+            some thickness.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="EDMDTransformation" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            Transformation
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDObject">
+				<xs:sequence>
+					<xs:element name="TransformationType" type="tns:EDMDTransformationType">
+						<xs:annotation>
+							<xs:documentation>
+            Type of the transformation, can be '2d' or '3d' transformation
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="xx" type="xs:double">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [0,0]
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="xy" type="xs:double">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [0,1]
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="xz" type="xs:double" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [0,2], is nill in a 2d transformation
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="yx" type="xs:double">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [1,0]
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="yy" type="xs:double">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [1,1]
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="yz" type="xs:double" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [0,2], is nill in a 2d transformation
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="zx" type="xs:double" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [2,0], is nill in a 2d transformation
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="zy" type="xs:double" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [2,1], is nill in a 2d transformation
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="zz" type="xs:double" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Entry at position [2,2], is nill in a 2d transformation
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="tx" type="property:EDMDLengthProperty">
+						<xs:annotation>
+							<xs:documentation>
+            Translation in the direction of (x)
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ty" type="property:EDMDLengthProperty">
+						<xs:annotation>
+							<xs:documentation>
+            Translation in the direction of (y)
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="tz" type="property:EDMDLengthProperty" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Translation in the direction of (z),
+            is nill in a 2d transformation
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDShapeDescriptionType" type="tns:EDMDShapeDescriptionType"/>
+	<xs:simpleType name="EDMDShapeDescriptionType">
+		<xs:annotation>
+			<xs:documentation>
+            Type of an EDMDShapedescription
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="ExternalGeometricModel">
+				<xs:annotation>
+					<xs:documentation>
+            indicates, the data is stored in an external source
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="GeometricModel">
+				<xs:annotation>
+					<xs:documentation>
+            indicates, the data is stored as a geometric model inside
+            this xml document.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDShapeDescription" type="tns:EDMDShapeDescription" nillable="true"/>
+	<xs:complexType name="EDMDShapeDescription" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            EDMDShapeDescription is the abstract super type of types to
+            describe shapes
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+					<xs:element name="ShapeDescriptionType" type="tns:EDMDShapeDescriptionType">
+						<xs:annotation>
+							<xs:documentation>
+            Type of the EDMDShapeDescription
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="BoundingBox" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Points to another EDMDShapeDescription of another type, 
+            which gives an approximation of the EDMDShapeDescription.
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDKeepOut" type="tns:EDMDKeepOut" nillable="true"/>
+	<xs:complexType name="EDMDKeepOut" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDKeepOut is an EDMDItemShape, that defines a keep out constraint
+            for a special purpose.
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDKeepConstraint"/>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	<xs:element name="EDMDBend" type="tns:EDMDBend" nillable="true"/>
+	
+	<xs:complexType name="EDMDBend" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+				An EDMDBend is abstract class of bends
+		   </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDItemShape">
+				<xs:sequence>
+					<xs:element name="BendType" type="tns:EDMDBendType">
+						<xs:annotation>
+							<xs:documentation>
+								Type of the EDMDBend
+							  </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+				
+				<xs:attribute name="SequenceNumber" type="xs:integer">
+					<xs:annotation>
+						<xs:documentation>
+							Optional sequence number describing the order bends should be applied where the first bend to be applied has SequenceNumber 1
+						</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	<xs:simpleType name="EDMDInnerSide">
+		<xs:annotation>
+			<xs:documentation>
+				Defines the board side that is on the inner side of the bend.
+			 </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Top">
+				<xs:annotation>
+					<xs:documentation>
+					Relative to top of board.
+				  </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Bottom">
+				<xs:annotation>
+					<xs:documentation>
+						Relative to bottom of board.
+					  </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:element name="EDMDBendType" type="tns:EDMDBendType" nillable="true"/>
+	
+	<xs:complexType name="EDMDBendType" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+				An EDMDBend is abstract class of bends
+			</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+					<xs:element name="BendLine" type="xs:IDREF" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Defines the line representing the axis of the bend
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	<xs:element name="EDMDCircularBendType" type="tns:EDMDCircularBendType" nillable="true"/>
+	
+	<xs:complexType name="EDMDCircularBendType" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+			An EDMDCircularBendType describes a circular bendline.
+		   </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDBendType">
+				<xs:sequence>
+					<xs:element name="InnerSide" type="tns:EDMDInnerSide">
+						<xs:annotation>
+							<xs:documentation>
+								Orientation of inner side of bend.
+						    </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="InnerRadius" type="xs:double">
+						<xs:annotation>
+							<xs:documentation>
+							D efines the inner radius of the bend from the board surface.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="InnerAngle" type="xs:double">
+						<xs:annotation>
+							<xs:documentation>
+							Defines the inner angle of the bend.
+						  </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	
+	<xs:element name="EDMDInterStratumFeature" type="tns:EDMDInterStratumFeature" nillable="true"/>
+	<xs:complexType name="EDMDInterStratumFeature" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDInterStratumFeature spans one or more EDMDStratum
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDItemShape">
+				<xs:sequence>
+					<xs:element name="InterStratumFeatureType" type="tns:EDMDInterStratumFeatureType">
+						<xs:annotation>
+							<xs:documentation>
+							Type of the EDMDInterStratumFeature
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Stratum" type="xs:IDREF" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+							Reference on the spanned EDMDStratum. Has to refer to an EDMDStratum.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="EDMDInterStratumFeatureType">
+		<xs:annotation>
+			<xs:documentation>
+            Type of an EDMDInterStratumFeature
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="UnsupportedPassage">
+				<xs:annotation>
+					<xs:documentation>
+            An UnsupportedPassage is a type of EDMDInterStratumFeature
+            that has no metalization in the realization of its walls.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="StratumFeatureTemplateComponent">
+				<xs:annotation>
+					<xs:documentation>
+            A Stratum_feature_template_component 
+            is a type of Laminate_component.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="CutoutEdgeSegment">
+				<xs:annotation>
+					<xs:documentation>
+            A Cutout_edge_segment is a type of Inter_stratum_feature 
+            that defines an edge segment of a Cutout. When the 
+            Cutout_edge_segment participates in a Cutout that is fully 
+            described by a collection of Cutout_edge_segment, the 
+            end_vertex of the final segment shall be the start_vertex 
+            of the first segment. Adjacent Cutout_edge_segment reference 
+            the same member of Edge_segment_vertex but in different roles 
+            to ensure continuity. A Cutout_edge_segment may be a 
+            Plated_cutout_edge_segment. The curve representing this concept 
+            in two dimensional representations shall be open. The surface 
+            representing this concept in three dimensional representations 
+            shall be non-manifold. Pre-processors shall adhere to the 
+            requirement that the boundary this segment is contributing 
+            to shall be closed.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PlatedCutoutEdgeSegment">
+				<xs:annotation>
+					<xs:documentation>
+            A Plated_cutout_edge_segment is a type of 
+            Plated_inter_stratum_feature and is a type of Cutout_edge_segment 
+            that helps compose a Partially_plated_cutout. The 
+            Plated_cutout_edge_segment is a feature with a specified shape 
+            that makes up part of the edge of a Partially_plated_cutout.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Cutout">
+				<xs:annotation>
+					<xs:documentation>
+            A Cutout is a type of Inter_stratum_feature. A Cutout may be one 
+            of a Physical_connectivity_interrupting_cutout, a Plated_cutout 
+            or a Partially_plated_cutout. A Cutout is a closed, internal 
+            shape in a substrate. A Cutout may not extend completely through 
+            the substrate. A Complex Cutouts may be created by using the 
+            facilities in Assembly_group_component. The Cutout is represented 
+            by a closed curve in two dimensional representations and by a 
+            manifold surface in three dimensional representations. If the 
+            vertical_extent inherited from Inter_stratum_feature  is not 
+            provided the Interconnect_module_edge that is referenced by the 
+            vertical_reference attribute shall be provided and the 
+            Interconnect_module_edge  so referenced shall be used for the 
+            vertical extent.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PlatedInterStratumFeature">
+				<xs:annotation>
+					<xs:documentation>
+            A Plated_inter_stratum_feature is a type of Inter_stratum_feature 
+            with deposited metal on its walls that makes an electrical 
+            connection between conductive patterns on internal 
+            Design_layer_stratum, external Design_layer_stratum, or both, of 
+            a printed circuit board. A Plated_inter_stratum_feature is one of 
+            a Plated_cutout, a Plated_cutout_edge_segment, a 
+            Plated_interconnect_module_edge, a 
+            Plated_interconnect_module_edge_segment, or a Plated_passage.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PlatedPassage">
+				<xs:annotation>
+					<xs:documentation>
+            A Plated_passage is a type of Plated_inter_stratum_feature. 
+            A Plated_passage may be either a Component_termination_passage 
+            or a Via.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="MilledCutout">
+				<xs:annotation>
+					<xs:documentation>
+            A Milled_cutout describes board cutouts as a milling path of a drill having a specified diameter.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PlatedCutout">
+				<xs:annotation>
+					<xs:documentation>
+            A Plated_cutout is a type of Plated_inter_stratum_feature and a 
+            type of Cutout. The Plated_cutout is an interior volume of the 
+            substrate, such as a void included for passage of a shaft, and 
+            may be plated for EMI shielding purposes. This object conveys 
+            the semantic that the interior referenced by the related shape 
+            is conductive.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Via">
+				<xs:annotation>
+					<xs:documentation>
+            Via is defined in IEC 60050-541.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PhysicalConnectivityInterruptingCutout">
+				<xs:annotation>
+					<xs:documentation>
+            A Physical_connectivity_interrupting_cutout is a type of Cutout 
+            that is included in the design of an for  Interconnect_module the 
+            purpose of interrupting one or more connectivity elements in an 
+            Interconnect_module.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PartiallyPlatedCutout">
+				<xs:annotation>
+					<xs:documentation>
+            A Partially_plated_cutout is a type of Cutout that is not a 
+            completely plated cutout for 
+            reason of manufacturing capabilities or design purposes.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ComponentTerminationPassage">
+				<xs:annotation>
+					<xs:documentation>
+            A Component_termination_passage is a type of Plated_passage 
+            through which a Component_terminal  may pass. The properties 
+            of the Component_termination_passage are selected to support 
+            the Component_terminal.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="FilledVia">
+				<xs:annotation>
+					<xs:documentation>
+            FilledVia is a type of Via.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="MechanicalComponent">
+				<xs:annotation>
+					<xs:documentation>
+            A mechanical component that has no electrical function.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="CustomElectroMechanicalComponent">
+				<xs:annotation>
+					<xs:documentation>
+            A mechanical component that has an electrial function.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="BoardCutout">
+				<xs:annotation>
+					<xs:documentation>
+            The BoardCutout Enum should be used to seperate a Board Cutout from the Board Outline.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDNonFeatureItemShapePurpose" type="tns:EDMDNonFeatureItemShapePurpose"/>
+	<xs:simpleType name="EDMDNonFeatureItemShapePurpose">
+		<xs:annotation>
+			<xs:documentation>
+            Predefined Puporses of an EDMDKeepOut
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="InfoText">
+				<xs:annotation>
+					<xs:documentation>
+            the EDMDNonFeatureItemShape contains info text
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="InfoGeometry">
+				<xs:annotation>
+					<xs:documentation>
+            the EDMDNonFeatureItemShape contains info geometry
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="AuxiliaryGeometry">
+				<xs:annotation>
+					<xs:documentation>
+            the EDMDNonFeatureItemShape contains auxiliary geometry, 
+            which was used zu model other parts of geometry (e.g. aditional
+            axis etc.)
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDNonFeatureItemShape" type="tns:EDMDNonFeatureItemShape" nillable="true"/>
+	<xs:complexType name="EDMDNonFeatureItemShape" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDNonFeatureItemShape is an EDMEItemShape, that defines a non feature
+            shape which is related to other EDMDItems
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDItemShape">
+				<xs:sequence>
+					<xs:element name="NonFeatureItemShapePurposePurpose" type="tns:EDMDNonFeatureItemShapePurpose" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							Purpose for the EDMDNonFeatureItemShape
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="RelatedItemShape" type="xs:IDREF" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+							Reference to the EDMDItemShapes, where the EDMDNonFeatureItemShape 
+							is related to. Has to refer to an EDMDItemShape.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDItem" type="tns:EDMDItem" nillable="true"/>
+	
+	<xs:simpleType name="EDMDGeometryType">
+		<xs:annotation>
+			<xs:documentation>
+            Type of EDMDGeometryType. Introduced in EDMD v4.0 to help clarify what type of PCB feature an Item represents
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="BOARD_OUTLINE">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents the outline of the entire PCB
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="KEEPIN_AREA_ROUTING">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Routing should be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>			
+			<xs:enumeration value="KEEPIN_AREA_COMPONENT">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Components should be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>			
+			<xs:enumeration value="KEEPIN_AREA_VIA">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Vias should be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>			
+			<xs:enumeration value="KEEPIN_AREA_TESTPOINT">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Test Points should be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>			
+			<xs:enumeration value="KEEPIN_AREA_OTHER">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Other Items without a specific keep-in type should be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="KEEPOUT_AREA_ROUTING">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Routing should not be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="KEEPOUT_AREA_COMPONENT">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Components should not be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>				
+			<xs:enumeration value="KEEPOUT_AREA_VIA">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Vias should not be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>				
+			<xs:enumeration value="KEEPOUT_AREA_TESTPOINT">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Test Points should not be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="KEEPOUT_AREA_OTHER">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Other Items without a specific keep-out type should not be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="PLACEMENT_GROUP_AREA">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an area on the Board which Items of the specified type should be placed within.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="OTHER_OUTLINE">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a user-defined area on the Board with a function other than a keep-in or keep-out area.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="BOARD_AREA_FLEXIBLE">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents the outline of a Flexible Board Area or Zone within the PCB. Used in conjunction with BOARD_AREA_RIGID and BOARD_AREA_STIFFENER to define areas of a Flex-Rigid board. Each area can have a different associated layer stack up. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="BOARD_AREA_RIGID">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents the outline of a Rigid Board Area or Zone within the PCB. Used in conjunction with BOARD_AREA_FLEXIBLE and BOARD_AREA_STIFFENER to define areas of a Flex-Rigid board. Each area can have a different associated layer stack up. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="BOARD_AREA_STIFFENER">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents the outline of a Board area or zone within the PCB functioning as a Stiffener. Used in conjunction with BOARD_AREA_FLEXIBLE and BOARD_AREA_RIGID to define areas of a Flex-Rigid board. Each area can have a different associated layer stack up. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="HOLE_PLATED">
+				<xs:annotation>
+					<xs:documentation>
+					Plated hole through or partially through the Board.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="VIA">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a Via
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="FILLED_VIA">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a Filled Via
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="HOLE_NON_PLATED">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a non-plated hole used for the physical attachment of the Board to its enclosure or to assist in the manufacture of the PCB.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="HOLE_PLATED_MILLED">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a non-plated milled or partially milled hole manufactured by a mill following a path
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="HOLE_NONPLATED_MILLED">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a plated milled or partially milled hole manufactured by a mill following a path
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>		
+			<xs:enumeration value="COMPONENT">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an Electrical Component/Package (e.g. a 16 Pin Dual-in-Line).
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="COMPONENT_MECHANICAL">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a Mechanical Component on the Board - Screw, bracket, heatsink etc.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="COPPER_PAD">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Pad 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="COPPER_TRACE">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Track or Trace
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="COPPER_AREA">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Copper Filled Area
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="SOLDERMASK">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a Soldermask area. This would normally be associated with a Soldermask PHYSICAL_LAYER
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>		
+			<xs:enumeration value="SILKSCREEN">
+				<xs:annotation>
+					<xs:documentation>
+					Represents a Silkscreen item. This would normally be associated with a Silkscreen PHYSICAL_LAYER
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="BEND">
+				<xs:annotation>
+					<xs:documentation>
+					Represents an bend, with an associated bend line and bend area
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+			<xs:enumeration value="LAYER_SOLDERMASK">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a physical Soldermask Board Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+					<xs:enumeration value="LAYER_SOLDERPASTE">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a physical Solderpaste Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_SILKSCREEN">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a physical Silkscreen Layer used in the construction of the board.  
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_GENERIC">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Generic Layer (of a type that can't be described by the other layer types) used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_GLUE">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Glue Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_GLUEMASK">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Gluemask Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_PASTEMASK">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Pastemask Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_OTHERSIGNAL">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Signal Layer other than Power or Ground used in the construction of the board.  
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_LANDSONLY">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a physical Lands Only Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_POWERORGROUND">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Power or Ground Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_EMBEDDED_CAP_DIELECTRIC">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Dielectric Layer containing embedded Passive Capacitors used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_EMBEDDED_RESISTOR">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Layer containing embedded Resistors used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_DIELECTRIC">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Dielectric Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_STIFFENER">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Dielectric Layer used in the construction of the board. 
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_LOGICAL">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents a Logical Layer used by the ECAD system to help visualize or group certain types of items together. 
+					It has no thickness and isn't part of the physical make up of the Board.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LAYER_STACKUP">
+				<xs:annotation>
+					<xs:documentation>
+					Item represents the stack up of one or more Layers. A Board will have at least one LAYER_STACKUP, and may have several to represent different areas of the Board with different numbers of Layers (a Rigid-Flex board for example).
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:complexType name="EDMDItem" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            EDMDItem includes item, item_version and 
+            design_discipline_item_definition (including sub types)
+			</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+					<xs:element name="ItemType" type="tns:EDMDItemType">
+						<xs:annotation>
+							<xs:documentation>
+								Type of the item
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Identifier" type="foundation:EDMDIdentifier" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Identifier of the EDMDItem in several systems
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="PackageName" type="foundation:EDMDName" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Package Name of the EDMDItem in several systems
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ItemInstance" type="tns:EDMDItemInstance" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Parts and SubAssemblies
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Shape" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Reference on an EDMDItemShape, which describes the EDMDItem. Has to refer to an EDMDItemShape.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ShapeTransformation" type="tns:EDMDTransformation" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Transformation between EDMDItem and the representation 
+								of the shape. If this element is not set, an identity matrix is assumed (so not transformation is needed).
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Accept" type="property:EDMDLogicProperty" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Indicates the state of acceptance of this item by several users.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ClearanceState" type="property:EDMDClearanceStateProperty" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+							Clearance state, indicates the final accept or reject of a item for a special purpose or clearance state
+							NOTE: In EDMDSchema this is only an informal flag. The authorization is up to the tools. There is no protocol to
+							negotiate clearance in EDMD.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="BaseLine" type="property:EDMDLogicProperty" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Indicates, that originator of property meant this EMDMItem as a baseline.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ReferenceName" type="xs:string" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                            Reference name of "abstract" item (E.g. "TOP", "BOTTOM"). This value is only filled for "abstract" items of "passive" PCB model.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="AssembleToName" type="xs:string" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Reference to "abstract" item (E.g. "TOP", "BOTTOM"). The value is only filled for (root) EDMDItems of "active" PCB model.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="PackagePin" type="tns:EDMDPackagePin" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Specifies the shape and location of one of more Pins when this Item represents a Package. If the Primary attribute is true then this is the main Pin, or Pin One
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="EDMD3DModel" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Optional reference to an EDMD3DModel which describes a 3D MCAD model associated with this Item if it represents a Component
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+
+				<xs:attribute name="GeometryType" type="tns:EDMDGeometryType"/>
+				
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	<xs:simpleType name="EDMDItemType">
+		<xs:annotation>
+			<xs:documentation>
+            The type of an EDMDItem
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="single">
+				<xs:annotation>
+					<xs:documentation>
+					indicates EDMDItem is a part
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="assembly">
+				<xs:annotation>
+					<xs:documentation>
+					indicates EDMDItem is an assembly
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>	
+
+	<xs:complexType name="EDMDPackagePin" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+				Represents a Package Pin
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+				    <xs:element minOccurs="1" maxOccurs="1" name="Point" type="xs:IDREF">
+						<xs:annotation>
+							<xs:documentation>
+								Center of the Pin shape (refers to an EDMDPoint)
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element minOccurs="1" maxOccurs="1" name="Shape" type="xs:IDREF">
+						<xs:annotation>
+							<xs:documentation>
+								The shape of the Pin (refers to a pdm:Shape)
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+				<xs:attribute name="pin_number" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>
+							Identifier for this Pin
+						</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="primary" type="xs:boolean">
+					<xs:annotation>
+						<xs:documentation>
+							If true indicates that this Pin is Pin 1, or the primary locating pin
+						</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>		
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	<xs:complexType name="EDMD3DModel" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+				Represents a 3D Model associated with a Component
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+				    <xs:element minOccurs="1" maxOccurs="1" name="ModelIdentifier" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+								The 3D Model's file name (including suffix) if the file is on disk, or its ID if the model is stored in the cloud or in a database 
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element minOccurs="0" maxOccurs="1" name="ModelVersion" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+								Optional 3D Model configuration or version within the above file/database reference 
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element minOccurs="0" maxOccurs="1" name="ModelLocation" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+								Optional location of the 3D model relative to the known root location. E.g. /Library/Resistors 
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element minOccurs="1" maxOccurs="1" name="MCADFormat" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+								The file format of the 3D Model. Standard names are SolidWorks, SolidEdge, NX, Catia, STEP, OBJ, STL, Inventor, Fusion, Onshape
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element minOccurs="0" maxOccurs="1" name="MCADFormatVersion" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+								Optional file format version of the 3D Model. E.g. 2019 for SolidWorks 2019, or AP214 for STEP AP214
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element minOccurs="0" maxOccurs="1" name="Transformation" type="tns:EDMDTransformation" nillable="true" >
+						<xs:annotation>
+							<xs:documentation>
+								Optional 2D or 3D transform translation needed to align this 3D model with the Component's footprint
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element minOccurs="0" maxOccurs="1" name="TransformationReference" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+								Optional reference for an MCAD coordinate system/feature needed to align the model as an alternative to using a 2D/3D transform    
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	
+	<xs:complexType name="EDMDItemInstance" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An item_instance is the occurrence of an object in a product structure
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDExtensibleObject">
+				<xs:sequence>
+					<xs:element name="InstanceName" type="foundation:EDMDName" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+								Identifies the EDMDItemInstance in an EDMDItem
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Transformation" type="tns:EDMDTransformation" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Geometric transformation between assembly and part 
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Item" type="xs:IDREF">
+						<xs:annotation>
+							<xs:documentation>
+								Reference to the EDMDItem, has to refer to an EDMDItem.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="InstanceUserAreaLayerName" type="foundation:EDMDName" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Optional User Area name where EDMDItemInstance represents a User Area 
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+				<xs:attribute name="zOffset" type="xs:decimal">
+					<xs:annotation>
+						<xs:documentation>
+							Optional zOffset where this EDMDItemInstance represents a Component Instance. This is required as the instance is located by a 2D rather than 3D transform as its location is relative to the board surface
+						</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDFunctionalItemShapeType" type="tns:EDMDFunctionalItemShapeType"/>
+	<xs:simpleType name="EDMDFunctionalItemShapeType">
+		<xs:annotation>
+			<xs:documentation>
+            Predefined Functions of an EDMDFunctionalItemShape
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="RigidArea">
+				<xs:annotation>
+					<xs:documentation>
+					   EDMDFunctionalItemShape represents a Rigid Area (used when describing a Rigid Zone on a Flex-Rigid board)
+				  </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			
+			<xs:enumeration value="FlexibleArea">
+				<xs:annotation>
+					<xs:documentation>
+					   EDMDFunctionalItemShape represents a Flexible Area (used when describing a Flexible Zone on a Flex-Rigid board).
+				    </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			
+			<xs:enumeration value="Stiffener">
+				<xs:annotation>
+					<xs:documentation>
+					EDMDFunctionalItemShape represents a Stiffener on a Flex-Rigid board.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>		
+			
+			<xs:enumeration value="UserArea">
+				<xs:annotation>
+					<xs:documentation>
+						EDMDFunctionalItemShape is a user area. This is a catch-all area type that allows the user to defined named regions that do not have a predefined purpose. Any meaning that the user would apply to the area would be done using properties and post processing.
+					  </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+
+			<xs:enumeration value="PlacementGroupArea">
+				<xs:annotation>
+					<xs:documentation>
+					   EDMDFunctionalItemShape represents a Placement Group Area. NO LONGER USED.
+				    </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="MechanicalItem">
+				<xs:annotation>
+					<xs:documentation>
+					    EDMDFunctionalItemShape is a Mechanical Item. NOT LONGER USED.
+				    </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>	
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDAssemblyComponentType" type="tns:EDMDAssemblyComponentType"/>
+	<xs:simpleType name="EDMDAssemblyComponentType">
+		<xs:annotation>
+			<xs:documentation>
+            Possible assembly component types
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="AssemblyGroupComponent">
+				<xs:annotation>
+					<xs:documentation>
+            An Assembly_group_component is a type of Assembly_component. 
+            Each component that is part of a group is in the same design 
+            view as that group.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LaminateComponent">
+				<xs:annotation>
+					<xs:documentation>
+            A Laminate_component is a type of Assembly_component. 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ThermalComponent">
+				<xs:annotation>
+					<xs:documentation>
+            A ThermalComponent is a type of Assembly_component.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Physical">
+				<xs:annotation>
+					<xs:documentation>
+            Can be of type packaged component, bare die component, 
+            routed physical component, and routed interconnect component
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Padstack">
+				<xs:annotation>
+					<xs:documentation>
+            A Padstack_occurrence organizes the various Land and 
+            Inter_stratum_features so that one placement may suffice for 
+            all Application Objects that are derived from the placement 
+            of one padstack. 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="EDMDStratumTechnology" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDInterStratumFeature spans one or more EDMDStratum
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="foundation:EDMDCollaborationObject">
+				<xs:sequence>
+					<xs:element name="TechnologyType" type="tns:EDMDStratumTechnologyType">
+						<xs:annotation>
+							<xs:documentation>
+            Type of EDMDStratumTechnology
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="LayerPurpose" type="tns:EDMDLayerPurpose">
+						<xs:annotation>
+							<xs:documentation>
+            The layer purpose
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="LayerPositionType" type="tns:EDMDLayerPositionType">
+						<xs:annotation>
+							<xs:documentation>
+            Type of Layer Positioning
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="EDMDStratumTechnologyType">
+		<xs:annotation>
+			<xs:documentation>
+            Type of EDMDStratumTechnology
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Design">
+				<xs:annotation>
+					<xs:documentation>
+            An EMDMStratumTechnologyType of type 'Design'
+            is a technology specification tailored for those materials 
+            intended to be used to implement the direct connectivity as 
+            described in a design. The same EMDMStratumTechnology may be 
+            used in multiple designs for multiple products
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Documentation">
+				<xs:annotation>
+					<xs:documentation>
+            An EMDMStratumTechnologyType of type 'Documentation'
+            may have patterns applied and whose purpose is not for directly 
+            implementing point to point connectivity as in the 
+            Design_layer_technology. 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EDMDLayerPurpose">
+		<xs:annotation>
+			<xs:documentation>
+            List of the predefined purpose of the documentation layer.
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="SolderMask">
+				<xs:annotation>
+					<xs:documentation>
+            documentation layer: solder mask
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="SolderPaste">
+				<xs:annotation>
+					<xs:documentation>
+            documentation layer: solder paste
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="SilkScreen">
+				<xs:annotation>
+					<xs:documentation>
+            documentation layer: silk screen
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="GenericLayer">
+				<xs:annotation>
+					<xs:documentation>
+            documentation layer: generic layer
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Glue">
+				<xs:annotation>
+					<xs:documentation>
+            documentation layer: glue
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="GlueMask">
+				<xs:annotation>
+					<xs:documentation>
+            documentation layer: glue mask
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PasteMask">
+				<xs:annotation>
+					<xs:documentation>
+            documentation layer: paste mask
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="OtherSignal">
+				<xs:annotation>
+					<xs:documentation>
+            design layer :   specifies that layer is used for a signal other than power or ground
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LandsOnly">
+				<xs:annotation>
+					<xs:documentation>
+            design layer :    specifies that layer is used for lands only;
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PowerOrGround">
+				<xs:annotation>
+					<xs:documentation>
+            design layer :     specifies that layer is used for power or ground signals;
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="EmbeddedPassiveCapacitorDielectric">
+				<xs:annotation>
+					<xs:documentation>
+            design layer :   specifies that layer is used for a embedded passive capacitor dielectric;
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Dielectric">
+				<xs:annotation>
+					<xs:documentation>
+            design layer :   specifies that layer is used for dielectric;
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="EmbeddedPassiveResistor">
+				<xs:annotation>
+					<xs:documentation>
+            design layer :    specifies that layer is used for a embedded passive resistor;
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EDMDLayerPositionType">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDLayerPositionType lists the types of the layer position in the 
+            sequence of layers.
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Primary">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that layer position is the z-axis zero 
+            position in the vertical sequence of layers
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Secondary">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that the layer position is secondary, 
+            a design layer opposite that of the primary layer
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="All">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that a layer may be in any sequential position
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="External">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that layer position is either the primary or 
+            secondary layer
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Internal">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that layer position is not one of primary or secondary; 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="EDMDKeepIn" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDKeepIn is an EDMDItemShape, that defines a keep in constrained
+            for a special purpose.
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDKeepConstraint"/>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EDMDFunctionalItemShape" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            EDMDFunctionalItemShape is an ItemShape, which has a special function.
+            Function is descibed by ShapeElements
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDItemShape">
+				<xs:sequence>
+					<xs:element name="FunctionalItemShapeType" type="tns:EDMDFunctionalItemShapeType" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Type of the functional item shape
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EDMDAssemblyComponent" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            Assembly component
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDItemShape">
+				<xs:sequence>
+					<xs:element name="AssemblyComponentType" type="tns:EDMDAssemblyComponentType" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+            Type of the assembly component
+            </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EDMDStratum" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDInterStratumFeature spans one or more EDMDStratum
+            </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDItemShape">
+				<xs:sequence>
+					<xs:element name="StratumTechnology" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							Specifies a role of the EDMDStratumTechnology for the 
+							EDMDStratum. Has to refer to an EDMDStratumTechnology.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="StratumType" type="tns:EDMDStratumType">
+						<xs:annotation>
+							<xs:documentation>
+							Type of the EMDMStratum
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="StratumSurfaceDesignation" type="tns:EDMDStratumSurfaceDesignation" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							Kind of designation of the EDMDStratum
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="EDMDStratumType">
+		<xs:annotation>
+			<xs:documentation>
+            An EDMDStratumType indicates the type of an EDMDStratum
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="DocumentationLayerStratum">
+				<xs:annotation>
+					<xs:documentation>
+            A Documentation_layer_stratum is a type of Stratum used to 
+            describe patterns and other artwork information needed to 
+            manufacture a Stratum from materials which are not independently 
+            implementing a Generic_physical_network in the printed circuit 
+            board.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="DesignLayerStratum">
+				<xs:annotation>
+					<xs:documentation>
+            A Design_layer_stratum is a type of Stratum incorporated into 
+            an Interconnect_module for the purpose of realizing a physical 
+            network in one material.
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="EDMDStratumSurfaceDesignation">
+		<xs:annotation>
+			<xs:documentation>
+            A Design_layer_stratum is a type of Stratum incorporated into an 
+            Interconnect_module 
+            for the purpose of realizing a physical network in one material.
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="AverageSurface">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that stratum surface is the average
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PrimarySurface">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that stratum surface is primary
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="SecondarySurface">
+				<xs:annotation>
+					<xs:documentation>
+            specifies that stratum surface is secondary
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDShapeElementType" type="tns:EDMDShapeElementType"/>
+	<xs:element name="EDMDInterStratumFeatureType" type="tns:EDMDInterStratumFeatureType"/>
+	<xs:element name="EDMDAssemblyComponent" type="tns:EDMDAssemblyComponent" nillable="true"/>
+	<xs:element name="EDMDStratumTechnologyType" type="tns:EDMDStratumTechnologyType"/>
+	<xs:element name="EDMDLayerPurpose" type="tns:EDMDLayerPurpose"/>
+	<xs:element name="EDMDLayerPositionType" type="tns:EDMDLayerPositionType"/>
+	<xs:element name="EDMDStratum" type="tns:EDMDStratum" nillable="true"/>
+	<xs:element name="EDMDItemInstance" type="tns:EDMDItemInstance" nillable="true"/>
+	<xs:element name="EDMDSignalType" type="tns:EDMDSignalType"/>
+	<xs:simpleType name="EDMDSignalType">
+		<xs:annotation>
+			<xs:documentation>
+            The type of a signal
+            </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="OtherSignal">
+				<xs:annotation>
+					<xs:documentation>
+            other signal: specifies that layer is used for a signal 
+            other than power or ground; 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="LandsOnly">
+				<xs:annotation>
+					<xs:documentation>
+            lands only: specifies that layer is used for lands only; 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PowerOrGround">
+				<xs:annotation>
+					<xs:documentation>
+            power or ground: specifies that layer is used for 
+            power or ground signals; 
+            </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDTransformation" type="tns:EDMDTransformation" nillable="true"/>
+	<xs:element name="EDMDStratumType" type="tns:EDMDStratumType"/>
+	<xs:element name="EDMDStratumSurfaceDesignation" type="tns:EDMDStratumSurfaceDesignation"/>
+	<xs:element name="EDMDItemType" type="tns:EDMDItemType"/>
+	<xs:element name="EDMDKeepIn" type="tns:EDMDKeepIn" nillable="true"/>
+	<xs:element name="EDMDStratumTechnology" type="tns:EDMDStratumTechnology" nillable="true"/>
+	<xs:element name="EDMDKeepConstraintPurpose" type="tns:EDMDKeepConstraintPurpose"/>
+	<xs:element name="EDMDFunctionalItemShape" type="tns:EDMDFunctionalItemShape" nillable="true"/>
+</xs:schema>

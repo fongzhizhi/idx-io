@@ -1,0 +1,1491 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema elementFormDefault="qualified" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/property" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/property" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+  <xs:annotation>
+    <xs:documentation>
+      Author: Working Group ECAD-MCAD Collaboration
+      Purpose: EDMD-Schema 4.0
+      Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+
+      prostep ivip Association
+      Dolivostr. 11
+      D-64293 Darmstadt, Germany
+    </xs:documentation>
+  </xs:annotation>
+  <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+  <xs:element name="EDMDConstrainedProperty" nillable="true" type="tns:EDMDConstrainedProperty" />
+  <xs:complexType name="EDMDConstrainedProperty" abstract="true" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Abstract super type of simple properties
+        with optional constraints.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="foundation:EDMDObject">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="ValidUnit" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Units which are valid for this property
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="ValidValue" nillable="true" type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+                Values which are valid for this property
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="MaxValue" nillable="true" type="tns:EDMDConstrainedProperty">
+            <xs:annotation>
+              <xs:documentation>
+                Maximum value restrictions, given by different originators.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="MinValue" nillable="true" type="tns:EDMDConstrainedProperty">
+            <xs:annotation>
+              <xs:documentation>
+                Minimum value restrictions, given by different originators.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="Originator" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                The Originator, who has set the value of the property. Has to refer to an EDMDPerson
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+        <xs:attribute name="IsChanged" type="xs:boolean" use="optional">
+          <xs:annotation>
+            <xs:documentation>
+              Optional attribute to indicate that the property has
+              changed.
+              NOTE: If this attribute is not set, the message interpreting
+              system has to recognize if property is changed.
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="IsNew" type="xs:boolean" use="optional">
+          <xs:annotation>
+            <xs:documentation>
+              Optional attribute to indicate that the property is new.
+              NOTE: If this attribute is not set, the message interpreting
+              system has to recognize if property is new.
+            </xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUserProperty" nillable="true" type="tns:EDMDUserProperty" />
+  <xs:complexType name="EDMDUserProperty" abstract="true" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        User defined property, which can be identified via key, to get
+        a more flexible way of use, multiple keys are allowed
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="unbounded" name="Key" type="foundation:EDMDName">
+            <xs:annotation>
+              <xs:documentation>
+                Multiple keys
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="EDMDLengthProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Length Property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                Value as a floating point number
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="Unit" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Unit of the length
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUnit" nillable="true" type="tns:EDMDUnit" />
+  <xs:complexType name="EDMDUnit" abstract="true" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Abstract super type for units, place in an EDMDMessage
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="foundation:EDMDCollaborationObject">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="UnitName" nillable="true" type="foundation:EDMDName">
+            <xs:annotation>
+              <xs:documentation>
+                Name of the Unit in several systems for common known units it is recommended
+                to use only the displayable name elemente inherited from the EDMDExtensibleObject.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUnitLength" nillable="true" type="tns:EDMDUnitLength" />
+  <xs:complexType name="EDMDUnitLength" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type length
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitLengthFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitLength
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitLengthFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for length.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mm">
+        <xs:annotation>
+          <xs:documentation>
+            millimeter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="in">
+        <xs:annotation>
+          <xs:documentation>
+            inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="m">
+        <xs:annotation>
+          <xs:documentation>
+            meter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="ft">
+        <xs:annotation>
+          <xs:documentation>
+            foot
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="mil">
+        <xs:annotation>
+          <xs:documentation>
+            milli inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="microinch">
+        <xs:annotation>
+          <xs:documentation>
+            micro inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="cm">
+        <xs:annotation>
+          <xs:documentation>
+            centimeter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="micrometre">
+        <xs:annotation>
+          <xs:documentation>
+            micro metre
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUserAnyPropertyValue" nillable="true" type="tns:EDMDUserAnyPropertyValue" />
+  <xs:complexType name="EDMDUserAnyPropertyValue" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        EDMDUserAnyPropertyValue is the container for any structured
+        xml-data, which is stored in EDMDAnyProperty.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="foundation:EDMDObject">
+        <xs:sequence>
+          <xs:any minOccurs="0" maxOccurs="1" />
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUserAnyProperty" nillable="true" type="tns:EDMDUserAnyProperty" />
+  <xs:complexType name="EDMDUserAnyProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        EDMDAnyProperty contains a value of type xml-any to store
+        structured information as xml, it should contain only types
+        not defined in EDMDSchema namespaces.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUserProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="tns:EDMDUserAnyPropertyValue">
+            <xs:annotation>
+              <xs:documentation>
+                Value element to store any xml element.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUnitPower" nillable="true" type="tns:EDMDUnitPower" />
+  <xs:complexType name="EDMDUnitPower" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type power
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitPowerFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitPower
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitPowerFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for power.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mW">
+        <xs:annotation>
+          <xs:documentation>
+            milli watt
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="W">
+        <xs:annotation>
+          <xs:documentation>
+            watt
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="kW">
+        <xs:annotation>
+          <xs:documentation>
+            kilo watt
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDDateTimeProperty" nillable="true" type="tns:EDMDDateTimeProperty" />
+  <xs:complexType name="EDMDDateTimeProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Date and Time property.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="xs:dateTime">
+            <xs:annotation>
+              <xs:documentation>
+                Value of the Date and Time as an element of type dateTime.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUnitWork" nillable="true" type="tns:EDMDUnitWork" />
+  <xs:complexType name="EDMDUnitWork" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type work
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitWorkFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitWork
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitWorkFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for work.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="J">
+        <xs:annotation>
+          <xs:documentation>
+            Joule
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="kJ">
+        <xs:annotation>
+          <xs:documentation>
+            kilo Joule
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUnitWeight" nillable="true" type="tns:EDMDUnitWeight" />
+  <xs:complexType name="EDMDUnitWeight" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type work
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitWeightFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitWeight
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitWeightFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for weight.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mg">
+        <xs:annotation>
+          <xs:documentation>
+            milli gramme
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="g">
+        <xs:annotation>
+          <xs:documentation>
+            gramme
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="kg">
+        <xs:annotation>
+          <xs:documentation>
+            kilo gramme
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUnitCapacitance" nillable="true" type="tns:EDMDUnitCapacitance" />
+  <xs:complexType name="EDMDUnitCapacitance" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type capacitance
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitCapacitanceFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitCapacitance
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitCapacitanceFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for capacitance.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="pF">
+        <xs:annotation>
+          <xs:documentation>
+            pico farad
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="nF">
+        <xs:annotation>
+          <xs:documentation>
+            nano farad
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="mF">
+        <xs:annotation>
+          <xs:documentation>
+            milli farad
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="F">
+        <xs:annotation>
+          <xs:documentation>
+            farad
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDLogicProperty" nillable="true" type="tns:EDMDLogicProperty" />
+  <xs:complexType name="EDMDLogicProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Logical property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="xs:boolean">
+            <xs:annotation>
+              <xs:documentation>
+                Logic value as bool
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDClearanceStateProperty" nillable="true" type="tns:EDMDClearanceStateProperty" />
+  <xs:complexType name="EDMDClearanceStateProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        claerace state property, indicates the final accept or reject of a item for a special pupose or clearance state
+        NOTE: In EDMDSchema this is only an informal flag. The authorization is up to the tools. There ist no protocol to
+        negociate clearence in EDMD.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="StateName" type="tns:ArrayOfEDMDName">
+            <xs:annotation>
+              <xs:documentation>
+                Name of the state in different systems.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="1" maxOccurs="1" name="Accept" type="xs:boolean">
+            <xs:annotation>
+              <xs:documentation>
+                True if item is accepted for this state
+                Falste if item is rejected for this state
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="ArrayOfEDMDName" mixed="true">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="EDMDName" nillable="true" type="foundation:EDMDName" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!--ADDED-->
+  <xs:complexType name="EDMDIntegerProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Simple Property with a value and an unit.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="xs:int">
+            <xs:annotation>
+              <xs:documentation>
+                Value of this property.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="Unit" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Unit of this property
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="EDMDBooleanPropertyType" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Boolean property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="tns:EDMDBooleanRestrictionType">
+            <xs:annotation>
+              <xs:documentation>
+                value of the angle as floating point number
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="EDMDCutOutSidePropertyType" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Body_Enum property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="tns:EDMDCutOutSideEnum">
+            <xs:annotation>
+              <xs:documentation>
+                Top, Bottom, All
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="EDMDRestrictedAreaPlacementSidePropertyType" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Body_Enum property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="tns:EDMDRestrictedAreaPlacementSideEnum">
+            <xs:annotation>
+              <xs:documentation>
+                Both, Top, Bottom
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="EDMDRestrictedAreaRoutingSidePropertyType" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Body_Enum property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:choice>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="tns:EDMDRestrictedAreaRoutingSideEnum">
+            <xs:annotation>
+              <xs:documentation>
+                Both, Top, Bottom, All, Inner
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="1" maxOccurs="1" name="Range" type="tns:EDMDRestrictedAreaRoutingSideRangeType">
+            <xs:annotation>
+              <xs:documentation>
+                Inner_i_to_j
+                i has to be lower than j
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+
+
+        </xs:choice>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="EDMDPin_TypePropertyType" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Pin_Enum property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="tns:EDMDPin_TypeEnum">
+            <xs:annotation>
+              <xs:documentation>
+                I, L, Z, C
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:simpleType name="EDMDPin_TypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="I" />
+      <xs:enumeration value="L" />
+      <xs:enumeration value="Z" />
+      <xs:enumeration value="C" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="EDMDCutOutSideEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Top" />
+      <xs:enumeration value="Bottom" />
+      <xs:enumeration value="All" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="EDMDRestrictedAreaPlacementSideEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Both" />
+      <xs:enumeration value="Top" />
+      <xs:enumeration value="Bottom" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="EDMDRestrictedAreaRoutingSideEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Both" />
+      <xs:enumeration value="Top" />
+      <xs:enumeration value="Bottom" />
+      <xs:enumeration value="All" />
+      <xs:enumeration value="Inner" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="EDMDRestrictedAreaRoutingSideRangeType">
+    <xs:sequence>
+      <xs:element name="i" type="xs:int" minOccurs="1" maxOccurs="1" />
+      <xs:element name="j" type="xs:int" minOccurs="1" maxOccurs="1" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="EDMDBooleanRestrictionType">
+    <xs:restriction base="xs:int">
+      <xs:enumeration value="-1" />
+      <xs:enumeration value="1" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="EDMDAngleProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Angle property
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                value of the angle as floating point number
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="Unit" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Unit of the angle
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDLengthProperty" nillable="true" type="tns:EDMDLengthProperty" />
+  <xs:element name="EDMDUnitVolume" nillable="true" type="tns:EDMDUnitVolume" />
+  <xs:complexType name="EDMDUnitVolume" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type volume
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitVolumeFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitVolume
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitVolumeFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for volume.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mm3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic millimeter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="in3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="ft3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic foot
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="m3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic meter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="mil3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic milli inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="microinch3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic micro inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="cm3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic centimeter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="micrometre3">
+        <xs:annotation>
+          <xs:documentation>
+            cubic micro meter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUnitVoltage" nillable="true" type="tns:EDMDUnitVoltage" />
+  <xs:complexType name="EDMDUnitVoltage" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type voltage
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitVoltageFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitVoltage
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitVoltageFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for voltage.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mV">
+        <xs:annotation>
+          <xs:documentation>
+            Milli volt
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="V">
+        <xs:annotation>
+          <xs:documentation>
+            Volt
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="kV">
+        <xs:annotation>
+          <xs:documentation>
+            kilo Volt
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUnitResistance" nillable="true" type="tns:EDMDUnitResistance" />
+  <xs:complexType name="EDMDUnitResistance" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type resistance
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitResistanceFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitResistance
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitResistanceFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for resistance.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mohm">
+        <xs:annotation>
+          <xs:documentation>
+            milli ohm
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="ohm">
+        <xs:annotation>
+          <xs:documentation>
+            ohm
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="kohm">
+        <xs:annotation>
+          <xs:documentation>
+            kilo ohm
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUserSimpleProperty" nillable="true" type="tns:EDMDUserSimpleProperty" />
+  <xs:complexType name="EDMDUserSimpleProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Simple property includes one value to store simple
+        unstructured information.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUserProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+                Simple unstructured value
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="Unit" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Unit of the value
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="EDMDUnitSurface" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type surface
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitSurfaceFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitSurface
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitSurfaceFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for surface.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mm2">
+        <xs:annotation>
+          <xs:documentation>
+            square millimeter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="in2">
+        <xs:annotation>
+          <xs:documentation>
+            square inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="m2">
+        <xs:annotation>
+          <xs:documentation>
+            square meter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="ft2">
+        <xs:annotation>
+          <xs:documentation>
+            square foot
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="mil2">
+        <xs:annotation>
+          <xs:documentation>
+            square milli inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="microinch2">
+        <xs:annotation>
+          <xs:documentation>
+            square micro inch
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="cm2">
+        <xs:annotation>
+          <xs:documentation>
+            square centimeter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="micrometre2">
+        <xs:annotation>
+          <xs:documentation>
+            square micro meter
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="EDMDUnitAmperage" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type amperage
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitAmperageFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDUnitAmperage
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDUnitAmperageFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for amperage.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mA">
+        <xs:annotation>
+          <xs:documentation>
+            Milliampere
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="A">
+        <xs:annotation>
+          <xs:documentation>
+            Ampere
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="kA">
+        <xs:annotation>
+          <xs:documentation>
+            Kilo ampere
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUnitSurfaceFundamental" type="tns:EDMDUnitSurfaceFundamental" />
+  <xs:element name="EDMDUnitVolumeFundamental" type="tns:EDMDUnitVolumeFundamental" />
+  <xs:element name="EDMDUnitLengthFundamental" type="tns:EDMDUnitLengthFundamental" />
+  <xs:element name="EDMDUnitAngleFundamental" type="tns:EDMDUnitAngleFundamental" />
+  <xs:simpleType name="EDMDUnitAngleFundamental">
+    <xs:annotation>
+      <xs:documentation>
+        List of suitable units for angle.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="grad">
+        <xs:annotation>
+          <xs:documentation>
+            grad, 1pi = 200, 2pi = 400
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="degree">
+        <xs:annotation>
+          <xs:documentation>
+            degree, 1pi = 180, 2pi = 360
+          </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDUnitWeightFundamental" type="tns:EDMDUnitWeightFundamental" />
+  <xs:element name="EDMDUnitAmperageFundamental" type="tns:EDMDUnitAmperageFundamental" />
+  <xs:element name="EDMDUnitVoltageFundamental" type="tns:EDMDUnitVoltageFundamental" />
+  <xs:element name="EDMDUnitPowerFundamental" type="tns:EDMDUnitPowerFundamental" />
+  <xs:element name="EDMDUnitWorkFundamental" type="tns:EDMDUnitWorkFundamental" />
+  <xs:element name="EDMDUnitCapacitanceFundamental" type="tns:EDMDUnitCapacitanceFundamental" />
+  <xs:element name="EDMDUnitResistanceFundamental" type="tns:EDMDUnitResistanceFundamental" />
+  <xs:element name="EDMDUnitSurface" nillable="true" type="tns:EDMDUnitSurface" />
+  <xs:element name="EDMDProperty" nillable="true" type="tns:EDMDProperty" />
+  <xs:complexType name="EDMDProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Simple Property with a value and an unit.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Value" type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+                Value of this property.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="Unit" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Unit of this property
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDAngleProperty" nillable="true" type="tns:EDMDAngleProperty" />
+  <xs:element name="EDMDUserCompoundProperty" nillable="true" type="tns:EDMDUserCompoundProperty" />
+  <xs:complexType name="EDMDUserCompoundProperty" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        User defined Compound Property contains a list of properties
+        and can be used to represent lists and (by nesting) matrices.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUserProperty">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="unbounded" name="Value" type="tns:EDMDUserProperty">
+            <xs:annotation>
+              <xs:documentation>
+                List of included EDMDUserProperties
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUnitAngle" nillable="true" type="tns:EDMDUnitAngle" />
+  <xs:complexType name="EDMDUnitAngle" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        represent a unit of type angle
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDUnit">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Fundamental" nillable="true" type="tns:EDMDUnitAngleFundamental">
+            <xs:annotation>
+              <xs:documentation>
+                The fundamental unit the EDMDUnit represents. If a unit represents a dependend unit this
+                optional element has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependendScaleFactor" nillable="true" type="xs:double">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this is the scale factor for conversion from the unit
+                depending on to unit. If a unit represents a fundamental unit this optional element
+                has to be not included.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="DependsOn" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                In case of representing a dependend unit this references to the unit depending on.
+                If a unit represents a fundamental unit this optional element
+                has to be not included.
+                Has to refer to an EDMDAngleLength
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDUnitAmperage" nillable="true" type="tns:EDMDUnitAmperage" />
+  <xs:complexType name="EDMDColorProperty" mixed ="true">
+    <xs:complexContent>
+      <xs:extension base="tns:EDMDConstrainedProperty">
+        <xs:sequence>
+          <xs:element name="Value" type="xs:int" />
+          <xs:element name="Mixed" type="xs:boolean" />
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="EDMDUserNonValueProperty">
+    <xs:complexContent>
+      <xs:extension base="tns:EDMDUserProperty">
+        <xs:sequence />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

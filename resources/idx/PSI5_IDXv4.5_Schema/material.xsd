@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema
+  elementFormDefault="qualified"
+  targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/material" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/material" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+  <xs:annotation>
+    <xs:documentation>
+		Author: Working Group ECAD-MCAD Collaboration
+		Purpose: EDMD-Schema 4.0
+		Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+		
+		prostep ivip Association
+		Dolivostr. 11
+		D-64293 Darmstadt, Germany
+	</xs:documentation>
+  </xs:annotation>
+  <xs:import
+    namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation"
+    schemaLocation="foundation.xsd" />
+  <xs:element
+    name="EDMDMaterial"
+    nillable="true"
+    type="tns:EDMDMaterial" />
+  <xs:complexType
+    name="EDMDMaterial"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            EDMDMaterial represents a material and its properties
+            NOTE: material issues are not defined, yet in the collaboration model. 
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDCollaborationObject" />
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

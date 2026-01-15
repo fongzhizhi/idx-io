@@ -1,0 +1,236 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+	
+-->
+<xs:schema elementFormDefault="qualified" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/annotation" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/annotation" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+  <xs:annotation>
+    <xs:documentation>
+		Author: Working Group ECAD-MCAD Collaboration
+		Purpose: EDMD-Schema 4.0
+		Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+		
+		prostep ivip Association
+		Dolivostr. 11
+		D-64293 Darmstadt, Germany
+	</xs:documentation>
+  </xs:annotation>
+ 
+  <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+  
+  
+  <xs:element name="EDMDAnnotation" nillable="true" type="tns:EDMDAnnotation" />
+  
+  <xs:complexType name="EDMDAnnotation" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+		Annotation to an object
+	  </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="foundation:EDMDCollaborationObject">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="Subject" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Subject EDMDObject, which the annotation is assigned to, has to refer to an EDMDObject.
+               </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0"  maxOccurs="1" name="Creator" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Creator of the annotation, has to refer to an EDMDPerson.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element  minOccurs="0"  maxOccurs="unbounded" name="RelatedAnnotation" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                Annotations, where this annotation depends on, has to refer to EDMDAnnotation.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="1" maxOccurs="1" name="Caption" type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+                Caption of the annotation
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="1" name="Text" nillable="true" type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+                Annotation text
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="Reference" nillable="true" type="xs:anyURI">
+            <xs:annotation>
+              <xs:documentation>
+                  Further external information, e.g. a link to a bug tracking system.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:element name="EDMDHistoryEntry" nillable="true" type="tns:EDMDHistoryEntry" />
+  
+  <xs:complexType name="EDMDHistoryEntry" abstract="true" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+			Abstract super type for history entry. History entries are informal in EDMDSchema.
+		</xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDAnnotation">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="History" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+				Reference to the history the history entry belongs to.
+				</xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element minOccurs="1" maxOccurs="1" name="CreationDateTime" type="xs:dateTime">
+            <xs:annotation>
+              <xs:documentation>
+				Creation date and time of history entry.
+			  </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+		  <xs:element minOccurs="0" maxOccurs="1" name="SystemScope" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+				System scope, which the history entry is assigned to, has to refer to an EDMDSystem.
+			  </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:complexType name="EDMDHistoryEntryChangeItemInstance" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+		History entry indicating a change on an item instance (e.g. placement) Subject point to the EDMDItemInstance.
+	  </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDHistoryEntry" />
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:complexType name="EDMDHistoryEntryAddComment" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+       History entry adding only a comment to the history.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDHistoryEntry" />
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:complexType name="EDMDHistoryEntryChangeOwnership" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        History entry indicating the change of ownership (Subject points to the EDMDRoleOnItem or EDMDRoleOnItemInstance)
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension  base="tns:EDMDHistoryEntry">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="OldOwner" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+                The owner before ownership changed.
+               </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:complexType name="EDMDHistoryEntryAddItemInstance" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        History entry indicating addition of an item instance (Subject points to the EDMDItemInstance)
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDHistoryEntry" />
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:element name="EDMDHistoryEntryChangeAcceptance" nillable="true" type="tns:EDMDHistoryEntryChangeAcceptance" />
+  
+  <xs:complexType name="EDMDHistoryEntryChangeAcceptance" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+         History entry indicating acceptance of a change (Subject points to the EDMDItem representing the result of change)
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDHistoryEntry" />
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:element name="EDMDHistoryEntryAddComment" nillable="true" type="tns:EDMDHistoryEntryAddComment" />
+  
+  <xs:element name="EDMDHistory" nillable="true" type="tns:EDMDHistory" />
+  
+  <xs:complexType name="EDMDHistory" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Represents a human readable history. 
+            NOTE: History entries are informal in EDMDSchema. So in case of inaccurate implementation
+            history may conflicts with EDMDChanges.
+       </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="foundation:EDMDCollaborationObject">
+        <xs:sequence>
+          <xs:element minOccurs="1" maxOccurs="1" name="HistoryName" type="tns:ArrayOfEDMDName">
+            <xs:annotation>
+              <xs:documentation>
+				Name of the history in different systems. Names are used to seperate history of different collaboration sessions.
+				</xs:documentation>
+            </xs:annotation>
+          </xs:element>
+		  <xs:element minOccurs="0" maxOccurs="1" name="Subject" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+				Subject EDMDObject, which the history is assigned to, has to refer to an EDMDObject.
+				</xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  
+  <xs:complexType name="ArrayOfEDMDName" mixed="true">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="EDMDName" nillable="true" type="foundation:EDMDName" />
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:element name="EDMDHistoryEntryChangeItemInstance" nillable="true" type="tns:EDMDHistoryEntryChangeItemInstance" />
+  
+  <xs:element name="EDMDHistoryEntryAddItemInstance" nillable="true" type="tns:EDMDHistoryEntryAddItemInstance" />
+  
+  <xs:element name="EDMDHistoryEntryChangeOwnership" nillable="true" type="tns:EDMDHistoryEntryChangeOwnership" />
+
+  </xs:schema>

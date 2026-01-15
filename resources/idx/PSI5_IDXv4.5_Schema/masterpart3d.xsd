@@ -1,0 +1,284 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xsd:schema id="MasterPart_new" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/3dpart" elementFormDefault="qualified" xmlns:Master3D="http://www.prostep.org/ecad-mcad/edmd/4.0/3dpart" xmlns:property="http://www.prostep.org/ecad-mcad/edmd/4.0/property" xmlns:pdm="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/property" schemaLocation="property.xsd" />
+  <xsd:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" schemaLocation="pdm.xsd" />
+
+  <xsd:complexType name="EDMD3DMasterModelType" mixed="true">
+    <xsd:complexContent>
+      <xsd:extension base="pdm:EDMDShapeDescription">
+        <xsd:sequence>
+          <xsd:element name="Electrical_Insertion_Point" type="Master3D:EDMDElectrical_Insertion_PointType" minOccurs="0" maxOccurs="1" />
+          <!--<xsd:element name="Body" type ="Master3D:EDMDAbstractBodyType" minOccurs="0" maxOccurs="unbounded" />-->
+          <xsd:element ref="Master3D:EDMDAbstractBody" minOccurs="0" maxOccurs="unbounded" />
+          <xsd:element name="Pin" type="Master3D:EDMDPinType" minOccurs="0" maxOccurs="unbounded" />
+          <xsd:element name="Pin_Row" type="Master3D:EDMDPinRowType" minOccurs="0" maxOccurs="unbounded" />
+          <xsd:element name="Pad" type="Master3D:EDMDPadType" minOccurs="0" maxOccurs="unbounded" />
+          <xsd:element name="Master_String" type="property:EDMDProperty" minOccurs="0" maxOccurs="unbounded" />
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDElectrical_Insertion_PointType">
+    <xsd:sequence>
+      <xsd:element name="ACS_X_Offset" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="ACS_Y_Offset" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="ACS_Z_Offset" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="ACS_Angle" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+  <!-- BODY and its Subtypes-->
+  <xsd:complexType name="EDMDAbstractBodyType" abstract="true">
+
+    <xsd:sequence>
+      <xsd:element name="GeometricalProperties" type="Master3D:EDMDBodyGeometricalType" minOccurs="1" maxOccurs ="1" />
+      <xsd:element name="NonGeometricalProperties" type="Master3D:EDMDBodyNonGeometricalType" minOccurs="1" maxOccurs ="1" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:element name="EDMDAbstractBody" abstract="true" />
+  <xsd:element name="EDMDBasicBody" type="Master3D:EDMDBasicBodyType" substitutionGroup="Master3D:EDMDAbstractBody" />
+  <xsd:element name="EDMDCutOut" type="Master3D:EDMDCutOutType" substitutionGroup="Master3D:EDMDAbstractBody" />
+  <xsd:element name="EDMDRestrictedAreaPlacement" type="Master3D:EDMDRestrictedAreaPlacementType" substitutionGroup="Master3D:EDMDAbstractBody" />
+  <xsd:element name="EDMDRestrictedAreaRouting" type="Master3D:EDMDRestrictedAreaRoutingType" substitutionGroup="Master3D:EDMDAbstractBody" />
+
+  <xsd:complexType name="EDMDBasicBodyType">
+    <xsd:complexContent>
+      <xsd:extension base="Master3D:EDMDAbstractBodyType">
+        <xsd:sequence>
+          <xsd:element name="AdditionalGeometricalProperties" type="Master3D:EDMDBasicBodyAdditionalGeometricalType" minOccurs="1" maxOccurs="1" />
+          <!--<xsd:element name="AdditionalNonGeometricalProperties" type="Master3D:EDMDBasicBodyAdditionalNonGeometricalType" minOccurs="1" maxOccurs="1" />-->
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDBasicBodyAdditionalGeometricalType">
+    <xsd:sequence>
+      <!-- Offsets -->
+      <xsd:element name="Body_Offset_Z" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <!-- Scale -->
+      <xsd:element name="Body_Scale" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <!-- Angles -->
+      <xsd:element name="Body_Angle_X" type="property:EDMDAngleProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Body_Angle_Y" type="property:EDMDAngleProperty" minOccurs="1" maxOccurs="1" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDBasicBodyAdditionalNonGeometricalType">
+    <xsd:sequence>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDCutOutType">
+    <xsd:complexContent>
+      <xsd:extension base="Master3D:EDMDAbstractBodyType">
+        <xsd:sequence>
+          <xsd:element name="AdditionalGemetricalProperties" type="Master3D:EDMDCutOutAdditionalGeometricalType" minOccurs="1" maxOccurs="1" />
+          <!--<xsd:element name="AdditionalNonGemetricalProperties" type="Master3D:EDMDCutOutAdditionalNonGeometricalType" minOccurs="1" maxOccurs="1" />-->
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDCutOutAdditionalGeometricalType">
+    <xsd:sequence>
+      <xsd:element name="Side" type="property:EDMDCutOutSidePropertyType" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Plated_Trough" type="xsd:boolean" minOccurs="1" maxOccurs="1" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDCutOutAdditionalNonGeometricalType">
+    <xsd:sequence>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDRestrictedAreaPlacementType">
+    <xsd:complexContent>
+      <xsd:extension base="Master3D:EDMDAbstractBodyType">
+        <xsd:sequence>
+          <xsd:element name ="AdditionalGeometricalProperties" type="Master3D:EDMDRestrictedAreaPlacementAdditionalGeometricalType" minOccurs="1" maxOccurs="1" />
+          <!--<xsd:element name ="AdditionalNonGeometricalProperties" type="Master3D:EDMDRestrictedAreaPlacementAdditionalNonGeometricalType" minOccurs="1" maxOccurs="1" />-->
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDRestrictedAreaPlacementAdditionalGeometricalType">
+    <xsd:sequence>
+      <xsd:sequence>
+        <!-- Offsets -->
+        <xsd:element name="Body_Offset_Z" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+        <!-- Scale -->
+        <xsd:element name="Body_Scale" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+        <!-- Angles -->
+        <xsd:element name="Body_Angle_X" type="property:EDMDAngleProperty" minOccurs="1" maxOccurs="1" />
+        <xsd:element name="Body_Angle_Y" type="property:EDMDAngleProperty" minOccurs="1" maxOccurs="1" />
+      </xsd:sequence>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDRestrictedAreaPlacementAdditionalNonGeometricalType">
+    <xsd:sequence></xsd:sequence>
+  </xsd:complexType>
+
+
+  <xsd:complexType name="EDMDRestrictedAreaRoutingType">
+    <xsd:complexContent>
+      <xsd:extension base="Master3D:EDMDAbstractBodyType">
+        <xsd:sequence>
+          <xsd:element name ="AdditionalGeometricalProperties" type="Master3D:EDMDRestrictedAreaRoutingAdditionalGeometricalType" minOccurs="1" maxOccurs="1" />
+          <!--<xsd:element name ="AdditionalNonGeometricalProperties" type="Master3D:EDMDRestrictedAreaRoutingAdditionalNonGeometricalType" minOccurs="1" maxOccurs="1" />-->
+        </xsd:sequence>
+      </xsd:extension>
+    </xsd:complexContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDRestrictedAreaRoutingAdditionalGeometricalType">
+    <xsd:sequence></xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDRestrictedAreaRoutingAdditionalNonGeometricalType">
+    <xsd:sequence></xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDBodyGeometricalType">
+    <xsd:sequence>
+      <!-- Dimensions -->
+      <xsd:element name="Body_Width" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Body_Length" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Body_Height" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <!-- Champfer or Edge Blend LB -->
+      <xsd:choice minOccurs="0" maxOccurs="1">
+        <xsd:element name="Body_Chamfer_LB" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+        <xsd:element name="Body_Radius_LB" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      </xsd:choice>
+      <!-- Champfer or Edge Blend RB -->
+      <xsd:choice minOccurs="0" maxOccurs="1">
+        <xsd:element name="Body_Chamfer_RB" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+        <xsd:element name="Body_Radius_RB" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      </xsd:choice>
+      <!-- Champfer or Edge Blend LA -->
+      <xsd:choice minOccurs="0" maxOccurs="1">
+        <xsd:element name="Body_Chamfer_LA" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+        <xsd:element name="Body_Radius_LA" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      </xsd:choice>
+      <!-- Champfer or Edge Blend RA -->
+      <xsd:choice minOccurs="0" maxOccurs="1">
+        <xsd:element name="Body_Chamfer_RA" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+        <xsd:element name="Body_Radius_RA" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      </xsd:choice>
+      <!-- Offsets -->
+      <xsd:element name="Body_Offset_X" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Body_Offset_Y" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+
+      <!-- Angles -->
+      <xsd:element name="Body_Angle_Z" type="property:EDMDAngleProperty" minOccurs="1" maxOccurs="1" />
+
+      <!-- Add or Remove -->
+      <xsd:element name="Body_Boolean_Sign" type="property:EDMDBooleanPropertyType" minOccurs="1" maxOccurs="1" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDBodyNonGeometricalType">
+    <xsd:sequence>
+      <xsd:element name="Body_Color" type="property:EDMDColorProperty" minOccurs="1" maxOccurs="1" />
+      <!--<xsd:element name="Body_Type" type="property:EDMDBody_TypePropertyType" minOccurs="1" maxOccurs="1" />-->
+      <xsd:element name="Body_Count" type="property:EDMDIntegerProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Body_String" type="property:EDMDProperty" minOccurs="0" maxOccurs="unbounded" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+  <!-- PIN -->
+  <xsd:complexType name="EDMDPinType">
+    <xsd:sequence>
+      <xsd:element name="Pin_Identifier" type="property:EDMDIntegerProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Digit" type="property:EDMDIntegerProperty" minOccurs="1" maxOccurs="1" />
+    </xsd:sequence>
+    <xsd:attribute name="Pin_RowRef" type="xsd:IDREF" use="required" />
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDPinRowType">
+    <xsd:sequence>
+      <xsd:element name="GeometricalProperties" type="Master3D:EDMDPinRowGeometricalType" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="NonGeometricalProperties" type="Master3D:EDMDPinRowNonGeometricalType" minOccurs="1" maxOccurs="1" />
+    </xsd:sequence>
+    <xsd:attribute name="id" type="xsd:ID" use="required" />
+    <xsd:attribute name="PadRef" type="xsd:IDREF" use="optional" />
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDPinRowGeometricalType">
+    <xsd:sequence>
+      <xsd:element name="Pin_Fixation_Height" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Fixation_Height_1" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Length_1" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Length_2" type="property:EDMDLengthProperty" minOccurs="0" maxOccurs="1" />
+      <xsd:element name="Pin_Length_3" type="property:EDMDLengthProperty" minOccurs="0" maxOccurs="1" />
+      <xsd:element name="Pin_Offset" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Angle" type="property:EDMDAngleProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Width" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Pitch" type="property:EDMDLengthProperty" minOccurs="0" maxOccurs="1" />
+      <xsd:element name="Pin_Thickness" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Radius" type="property:EDMDLengthProperty" minOccurs="0" maxOccurs="1" />
+      <xsd:element name="Pin_Boolean_Sign" type="property:EDMDBooleanPropertyType" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Bend_Angle" type="property:EDMDAngleProperty" minOccurs="0" maxOccurs="1" />
+      <xsd:element name="Pin_Bend_Radius" type="property:EDMDLengthProperty" minOccurs="0" maxOccurs="1" />
+      <xsd:element name="Pad_Offset" type="property:EDMDLengthProperty" minOccurs="0" maxOccurs="1" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDPinRowNonGeometricalType">
+    <xsd:sequence>
+      <xsd:element name="Pin_Number" type="property:EDMDIntegerProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Index" type="property:EDMDIntegerProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Increment" type="property:EDMDIntegerProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Type" type="property:EDMDPin_TypePropertyType" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Color" type="property:EDMDColorProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_Count" type="property:EDMDIntegerProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pin_String" type="property:EDMDProperty" minOccurs="0" maxOccurs="unbounded" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+  <!-- PAD -->
+  <xsd:complexType name="EDMDPadType">
+    <xsd:sequence>
+      <xsd:element name="GeometricalProperties" type="Master3D:EDMDPadGeometricalType" minOccurs="1" maxOccurs ="1" />
+      <xsd:element name="NonGeometricalProperties" type="Master3D:EDMDPadNonGeometricalType" minOccurs="1" maxOccurs ="1" />
+    </xsd:sequence>
+    <xsd:attribute name="id" type="xsd:ID" use="required" />
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDPadGeometricalType">
+    <xsd:sequence>
+      <xsd:element name="Pad_Length" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+      <xsd:element name="Pad_Width" type="property:EDMDLengthProperty" minOccurs="1" maxOccurs="1" />
+
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EDMDPadNonGeometricalType">
+    <xsd:sequence>
+      <xsd:element name="Pad_Name" type="property:EDMDProperty" minOccurs ="1" maxOccurs="1" />
+      <xsd:element name="Pad_Count" type="property:EDMDIntegerProperty" minOccurs ="1" maxOccurs="1" />
+      <xsd:element name="Pad_String" type="property:EDMDProperty" minOccurs ="0" maxOccurs="unbounded" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+</xsd:schema>
+
+
+

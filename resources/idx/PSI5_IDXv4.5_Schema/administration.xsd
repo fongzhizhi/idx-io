@@ -1,0 +1,624 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema
+  elementFormDefault="qualified"
+  targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/administration" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/administration" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+  <xs:annotation>
+    <xs:documentation>
+		Author: Working Group ECAD-MCAD Collaboration
+		Purpose: EDMD-Schema 4.0
+		Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+		
+		prostep ivip Association
+		Dolivostr. 11
+		D-64293 Darmstadt, Germany
+	</xs:documentation>
+  </xs:annotation>
+  <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+  <xs:element name="EDMDRoleOnItemCategory" type="tns:EDMDRoleOnItemCategory" />
+  <xs:simpleType name="EDMDRoleOnItemCategory">
+    <xs:annotation>
+      <xs:documentation>
+            Category of an EDMDRoleOnItem 
+            </xs:documentation>
+    </xs:annotation>
+    <xs:restriction
+      base="xs:string">
+      <xs:enumeration
+        value="Organisational">
+        <xs:annotation>
+          <xs:documentation>
+            EDMDRoleOnItem belongs to the organisational domain.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Mechanical">
+        <xs:annotation>
+          <xs:documentation>
+            EDMDRoleOnItem belongs to the mechanical domain.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Electrical">
+        <xs:annotation>
+          <xs:documentation>
+            EDMDRoleOnItem belongs to the electrical domain.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Generic">
+        <xs:annotation>
+          <xs:documentation>
+            The EDMDRoleOnItem is generic (user defined)
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDRole" nillable="true" type="tns:EDMDRole" />
+  <xs:complexType name="EDMDRole" abstract="true" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Abstract super type for Roles 
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDCollaborationObject">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="Actor"
+            type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+            EDMDPerson or Group, which plays the role. 
+            Has to refer to an EDMDPerson or EDMDGroup.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="unbounded"
+            name="RoleName"
+            type="foundation:EDMDName">
+            <xs:annotation>
+              <xs:documentation>
+            Name of the Role
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDRoleInOrganisation" nillable="true" type="tns:EDMDRoleInOrganisation" />
+  <xs:complexType name="EDMDRoleInOrganisation" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Describes a role of a person in an organisation or IT system
+            Context has to refer to an EDMDOrganisation or an EDMDSystem
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="tns:EDMDRole">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="Context"
+            type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+            Context where the role is valid. 
+            Has to refer to an EDMDOrganisation.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDOrganisation" nillable="true" type="tns:EDMDOrganisation" />
+  <xs:complexType name="EDMDOrganisation" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Represents an organisation or site 
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDCollaborationObject">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="OrganisationName"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Name of the organisation
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="Site"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Name of the site
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="StreetNumber"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Street number
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="Street"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Street name
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="PCode"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Postal code
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="Country"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Country
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="unbounded"
+            name="Uri"
+            nillable="true"
+            type="xs:anyURI">
+            <xs:annotation>
+              <xs:documentation>
+            Uri, e. g. http://www.company.tld
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDRoleOnObject" nillable="true" type="tns:EDMDRoleOnObject" />
+  <xs:complexType name="EDMDRoleOnObject" abstract="true" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+		Abstract super class for role on objects.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="tns:EDMDRole">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="RoleType"
+            type="tns:EDMDRoleOnItemType">
+            <xs:annotation>
+              <xs:documentation>
+            The main Type of the role owner concerning the item.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="Category"
+            nillable="true"
+            type="tns:EDMDRoleOnItemCategory">
+            <xs:annotation>
+              <xs:documentation>
+            The main Category of the role owner concerning the item.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="GenericCategory"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            If there is no adequate standard category this
+            could be used for user defined categories.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="Function"
+            type="tns:EDMDRoleOnItemFunction">
+            <xs:annotation>
+              <xs:documentation>
+            Main function of the role owner concerning the item.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="GenericFunction"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            If there is no adequate standard function this
+            could be used for user defined functions.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EDMDRoleOnItemType">
+    <xs:annotation>
+      <xs:documentation>
+            Indicates the type of an EDMDRoleOnItem
+            </xs:documentation>
+    </xs:annotation>
+    <xs:restriction
+      base="xs:string">
+      <xs:enumeration
+        value="owner">
+        <xs:annotation>
+          <xs:documentation>
+            Indicates the EDMDPerson or EDMDGroup (of persons) 
+            is the owner of the item in a higher level process
+            the ownership can be used to determine the acceptance
+            state of a item state. CAD-System or other collaboration
+            system should bring item states (EDMDItem) to backend systems 
+            after acceptance is given from all owners.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="listener">
+        <xs:annotation>
+          <xs:documentation>
+            Indicates the EDMDPerson or EDMDGroup (of persons)
+            is interested in the item and may be notified on
+            changes on this item. In context of EDMD protocol
+            this means creating an successor of EDMDItem.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="noowner">
+        <xs:annotation>
+          <xs:documentation>
+            Indicates the EDMDPerson or EDMDGroup (of persons)
+            is not longer interested in being the owner of this 
+            EMDMItem or EDMDItemInstance
+            NOTE: Only the Owner is allowed to release ownership
+            on EDMDItem or EDMDItemInstance.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="nolistener">
+        <xs:annotation>
+          <xs:documentation>
+            Indicates the EDMDPerson or EDMDGroup (of persons)
+            is not longer interested in being informed on changing
+            this item.
+            NOTE: Only the Listener is allowed to release listener role
+            on EDMDItem or EDMDItemInstance.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EDMDRoleOnItemFunction">
+    <xs:annotation>
+      <xs:documentation>
+            Indicates the function of an EDMDRoleOnItem
+            </xs:documentation>
+    </xs:annotation>
+    <xs:restriction
+      base="xs:string">
+      <xs:enumeration
+        value="ProjectManagement">
+        <xs:annotation>
+          <xs:documentation>
+            A project manager is responsible for the overall project. 
+            Defines the mechanical and electrical product structure,
+            requirements and tasks. Controls results.
+            EDMDRoleOnItemCategory has to be Organisational
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Design">
+        <xs:annotation>
+          <xs:documentation>
+            EDMDRoleOnItemCategory is Mechanical:
+            A mechanical designer designs the surrounding geometry 
+            in a mechanical 3D-CAD system. Fulfills requirements of 
+            the project manager. Defines requirements for the PCB 
+            development
+            EDMDRoleOnItemCategory is Electrical:
+            A electrical designer designs the schematics of the PCB. His output is the 
+            net list as an input for the layout of the PCB which is 
+            done by the layout designer. Fulfills requirements of the 
+            project manager and designers. 
+            EDMDRoleOnItemCategory has to be Mechanical or Electrical
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="DigitalMockUp">
+        <xs:annotation>
+          <xs:documentation>
+            A digital mock up engineer makes 3D-interference checks 
+            in a mechanical 3D-CAD system. Checks if the current 
+            design fits with the surrounding geometry. Uses the 3D 
+            representation of the mechanical and electrical design.
+            EDMDRoleOnItemCategory has to be Mechnical
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Layout">
+        <xs:annotation>
+          <xs:documentation>
+            A layout designer designs the layout of the PCB in the
+            ECAD System. Fulfills requirements of the project 	
+            manager, ECAD-Designers and MCAD-Designers. 
+            EDMDRoleOnItemCategory has to be Electrical
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Thermal">
+        <xs:annotation>
+          <xs:documentation>
+            A thermal simulation engineer makes thermal analysis 
+            based on the PCB-Layout. Checks if heating, cooling, 
+            security and other thermal requirements are fulfilled 
+            with the current PCB design.
+            EDMDRoleOnItemCategory has to be Electrical
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="EMC">
+        <xs:annotation>
+          <xs:documentation>
+            A EMI/EMC simulation engineer makes analysis if the 
+            current PCB design fulfills the requirements concerning 
+            the electromagnetic compatibility (EMC) which requires 
+            that the system is able to tolerate a specified degree 
+            of electromagnetic interference (EMI) and does not
+            generate more than a specified amount of interference.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="EDMDRoleOnItem" nillable="true" type="tns:EDMDRoleOnItem" />
+  <xs:complexType name="EDMDRoleOnItem" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Describes a role of a person on an item
+            Context has to refer to an EDMDItem
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension base="tns:EDMDRoleOnObject">
+        <xs:sequence>
+          <xs:element minOccurs="1"  maxOccurs="1"  name="Context" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+				Context where the role is valid. 
+				Has to refer to an EDMDItem.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDPerson" nillable="true" type="tns:EDMDPerson" />
+  <xs:complexType name="EDMDPerson" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Representation of a natural person.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDCollaborationObject">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="SurName"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Name of the person
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="GivenName"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Given Name of the person
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="Initials"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Initials of the person
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="EMailAddress"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            e-mail address of the person
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="PhoneNumber"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Phone number of the person
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="FaxNumber"
+            nillable="true"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Fax number of the person
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="EDMDRoleOnItemInstance" mixed="true">
+    <xs:annotation>
+      <xs:documentation></xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="tns:EDMDRoleOnObject">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="Context"
+            type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+            Context where the role is valid. 
+            Has to refer to an EDMDItemInstance.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDRoleOnItemInstance" nillable="true" type="tns:EDMDRoleOnItemInstance" />
+  <xs:element name="EDMDRoleOnItemType" type="tns:EDMDRoleOnItemType" />
+  <xs:element name="EDMDRoleOnItemFunction" type="tns:EDMDRoleOnItemFunction" />
+  <xs:element name="EDMDRoleOnConstraint" nillable="true" type="tns:EDMDRoleOnConstraint" />
+  <xs:complexType name="EDMDRoleOnConstraint" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Describes a role of a person on an item
+            Context has to refer to an EDMDItemConstraint
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="tns:EDMDRoleOnObject">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="Context"
+            type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+            Context where the role is valid. 
+            Has to refer to an EDMDItemConstraint.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>
