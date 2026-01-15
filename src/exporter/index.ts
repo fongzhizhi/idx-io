@@ -16,6 +16,7 @@ import { KeepoutBuilder } from './builders/keepout-builder';
 import { LayerBuilder } from './builders/layer-builder';
 import { BuilderConfig, BuilderContext } from './builders/base-builder';
 import { XMLWriter } from './writers/xml-writer';
+import { XMLWriterWithComments, XMLWriterWithCommentsOptions } from './writers/xml-writer-with-comments';
 import { DatasetAssembler, BoardData, BuilderRegistry, AssemblerConfig } from './assemblers/dataset-assembler';
 
 /**
@@ -208,20 +209,51 @@ export interface BrowserExportResult extends ExportResult {
 }
 
 /**
+ * XML注释配置接口
+ */
+export interface XMLCommentConfig {
+  /** 是否启用注释生成 */
+  enabled?: boolean;
+  /** 是否在文件头部添加详细注释 */
+  includeFileHeader?: boolean;
+  /** 是否为每个项目添加注释 */
+  includeItemComments?: boolean;
+  /** 是否为几何元素添加注释 */
+  includeGeometryComments?: boolean;
+  /** 是否为节区添加分隔注释 */
+  includeSectionComments?: boolean;
+}
+
+/**
  * IDX导出器主类 - 浏览器版本
  */
 export class IDXExporter {
   private config: IDXExportConfig;
-  private xmlWriter: XMLWriter;
+  private xmlWriter: XMLWriter | XMLWriterWithComments;
+  private commentConfig: XMLCommentConfig;
   
-  constructor(config: Partial<IDXExportConfig> = {}) {
+  constructor(config: Partial<IDXExportConfig> = {}, commentConfig: XMLCommentConfig = {}) {
     this.config = this.mergeConfig(config);
+    this.commentConfig = this.mergeCommentConfig(commentConfig);
     
-    // 初始化XML写入器
-    this.xmlWriter = new XMLWriter({
-      prettyPrint: true,
-      encoding: 'UTF-8'
-    });
+    // 根据注释配置选择XML写入器
+    if (this.commentConfig.enabled) {
+      const writerOptions: XMLWriterWithCommentsOptions = {
+        prettyPrint: true,
+        encoding: 'UTF-8',
+        enableComments: this.commentConfig.enabled,
+        includeFileHeader: this.commentConfig.includeFileHeader,
+        includeItemComments: this.commentConfig.includeItemComments,
+        includeGeometryComments: this.commentConfig.includeGeometryComments,
+        includeSectionComments: this.commentConfig.includeSectionComments
+      };
+      this.xmlWriter = new XMLWriterWithComments(writerOptions);
+    } else {
+      this.xmlWriter = new XMLWriter({
+        prettyPrint: true,
+        encoding: 'UTF-8'
+      });
+    }
   }
   
   /**
@@ -311,6 +343,46 @@ export class IDXExporter {
   createDownloadUrl(xmlContent: string): string {
     const blob = this.createDownloadBlob(xmlContent);
     return URL.createObjectURL(blob);
+  }
+  
+  /**
+   * 设置注释配置
+   */
+  setCommentConfig(commentConfig: XMLCommentConfig): void {
+    this.commentConfig = this.mergeCommentConfig(commentConfig);
+    
+    // 重新创建XML写入器
+    if (this.commentConfig.enabled) {
+      const writerOptions: XMLWriterWithCommentsOptions = {
+        prettyPrint: true,
+        encoding: 'UTF-8',
+        enableComments: this.commentConfig.enabled,
+        includeFileHeader: this.commentConfig.includeFileHeader,
+        includeItemComments: this.commentConfig.includeItemComments,
+        includeGeometryComments: this.commentConfig.includeGeometryComments,
+        includeSectionComments: this.commentConfig.includeSectionComments
+      };
+      this.xmlWriter = new XMLWriterWithComments(writerOptions);
+    } else {
+      this.xmlWriter = new XMLWriter({
+        prettyPrint: true,
+        encoding: 'UTF-8'
+      });
+    }
+  }
+  
+  /**
+   * 获取当前注释配置
+   */
+  getCommentConfig(): XMLCommentConfig {
+    return { ...this.commentConfig };
+  }
+  
+  /**
+   * 启用或禁用注释
+   */
+  setCommentsEnabled(enabled: boolean): void {
+    this.setCommentConfig({ ...this.commentConfig, enabled });
   }
   
   /**
@@ -413,6 +485,16 @@ export class IDXExporter {
         enabled: config.validation?.enabled || false,
         strictness: config.validation?.strictness || 'normal'
       }
+    };
+  }
+  
+  private mergeCommentConfig(config: XMLCommentConfig): XMLCommentConfig {
+    return {
+      enabled: config.enabled ?? true,
+      includeFileHeader: config.includeFileHeader ?? true,
+      includeItemComments: config.includeItemComments ?? true,
+      includeGeometryComments: config.includeGeometryComments ?? true,
+      includeSectionComments: config.includeSectionComments ?? true
     };
   }
 }

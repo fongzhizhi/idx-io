@@ -45,7 +45,7 @@ IDX导出器已经完成了大部分核心功能，当前验证通过率达到96
 
 #### Acceptance Criteria
 
-1. WHEN 组件被导出时，THE XMLWriter SHALL 使用正确的ItemType值（single而不是assembly）
+1. WHEN 组件被导出时，THE XMLWriter SHALL 使用正确的ItemType值（组件实例使用assembly，组件定义使用single）
 2. WHEN XML结构被生成时，THE ValidationEngine SHALL 验证所有必需的属性都存在
 3. WHEN IDX文件被验证时，THE IDX_Exporter SHALL 通过所有26项验证检查
 4. WHEN XML被序列化时，THE XMLWriter SHALL 确保所有元素符合IDX 4.5规范

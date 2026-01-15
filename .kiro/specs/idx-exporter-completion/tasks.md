@@ -6,7 +6,7 @@
 
 ## Tasks
 
-- [~] 1. 修复和扩展数据接口定义
+- [ ] 1. 修复和扩展数据接口定义
   - [x] 1.1 扩展ExportSourceData接口支持所有数据类型
     - 在src/exporter/index.ts中扩展ExportSourceData接口
     - 添加components、holes、keepouts、layers、layerStackup可选属性
@@ -27,7 +27,7 @@
     - 测试所有接口的类型兼容性
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [~] 2. 实现LayerBuilder构建器
+- [ ] 2. 实现LayerBuilder构建器
   - [x] 2.1 创建LayerBuilder类
     - 创建src/exporter/builders/layer-builder.ts文件
     - 继承BaseBuilder实现层数据处理逻辑
@@ -56,19 +56,19 @@
     - **Property 4: Layer attribute preservation**
     - **Validates: Requirements 2.3, 2.4**
 
-- [ ] 3. 优化XML结构和验证
-  - [~] 3.1 修复组件ItemType问题
-    - 在src/exporter/builders/component-builder.ts中修改ItemType为SINGLE
-    - 确保所有组件使用正确的ItemType值
+- [x] 3. 优化XML结构和验证
+  - [x] 3.1 修复组件ItemType问题
+    - 在src/exporter/builders/component-builder.ts中确保组件实例使用ASSEMBLY类型
+    - 确保组件定义使用SINGLE类型，组件实例使用ASSEMBLY类型
     - _Requirements: 3.1_
   
-  - [~] 3.2 实现ValidationEngine增强版本
+  - [x] 3.2 实现ValidationEngine增强版本
     - 创建src/exporter/validation/validation-engine.ts
     - 实现全面的数据验证和交叉验证逻辑
     - 添加具体的错误信息和修复建议
     - _Requirements: 3.2, 5.1, 5.2, 5.4_
   
-  - [~] 3.3 创建数据验证器类
+  - [x] 3.3 创建数据验证器类
     - 创建src/exporter/validation/validators/目录
     - 实现BoardDataValidator、ComponentDataValidator等验证器
     - _Requirements: 5.1, 5.2_
@@ -85,22 +85,22 @@
     - **Property 9: Validation error reporting quality**
     - **Validates: Requirements 5.1, 5.2, 5.4**
 
-- [~] 4. 检查点 - 确保核心功能正常
+- [ ] 4. 检查点 - 确保核心功能正常
   - 确保所有测试通过，询问用户是否有问题
 
-- [ ] 5. 实现XML注释支持
-  - [~] 5.1 创建CommentGenerator类
+- [x] 5. 实现XML注释支持
+  - [x] 5.1 创建CommentGenerator类
     - 创建src/exporter/writers/comment-generator.ts
     - 实现各种注释生成方法
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
   
-  - [~] 5.2 扩展XMLWriter支持注释
+  - [x] 5.2 扩展XMLWriter支持注释
     - 创建src/exporter/writers/xml-writer-with-comments.ts
     - 继承XMLWriter并添加注释生成功能
     - 在关键部分添加描述性注释
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
   
-  - [~] 5.3 更新IDXExporter使用带注释的XMLWriter
+  - [x] 5.3 更新IDXExporter使用带注释的XMLWriter
     - 在src/exporter/index.ts中集成XMLWriterWithComments
     - 添加配置选项控制注释生成
     - _Requirements: 7.1_
@@ -110,12 +110,12 @@
     - **Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5**
 
 - [ ] 6. 增强错误处理和恢复机制
-  - [~] 6.1 实现错误恢复策略
+  - [ ] 6.1 实现错误恢复策略
     - 在ValidationEngine中添加错误恢复逻辑
     - 实现graceful degradation和默认值替换
     - _Requirements: 5.3, 5.5_
   
-  - [~] 6.2 改进错误上下文信息
+  - [ ] 6.2 改进错误上下文信息
     - 创建src/exporter/validation/error-context.ts
     - 实现详细的错误定位和建议机制
     - _Requirements: 5.4_
@@ -125,12 +125,12 @@
     - **Validates: Requirements 5.3, 5.5**
 
 - [ ] 7. 修复示例文件
-  - [~] 7.1 修复export-basic.ts示例
+  - [ ] 7.1 修复export-basic.ts示例
     - 更新examples/export-basic.ts使用新的ExportSourceData接口
     - 确保示例能够正确编译和运行
     - _Requirements: 1.2, 1.3_
   
-  - [~] 7.2 修复export-with-layers.ts示例
+  - [ ] 7.2 修复export-with-layers.ts示例
     - 更新examples/export-with-layers.ts使用LayerBuilder功能
     - 添加完整的多层板数据示例
     - _Requirements: 1.4_
@@ -141,7 +141,7 @@
     - _Requirements: 1.2, 1.3, 1.4_
 
 - [ ] 8. 实现XML输出质量改进
-  - [~] 8.1 优化XML序列化精度和格式
+  - [ ] 8.1 优化XML序列化精度和格式
     - 在XMLWriter中改进数值精度处理
     - 确保XML格式化输出的可读性
     - _Requirements: 6.1, 6.2, 6.3_
@@ -155,12 +155,12 @@
     - **Validates: Requirements 6.4**
 
 - [ ] 9. 集成测试和验证
-  - [~] 9.1 创建综合集成测试
+  - [ ] 9.1 创建综合集成测试
     - 创建tests/integration/idx-exporter-completion.test.ts
     - 测试所有新功能的集成工作
     - _Requirements: 所有需求_
   
-  - [~] 9.2 运行IDX验证测试
+  - [ ] 9.2 运行IDX验证测试
     - 使用现有的IDX验证工具验证输出
     - 确保达到100%验证通过率
     - _Requirements: 3.3_
@@ -177,7 +177,7 @@
     - **Property 8: Comprehensive type definition support**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5**
 
-- [~] 10. 最终检查点 - 确保所有测试通过
+- [ ] 10. 最终检查点 - 确保所有测试通过
   - 确保所有测试通过，询问用户是否有问题
 
 ## Notes
