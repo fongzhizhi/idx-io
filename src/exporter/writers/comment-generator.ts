@@ -332,10 +332,8 @@ export class CommentGenerator {
    * 为XML的主要节区生成分隔注释
    */
   generateSectionComment(sectionName: string, itemCount?: number): string {
-    const separator = '-'.repeat(60);
     const countInfo = itemCount !== undefined ? ` (${itemCount} items)` : '';
-    
-    return `${separator}\n${sectionName.toUpperCase()} SECTION${countInfo}\n${separator}`;
+    return `${sectionName.toUpperCase()} SECTION${countInfo}`;
   }
   
   /**
