@@ -155,12 +155,12 @@
     - **Validates: Requirements 6.4**
 
 - [ ] 9. 集成测试和验证
-  - [ ] 9.1 创建综合集成测试
+  - [x] 9.1 创建综合集成测试
     - 创建tests/integration/idx-exporter-completion.test.ts
     - 测试所有新功能的集成工作
     - _Requirements: 所有需求_
   
-  - [ ] 9.2 运行IDX验证测试
+  - [x] 9.2 运行IDX验证测试
     - 使用现有的IDX验证工具验证输出
     - 确保达到100%验证通过率
     - _Requirements: 3.3_
