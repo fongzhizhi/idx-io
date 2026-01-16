@@ -439,10 +439,10 @@ export class XMLWriterWithComments extends XMLWriter {
       });
       
       const xElement = pointElement.ele('d2:X');
-      xElement.ele('property:Value').txt(element.X['property:Value']);
+      xElement.ele('property:Value').txt(this.formatCoordinate(element.X['property:Value']));
       
       const yElement = pointElement.ele('d2:Y');
-      yElement.ele('property:Value').txt(element.Y['property:Value']);
+      yElement.ele('property:Value').txt(this.formatCoordinate(element.Y['property:Value']));
       
     } else if (element.type === 'PolyLine') {
       // 构建PolyLine
@@ -460,7 +460,7 @@ export class XMLWriterWithComments extends XMLWriter {
       circleElement.ele('d2:CenterPoint').txt(element.CenterPoint);
       
       const diameterElement = circleElement.ele('d2:Diameter');
-      diameterElement.ele('property:Value').txt(element.Diameter['property:Value']);
+      diameterElement.ele('property:Value').txt(this.formatDimension(element.Diameter['property:Value']));
     }
   }
   
@@ -476,10 +476,10 @@ export class XMLWriterWithComments extends XMLWriter {
     curveSetElement.ele('pdm:ShapeDescriptionType').txt(curveSet['pdm:ShapeDescriptionType']);
     
     const lowerBoundElement = curveSetElement.ele('d2:LowerBound');
-    lowerBoundElement.ele('property:Value').txt(curveSet['d2:LowerBound']['property:Value']);
+    lowerBoundElement.ele('property:Value').txt(this.formatCoordinate(curveSet['d2:LowerBound']['property:Value']));
     
     const upperBoundElement = curveSetElement.ele('d2:UpperBound');
-    upperBoundElement.ele('property:Value').txt(curveSet['d2:UpperBound']['property:Value']);
+    upperBoundElement.ele('property:Value').txt(this.formatCoordinate(curveSet['d2:UpperBound']['property:Value']));
     
     curveSetElement.ele('d2:DetailedGeometricModelElement').txt(curveSet['d2:DetailedGeometricModelElement']);
   }
@@ -629,8 +629,32 @@ export class XMLWriterWithComments extends XMLWriter {
     keyElement.ele('foundation:SystemScope').txt(prop.Key.SystemScope);
     keyElement.ele('foundation:ObjectName').txt(prop.Key.ObjectName);
     
-    // 构建属性值
-    propElement.ele('property:Value').txt(prop.Value.toString());
+    // 构建属性值 - 智能格式化数值
+    let formattedValue: string;
+    const rawValue = prop.Value;
+    
+    // 检查是否为数值类型
+    if (typeof rawValue === 'number') {
+      // 根据属性名称决定格式化方式
+      const objectName = prop.Key.ObjectName.toLowerCase();
+      
+      if (objectName.includes('angle') || objectName.includes('rotation')) {
+        formattedValue = this.formatAngle(rawValue);
+      } else if (objectName.includes('diameter') || objectName.includes('width') || 
+                 objectName.includes('height') || objectName.includes('thickness')) {
+        formattedValue = this.formatDimension(rawValue);
+      } else if (objectName.includes('bound') || objectName.includes('position') || 
+                 objectName.includes('offset') || objectName === 'x' || objectName === 'y' || objectName === 'z') {
+        formattedValue = this.formatCoordinate(rawValue);
+      } else {
+        formattedValue = this.formatNumeric(rawValue);
+      }
+    } else {
+      // 非数值类型，直接转换为字符串
+      formattedValue = rawValue.toString();
+    }
+    
+    propElement.ele('property:Value').txt(formattedValue);
     
     if (prop.IsChanged !== undefined) {
       propElement.att('IsChanged', prop.IsChanged.toString());
@@ -646,20 +670,23 @@ export class XMLWriterWithComments extends XMLWriter {
     });
     
     if (transformation.TransformationType === 'd2') {
-      transElement.ele('d2:xx').txt(transformation.xx.toString());
-      transElement.ele('d2:xy').txt(transformation.xy.toString());
-      transElement.ele('d2:yx').txt(transformation.yx.toString());
-      transElement.ele('d2:yy').txt(transformation.yy.toString());
+      // 变换矩阵元素（旋转和缩放）
+      transElement.ele('d2:xx').txt(this.formatNumeric(transformation.xx));
+      transElement.ele('d2:xy').txt(this.formatNumeric(transformation.xy));
+      transElement.ele('d2:yx').txt(this.formatNumeric(transformation.yx));
+      transElement.ele('d2:yy').txt(this.formatNumeric(transformation.yy));
       
+      // 平移向量
       const txElement = transElement.ele('d2:tx');
-      txElement.ele('foundation:Value').txt(transformation.tx.Value.toString());
+      txElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.tx.Value));
       
       const tyElement = transElement.ele('d2:ty');
-      tyElement.ele('foundation:Value').txt(transformation.ty.Value.toString());
+      tyElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.ty.Value));
       
+      // Z偏移（可选）
       if (transformation.zOffset) {
         const zElement = transElement.ele('d2:zOffset');
-        zElement.ele('foundation:Value').txt(transformation.zOffset.Value.toString());
+        zElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.zOffset.Value));
       }
     }
   }

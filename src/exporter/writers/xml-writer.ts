@@ -10,6 +10,20 @@ export interface XMLWriterOptions {
   
   /** 字符编码 */
   encoding?: string;
+  
+  /** 数值精度（小数位数），默认为6 */
+  numericPrecision?: number;
+  
+  /** 是否移除尾随零，默认为true */
+  removeTrailingZeros?: boolean;
+}
+
+/**
+ * 数值格式化配置
+ */
+interface NumericFormatConfig {
+  precision: number;
+  removeTrailingZeros: boolean;
 }
 
 // src/exporter/writers/xml-writer.ts
@@ -17,6 +31,7 @@ export class XMLWriter {
   private namespaces: Record<string, string>;
   private prettyPrint: boolean;
   private encoding: string;
+  private numericFormat: NumericFormatConfig;
 
   constructor(options: XMLWriterOptions = {}) {
     this.namespaces = {
@@ -32,6 +47,105 @@ export class XMLWriter {
     
     this.prettyPrint = options.prettyPrint ?? true;
     this.encoding = options.encoding ?? 'UTF-8';
+    this.numericFormat = {
+      precision: options.numericPrecision ?? 6,
+      removeTrailingZeros: options.removeTrailingZeros ?? true
+    };
+  }
+  
+  /**
+   * 格式化数值为字符串，应用精度控制
+   * @param value 数值
+   * @param precision 可选的精度覆盖
+   * @returns 格式化后的字符串
+   */
+  protected formatNumeric(value: number | string, precision?: number): string {
+    // 如果已经是字符串，尝试解析为数字
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    // 检查是否为有效数字
+    if (isNaN(numValue) || !isFinite(numValue)) {
+      console.warn(`Invalid numeric value: ${value}, using "0"`);
+      return '0';
+    }
+    
+    // 使用指定精度或默认精度
+    const actualPrecision = precision ?? this.numericFormat.precision;
+    
+    // 格式化为固定小数位数
+    let formatted = numValue.toFixed(actualPrecision);
+    
+    // 移除尾随零（如果启用）
+    if (this.numericFormat.removeTrailingZeros) {
+      formatted = this.removeTrailingZeros(formatted);
+    }
+    
+    return formatted;
+  }
+  
+  /**
+   * 移除尾随零和不必要的小数点
+   * @param value 数值字符串
+   * @returns 清理后的字符串
+   */
+  private removeTrailingZeros(value: string): string {
+    // 如果不包含小数点，直接返回
+    if (!value.includes('.')) {
+      return value;
+    }
+    
+    // 移除尾随零
+    let result = value.replace(/\.?0+$/, '');
+    
+    // 如果结果为空或只有负号，返回"0"
+    if (result === '' || result === '-') {
+      return '0';
+    }
+    
+    return result;
+  }
+  
+  /**
+   * 验证并格式化坐标值
+   * @param value 坐标值
+   * @returns 格式化后的坐标字符串
+   */
+  protected formatCoordinate(value: number | string): string {
+    return this.formatNumeric(value);
+  }
+  
+  /**
+   * 验证并格式化尺寸值（直径、宽度、高度等）
+   * @param value 尺寸值
+   * @returns 格式化后的尺寸字符串
+   */
+  protected formatDimension(value: number | string): string {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    // 尺寸值不能为负
+    if (numValue < 0) {
+      console.warn(`Negative dimension value: ${value}, using absolute value`);
+      return this.formatNumeric(Math.abs(numValue));
+    }
+    
+    return this.formatNumeric(numValue);
+  }
+  
+  /**
+   * 验证并格式化角度值
+   * @param value 角度值（度）
+   * @returns 格式化后的角度字符串
+   */
+  protected formatAngle(value: number | string): string {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    // 将角度规范化到 [0, 360) 范围
+    let normalized = numValue % 360;
+    if (normalized < 0) {
+      normalized += 360;
+    }
+    
+    return this.formatNumeric(normalized);
   }
 
   /**
@@ -109,10 +223,10 @@ export class XMLWriter {
       });
       
       const xElement = pointElement.ele('d2:X');
-      xElement.ele('property:Value').txt(element.X['property:Value']);
+      xElement.ele('property:Value').txt(this.formatCoordinate(element.X['property:Value']));
       
       const yElement = pointElement.ele('d2:Y');
-      yElement.ele('property:Value').txt(element.Y['property:Value']);
+      yElement.ele('property:Value').txt(this.formatCoordinate(element.Y['property:Value']));
       
     } else if (element.type === 'PolyLine') {
       // 构建PolyLine
@@ -130,7 +244,7 @@ export class XMLWriter {
       circleElement.ele('d2:CenterPoint').txt(element.CenterPoint);
       
       const diameterElement = circleElement.ele('d2:Diameter');
-      diameterElement.ele('property:Value').txt(element.Diameter['property:Value']);
+      diameterElement.ele('property:Value').txt(this.formatDimension(element.Diameter['property:Value']));
     }
   }
 
@@ -146,10 +260,10 @@ export class XMLWriter {
     curveSetElement.ele('pdm:ShapeDescriptionType').txt(curveSet['pdm:ShapeDescriptionType']);
     
     const lowerBoundElement = curveSetElement.ele('d2:LowerBound');
-    lowerBoundElement.ele('property:Value').txt(curveSet['d2:LowerBound']['property:Value']);
+    lowerBoundElement.ele('property:Value').txt(this.formatCoordinate(curveSet['d2:LowerBound']['property:Value']));
     
     const upperBoundElement = curveSetElement.ele('d2:UpperBound');
-    upperBoundElement.ele('property:Value').txt(curveSet['d2:UpperBound']['property:Value']);
+    upperBoundElement.ele('property:Value').txt(this.formatCoordinate(curveSet['d2:UpperBound']['property:Value']));
     
     curveSetElement.ele('d2:DetailedGeometricModelElement').txt(curveSet['d2:DetailedGeometricModelElement']);
   }
@@ -191,8 +305,32 @@ export class XMLWriter {
     keyElement.ele('foundation:SystemScope').txt(prop.Key.SystemScope);
     keyElement.ele('foundation:ObjectName').txt(prop.Key.ObjectName);
     
-    // 构建属性值
-    propElement.ele('property:Value').txt(prop.Value.toString());
+    // 构建属性值 - 智能格式化数值
+    let formattedValue: string;
+    const rawValue = prop.Value;
+    
+    // 检查是否为数值类型
+    if (typeof rawValue === 'number') {
+      // 根据属性名称决定格式化方式
+      const objectName = prop.Key.ObjectName.toLowerCase();
+      
+      if (objectName.includes('angle') || objectName.includes('rotation')) {
+        formattedValue = this.formatAngle(rawValue);
+      } else if (objectName.includes('diameter') || objectName.includes('width') || 
+                 objectName.includes('height') || objectName.includes('thickness')) {
+        formattedValue = this.formatDimension(rawValue);
+      } else if (objectName.includes('bound') || objectName.includes('position') || 
+                 objectName.includes('offset') || objectName === 'x' || objectName === 'y' || objectName === 'z') {
+        formattedValue = this.formatCoordinate(rawValue);
+      } else {
+        formattedValue = this.formatNumeric(rawValue);
+      }
+    } else {
+      // 非数值类型，直接转换为字符串
+      formattedValue = rawValue.toString();
+    }
+    
+    propElement.ele('property:Value').txt(formattedValue);
     
     if (prop.IsChanged !== undefined) {
       propElement.att('IsChanged', prop.IsChanged.toString());
@@ -227,20 +365,23 @@ export class XMLWriter {
     });
     
     if (transformation.TransformationType === 'd2') {
-      transElement.ele('d2:xx').txt(transformation.xx.toString());
-      transElement.ele('d2:xy').txt(transformation.xy.toString());
-      transElement.ele('d2:yx').txt(transformation.yx.toString());
-      transElement.ele('d2:yy').txt(transformation.yy.toString());
+      // 变换矩阵元素（旋转和缩放）
+      transElement.ele('d2:xx').txt(this.formatNumeric(transformation.xx));
+      transElement.ele('d2:xy').txt(this.formatNumeric(transformation.xy));
+      transElement.ele('d2:yx').txt(this.formatNumeric(transformation.yx));
+      transElement.ele('d2:yy').txt(this.formatNumeric(transformation.yy));
       
+      // 平移向量
       const txElement = transElement.ele('d2:tx');
-      txElement.ele('foundation:Value').txt(transformation.tx.Value.toString());
+      txElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.tx.Value));
       
       const tyElement = transElement.ele('d2:ty');
-      tyElement.ele('foundation:Value').txt(transformation.ty.Value.toString());
+      tyElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.ty.Value));
       
+      // Z偏移（可选）
       if (transformation.zOffset) {
         const zElement = transElement.ele('d2:zOffset');
-        zElement.ele('foundation:Value').txt(transformation.zOffset.Value.toString());
+        zElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.zOffset.Value));
       }
     }
   }
