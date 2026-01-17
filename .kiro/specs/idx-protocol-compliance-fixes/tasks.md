@@ -314,20 +314,20 @@
     - 修改 tx、ty、tz 为 `{ Value: number }` 格式
     - _Requirements: 7.1, 7.3, 7.4_
 
-- [ ] 11. 文档和示例更新
-  - [~] 11.1 更新 README.md
+- [x] 11. 文档和示例更新
+  - [x] 11.1 更新 README.md
     - 添加协议合规性修复的说明
     - 更新使用示例，反映新的 API（如果有变化）
     - 添加验证功能的使用说明
     - _Requirements: 12.1_
   
-  - [~] 11.2 更新示例文件
+  - [x] 11.2 更新示例文件
     - 更新 `examples/export-with-layers.ts`，使用新的 API
     - 添加验证功能的示例
     - 确保示例代码可以正常运行
     - _Requirements: 12.1, 12.3_
   
-  - [~] 11.3 创建迁移指南
+  - [x] 11.3 创建迁移指南
     - 创建 `docs/migration-guide.md` 文件
     - 说明从旧版本迁移到新版本的步骤
     - 列出 API 变化（如果有）

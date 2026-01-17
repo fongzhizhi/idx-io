@@ -1,4 +1,19 @@
 // ============= 多层板导出示例 =============
+// 
+// 本示例展示了IDX导出器的多层板导出功能，包括：
+// - 完整的层叠结构定义
+// - 协议合规性验证
+// - 标准几何类型使用
+// - 正确的组件三层结构
+// - 规范的命名空间使用
+// 
+// 协议合规性修复包括：
+// - ProcessInstruction使用computational命名空间
+// - 形状引用使用正确格式（非href）
+// - 几何类型使用IDX v4.5标准值
+// - 变换矩阵使用正确的XML结构
+// - 用户属性使用规范的命名空间
+//
 
 import { IDXExporter, GlobalUnit, BrowserExportResult } from '../src';
 import { ExtendedExportSourceData, LayerType, createDefault4LayerStackup } from '../src/types/data-models';
@@ -27,8 +42,9 @@ async function exportMultiLayerBoard() {
       includeLayerStackup: true  // 启用层叠结构导出
     },
     validation: {
-      enabled: true,
-      strictness: 'normal'
+      enabled: true,           // 启用协议合规性验证
+      strictMode: false,       // 非严格模式，允许警告
+      reportWarnings: true     // 报告警告信息
     }
   }, {
     // 启用XML注释以便更好地理解层结构
@@ -213,31 +229,31 @@ async function exportMultiLayerBoard() {
     holes: [
       {
         id: 'VIA_VCC_001',
-        viaType: 'plated',
+        type: 'via',
+        viaType: 'through',
         position: { x: 45, y: 35 },
         diameter: 0.2,
         platingThickness: 0.025,
         startLayer: 'L1_TOP',
         endLayer: 'L3_PWR',
         netName: 'VCC',
-        viaType: 'through',
         purpose: 'via'
       },
       {
         id: 'VIA_GND_001',
-        viaType: 'plated',
+        type: 'via',
+        viaType: 'through',
         position: { x: 55, y: 45 },
         diameter: 0.2,
         platingThickness: 0.025,
         startLayer: 'L1_TOP',
         endLayer: 'L2_GND',
         netName: 'GND',
-        viaType: 'through',
         purpose: 'via'
       },
       {
         id: 'MOUNTING_HOLE_001',
-        viaType: 'non-plated',
+        type: 'mounting',
         position: { x: 10, y: 10 },
         diameter: 3.2,
         purpose: 'mounting'
@@ -280,7 +296,43 @@ async function exportMultiLayerBoard() {
     if (result.success) {
       console.log('✅ 多层板导出成功！');
       console.log(`📄 生成文件: ${result.fileName}`);
-      console.log(`📊 统计信息:`);
+      
+      // 检查协议合规性验证结果
+      if (result.validation) {
+        console.log('\n🔍 协议合规性验证结果:');
+        console.log(`   验证通过: ${result.validation.valid ? '✅' : '❌'}`);
+        console.log(`   错误数量: ${result.validation.errors.length}`);
+        console.log(`   警告数量: ${result.validation.warnings.length}`);
+        
+        if (result.validation.errors.length > 0) {
+          console.log('\n❌ 协议合规性错误:');
+          result.validation.errors.forEach(error => {
+            console.error(`   [${error.code}] ${error.message}`);
+            if (error.location) {
+              console.error(`     位置: ${error.location}`);
+            }
+            if (error.suggestion) {
+              console.error(`     建议: ${error.suggestion}`);
+            }
+          });
+        }
+        
+        if (result.validation.warnings.length > 0) {
+          console.log('\n⚠️  协议合规性警告:');
+          result.validation.warnings.forEach(warning => {
+            console.warn(`   [${warning.code}] ${warning.message}`);
+            if (warning.location) {
+              console.warn(`     位置: ${warning.location}`);
+            }
+          });
+        }
+        
+        if (result.validation.valid) {
+          console.log('\n🎉 生成的IDX文件完全符合IDX v4.5协议规范！');
+        }
+      }
+      
+      console.log(`\n📊 统计信息:`);
       console.log(`   总项目数: ${result.statistics.totalItems}`);
       console.log(`   组件数量: ${result.statistics.components}`);
       console.log(`   孔数量: ${result.statistics.holes}`);
@@ -365,6 +417,11 @@ async function exportSimple4LayerBoard() {
       creatorCompany: 'Demo Company',
       includeNonCollaborative: false,
       includeLayerStackup: true
+    },
+    validation: {
+      enabled: true,           // 启用验证功能
+      strictMode: false,       // 非严格模式
+      reportWarnings: true     // 报告警告
     }
   });
 
@@ -394,6 +451,17 @@ async function exportSimple4LayerBoard() {
     console.log('\n✅ 简化4层板导出成功！');
     console.log(`📄 文件: ${result.fileName}`);
     console.log(`📊 项目数: ${result.statistics.totalItems}`);
+    
+    // 显示验证结果
+    if (result.validation) {
+      console.log(`🔍 验证结果: ${result.validation.valid ? '通过' : '失败'}`);
+      if (result.validation.errors.length > 0) {
+        console.log(`❌ 错误: ${result.validation.errors.length}个`);
+      }
+      if (result.validation.warnings.length > 0) {
+        console.log(`⚠️  警告: ${result.validation.warnings.length}个`);
+      }
+    }
     
     // Node.js环境下保存文件
     if (typeof window === 'undefined') {
