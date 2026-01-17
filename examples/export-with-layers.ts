@@ -2,6 +2,8 @@
 
 import { IDXExporter, GlobalUnit, BrowserExportResult } from '../src';
 import { ExtendedExportSourceData, LayerType, createDefault4LayerStackup } from '../src/types/data-models';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function exportMultiLayerBoard() {
   // 创建导出器配置，启用层叠结构支持
@@ -301,7 +303,7 @@ async function exportMultiLayerBoard() {
       }
       
       // 在浏览器中创建下载链接
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         const downloadUrl = exporter.createDownloadUrl(result.xmlContent);
         const link = document.createElement('a');
         link.href = downloadUrl;
@@ -318,8 +320,15 @@ async function exportMultiLayerBoard() {
         
         console.log('🔗 下载链接已创建');
       } else {
-        // Node.js环境下可以保存文件或输出内容
-        console.log('\n📝 XML内容预览 (前500字符):');
+        // Node.js环境下保存文件
+        const outputDir = './output';
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+        const filePath = path.join(outputDir, result.fileName);
+        fs.writeFileSync(filePath, result.xmlContent, 'utf-8');
+        console.log(`\n💾 文件已保存: ${filePath}`);
+        console.log(`📝 XML内容预览 (前500字符):`);
         console.log(result.xmlContent.substring(0, 500) + '...');
       }
       
@@ -385,6 +394,17 @@ async function exportSimple4LayerBoard() {
     console.log('\n✅ 简化4层板导出成功！');
     console.log(`📄 文件: ${result.fileName}`);
     console.log(`📊 项目数: ${result.statistics.totalItems}`);
+    
+    // Node.js环境下保存文件
+    if (typeof window === 'undefined') {
+      const outputDir = './output';
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      const filePath = path.join(outputDir, result.fileName);
+      fs.writeFileSync(filePath, result.xmlContent, 'utf-8');
+      console.log(`💾 文件已保存: ${filePath}`);
+    }
   } else {
     console.error('❌ 简化4层板导出失败:', result.issues);
   }
@@ -394,7 +414,8 @@ async function exportSimple4LayerBoard() {
  * 浏览器环境下的多层板导出示例
  */
 function createMultiLayerBrowserExample() {
-  if (typeof window === 'undefined') {
+  // 类型守卫：确保在浏览器环境中
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
     console.log('此示例需要在浏览器环境中运行');
     return;
   }

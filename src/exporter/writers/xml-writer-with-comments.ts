@@ -339,6 +339,8 @@ export class XMLWriterWithComments extends XMLWriter {
   
   /**
    * 构建带注释的项目实例
+   * 
+   * 根据 IDX V4.5 协议，Item 引用应该使用元素文本内容，而不是 href 属性
    */
   private buildItemInstanceWithComments(parent: any, instance: any): void {
     if (this.options.enableComments) {
@@ -347,7 +349,9 @@ export class XMLWriterWithComments extends XMLWriter {
     
     const instanceElement = parent.ele('pdm:ItemInstance', { id: instance.id });
     
-    instanceElement.ele('pdm:Item').att('href', `#${instance.Item}`);
+    // 移除 # 前缀（如果有）
+    const itemId = instance.Item.startsWith('#') ? instance.Item.substring(1) : instance.Item;
+    instanceElement.ele('pdm:Item').txt(itemId);
     
     // 构建实例名称
     const nameElement = instanceElement.ele('pdm:InstanceName');
@@ -386,11 +390,13 @@ export class XMLWriterWithComments extends XMLWriter {
   
   /**
    * 判断是否为孔项目
+   * 
+   * 根据 IDX V4.5 协议，VIA 不是标准几何类型，应该使用 HOLE_PLATED
    */
   private isHoleItem(item: EDMDItem): boolean {
     return item.geometryType === GeometryType.HOLE_PLATED ||
            item.geometryType === GeometryType.HOLE_NON_PLATED ||
-           item.geometryType === GeometryType.VIA ||
+           item.geometryType === GeometryType.FILLED_VIA ||
            (item.UserProperties?.some(p => p.Key?.ObjectName === 'HoleType') ?? false);
   }
   
@@ -497,10 +503,12 @@ export class XMLWriterWithComments extends XMLWriter {
   
   /**
    * 内部ProcessInstruction构建方法
+   * 
+   * 根据 IDX V4.5 协议第 31 页，ProcessInstruction 应该使用 computational 命名空间
    */
   private buildProcessInstructionInternal(root: any, instruction: EDMDProcessInstruction): void {
     const instructionElement = root.ele('foundation:ProcessInstruction', { 
-      'xsi:type': `foundation:EDMD${instruction.instructionType}`,
+      'xsi:type': `computational:EDMDProcessInstruction${instruction.instructionType}`,
       id: instruction.id
     });
     
@@ -581,7 +589,10 @@ export class XMLWriterWithComments extends XMLWriter {
       }
       
       if (typeof item.Shape === 'string') {
-        itemElement.ele('pdm:Shape').att('href', `#${item.Shape}`);
+        // 根据 IDX V4.5 协议，形状引用应该使用元素文本内容，而不是 href 属性
+        // 移除 # 前缀（如果有）
+        const shapeId = item.Shape.startsWith('#') ? item.Shape.substring(1) : item.Shape;
+        itemElement.ele('pdm:Shape').txt(shapeId);
       } else {
         console.warn(`项目${item.id}包含复杂形状对象，暂时跳过序列化`);
       }
@@ -620,9 +631,14 @@ export class XMLWriterWithComments extends XMLWriter {
   
   /**
    * 内部用户属性构建方法
+   * 
+   * 根据 IDX V4.5 协议，用户属性应该使用 property:UserProperty 元素名称，
+   * 配合 xsi:type="property:EDMDUserSimpleProperty" 类型声明
    */
   private buildUserPropertyInternal(parent: any, prop: any): void {
-    const propElement = parent.ele('property:UserSimpleProperty');
+    const propElement = parent.ele('property:UserProperty', {
+      'xsi:type': 'property:EDMDUserSimpleProperty'
+    });
     
     // 构建属性键
     const keyElement = propElement.ele('property:Key');
@@ -663,31 +679,20 @@ export class XMLWriterWithComments extends XMLWriter {
   
   /**
    * 内部变换矩阵构建方法
+   * 
+   * 根据 IDX V4.5 协议第 7.1-7.4 需求：
+   * - 不使用 xsi:type 属性
+   * - 添加 TransformationType 元素
+   * - 使用 foundation:Value 包装 tx、ty、tz
    */
   private buildTransformationInternal(parent: any, transformation: any): void {
-    const transElement = parent.ele('pdm:Transformation', { 
-      'xsi:type': `d2:EDMDTransformation${transformation.TransformationType.toUpperCase()}` 
-    });
-    
+    // 使用 TransformationBuilder 构建正确格式的变换矩阵
     if (transformation.TransformationType === 'd2') {
-      // 变换矩阵元素（旋转和缩放）
-      transElement.ele('d2:xx').txt(this.formatNumeric(transformation.xx));
-      transElement.ele('d2:xy').txt(this.formatNumeric(transformation.xy));
-      transElement.ele('d2:yx').txt(this.formatNumeric(transformation.yx));
-      transElement.ele('d2:yy').txt(this.formatNumeric(transformation.yy));
-      
-      // 平移向量
-      const txElement = transElement.ele('d2:tx');
-      txElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.tx.Value));
-      
-      const tyElement = transElement.ele('d2:ty');
-      tyElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.ty.Value));
-      
-      // Z偏移（可选）
-      if (transformation.zOffset) {
-        const zElement = transElement.ele('d2:zOffset');
-        zElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.zOffset.Value));
-      }
+      this.transformationBuilder.build2DTransformation(parent, transformation);
+    } else if (transformation.TransformationType === 'd3') {
+      this.transformationBuilder.build3DTransformation(parent, transformation);
+    } else {
+      console.warn(`Unknown transformation type: ${transformation.TransformationType}`);
     }
   }
 }

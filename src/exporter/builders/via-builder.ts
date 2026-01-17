@@ -119,13 +119,14 @@ interface ProcessedViaData {
 export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
   
   // # 过孔类型映射
+  // 根据 IDX V4.5 协议表 8，VIA 不是标准几何类型，应该使用 HOLE_PLATED
   private readonly viaTypeMap: Record<ViaData['viaType'], {
     geometryType: GeometryType;
     interStratumType?: InterStratumFeatureType;
     description: string;
   }> = {
     'plated': {
-      geometryType: GeometryType.VIA,
+      geometryType: GeometryType.HOLE_PLATED,  // 修复：VIA → HOLE_PLATED
       interStratumType: InterStratumFeatureType.VIA,
       description: '镀孔'
     },
@@ -140,7 +141,7 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
       description: '填充孔'
     },
     'micro': {
-      geometryType: GeometryType.VIA,
+      geometryType: GeometryType.HOLE_PLATED,  // 修复：VIA → HOLE_PLATED（微孔也是镀孔的一种）
       interStratumType: InterStratumFeatureType.VIA,
       description: '微孔'
     }

@@ -1,5 +1,7 @@
 import { create } from "xmlbuilder2";
 import { EDMDDataSet, EDMDHeader, EDMDDataSetBody, EDMDItem, ItemType, EDMDIdentifier, EDMDProcessInstruction } from "../../types/core";
+import { TransformationBuilder } from "../builders/transformation-builder";
+import { ComponentStructureBuilder, ComponentData } from "../builders/component-structure-builder";
 
 /**
  * XML写入器选项
@@ -32,6 +34,8 @@ export class XMLWriter {
   private prettyPrint: boolean;
   private encoding: string;
   private numericFormat: NumericFormatConfig;
+  protected transformationBuilder: TransformationBuilder;
+  protected componentStructureBuilder: ComponentStructureBuilder;
 
   constructor(options: XMLWriterOptions = {}) {
     this.namespaces = {
@@ -51,6 +55,17 @@ export class XMLWriter {
       precision: options.numericPrecision ?? 6,
       removeTrailingZeros: options.removeTrailingZeros ?? true
     };
+    
+    // 初始化 TransformationBuilder
+    this.transformationBuilder = new TransformationBuilder({
+      coordinatePrecision: this.numericFormat.precision,
+      anglePrecision: this.numericFormat.precision,
+      dimensionPrecision: this.numericFormat.precision,
+      numericPrecision: this.numericFormat.precision
+    });
+    
+    // 初始化 ComponentStructureBuilder
+    this.componentStructureBuilder = new ComponentStructureBuilder();
   }
   
   /**
@@ -187,10 +202,12 @@ export class XMLWriter {
 
   /**
    * 构建ProcessInstruction
+   * 
+   * 根据 IDX V4.5 协议第 31 页，ProcessInstruction 应该使用 computational 命名空间
    */
   private buildProcessInstruction(root: any, instruction: EDMDProcessInstruction): void {
     const instructionElement = root.ele('foundation:ProcessInstruction', { 
-      'xsi:type': `foundation:EDMD${instruction.instructionType}`,
+      'xsi:type': `computational:EDMDProcessInstruction${instruction.instructionType}`,
       id: instruction.id
     });
     
@@ -296,9 +313,14 @@ export class XMLWriter {
 
   /**
    * 构建用户属性
+   * 
+   * 根据 IDX V4.5 协议，用户属性应该使用 property:UserProperty 元素名称，
+   * 配合 xsi:type="property:EDMDUserSimpleProperty" 类型声明
    */
   private buildUserProperty(parent: any, prop: any): void {
-    const propElement = parent.ele('property:UserSimpleProperty');
+    const propElement = parent.ele('property:UserProperty', {
+      'xsi:type': 'property:EDMDUserSimpleProperty'
+    });
     
     // 构建属性键
     const keyElement = propElement.ele('property:Key');
@@ -339,11 +361,15 @@ export class XMLWriter {
 
   /**
    * 构建项目实例
+   * 
+   * 根据 IDX V4.5 协议，Item 引用应该使用元素文本内容，而不是 href 属性
    */
   private buildItemInstance(parent: any, instance: any): void {
     const instanceElement = parent.ele('pdm:ItemInstance', { id: instance.id });
     
-    instanceElement.ele('pdm:Item').att('href', `#${instance.Item}`);
+    // 移除 # 前缀（如果有）
+    const itemId = instance.Item.startsWith('#') ? instance.Item.substring(1) : instance.Item;
+    instanceElement.ele('pdm:Item').txt(itemId);
     
     // 构建实例名称
     const nameElement = instanceElement.ele('pdm:InstanceName');
@@ -358,8 +384,30 @@ export class XMLWriter {
 
   /**
    * 构建变换矩阵
+   * 
+   * 根据 IDX V4.5 协议第 7.1-7.4 需求：
+   * - 不使用 xsi:type 属性
+   * - 添加 TransformationType 元素
+   * - 使用 foundation:Value 包装 tx、ty、tz
    */
   private buildTransformation(parent: any, transformation: any): void {
+    // 使用 TransformationBuilder 构建正确格式的变换矩阵
+    if (transformation.TransformationType === 'd2') {
+      this.transformationBuilder.build2DTransformation(parent, transformation);
+    } else if (transformation.TransformationType === 'd3') {
+      this.transformationBuilder.build3DTransformation(parent, transformation);
+    } else {
+      console.warn(`Unknown transformation type: ${transformation.TransformationType}`);
+      // 回退到旧格式（不推荐）
+      this.buildTransformationLegacy(parent, transformation);
+    }
+  }
+  
+  /**
+   * 旧版变换矩阵构建方法（仅用于回退）
+   * @deprecated 使用 TransformationBuilder 代替
+   */
+  private buildTransformationLegacy(parent: any, transformation: any): void {
     const transElement = parent.ele('pdm:Transformation', { 
       'xsi:type': `d2:EDMDTransformation${transformation.TransformationType.toUpperCase()}` 
     });
@@ -451,8 +499,106 @@ export class XMLWriter {
 
   /**
    * 构建EDMDItem
+   * 
+   * 根据 IDX V4.5 协议需求 3.1-3.7，组件需要使用三层结构：
+   * 1. 顶层 assembly Item（包含 ItemInstance 和 AssembleToName）
+   * 2. 中间 single Item（定义组件本体，包含 PackageName、用户属性和形状引用）
+   * 3. 底层形状元素
    */
   private buildItem(parent: any, item: EDMDItem): void {
+    // 检查是否为组件，如果是则使用三层结构
+    if (this.isComponentItem(item)) {
+      this.buildComponentWithThreeLayerStructure(parent, item);
+      return;
+    }
+    
+    // 非组件项目使用标准构建方法
+    this.buildStandardItem(parent, item);
+  }
+  
+  /**
+   * 判断是否为组件项目
+   * 
+   * 根据以下条件判断：
+   * - geometryType 为 COMPONENT
+   * - 或者包含 RefDes 用户属性
+   * - 或者包含 PackageName
+   */
+  private isComponentItem(item: EDMDItem): boolean {
+    // 检查 geometryType
+    if (item.geometryType === 'COMPONENT' || 
+        item.geometryType === 'COMPONENT_MECHANICAL') {
+      return true;
+    }
+    
+    // 检查是否有 RefDes 属性
+    if (item.UserProperties?.some(p => p.Key?.ObjectName === 'RefDes')) {
+      return true;
+    }
+    
+    // 检查是否有 PackageName（通常组件都有封装名称）
+    if (item.PackageName) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * 使用三层结构构建组件
+   * 
+   * 根据需求 3.1-3.7：
+   * - 创建顶层 assembly Item
+   * - 创建中间 single Item
+   * - 顶层 Item 不直接引用形状
+   * - ItemInstance 引用中间 single Item
+   */
+  private buildComponentWithThreeLayerStructure(parent: any, item: EDMDItem): void {
+    // 准备组件数据
+    const componentData: ComponentData = {
+      id: item.id,
+      name: item.Name || 'Component',
+      identifier: item.Identifier || {
+        SystemScope: 'ECAD',
+        Number: item.id,
+        Version: 1,
+        Revision: 0,
+        Sequence: 0
+      },
+      packageName: item.PackageName || {
+        SystemScope: 'ECAD',
+        ObjectName: 'Unknown'
+      },
+      userProperties: item.UserProperties || [],
+      shapeIds: item.Shape ? [typeof item.Shape === 'string' ? item.Shape : item.Shape.toString()] : [],
+      assembleToName: item.AssembleToName || 'TOP',
+      transformation: item.ItemInstances && item.ItemInstances.length > 0 && item.ItemInstances[0].Transformation
+        ? item.ItemInstances[0].Transformation
+        : {
+            TransformationType: 'd2',
+            xx: 1, xy: 0, yx: 0, yy: 1,
+            tx: { Value: 0 },
+            ty: { Value: 0 }
+          },
+      baseline: item.Baseline ? (item.Baseline.Value === 'true' || item.Baseline.Value === true) : undefined
+    };
+    
+    // 使用 ComponentStructureBuilder 构建三层结构
+    const structure = this.componentStructureBuilder.buildComponentStructure(componentData);
+    
+    // 先构建中间 single Item（因为 assembly 会引用它）
+    this.buildStandardItem(parent, structure.singleItem);
+    
+    // 然后构建顶层 assembly Item
+    this.buildStandardItem(parent, structure.assemblyItem);
+    
+    // 注意：shapeElements 通常已经在 Body 中定义，这里不需要再次构建
+  }
+  
+  /**
+   * 构建标准 Item（非组件或组件的子项）
+   */
+  private buildStandardItem(parent: any, item: EDMDItem): void {
     const itemAttrs: Record<string, any> = { id: item.id };
     
     if (item.IsAttributeChanged !== undefined) {
@@ -497,9 +643,12 @@ export class XMLWriter {
     }
     
     // 构建形状引用
+    // 根据 IDX V4.5 协议，形状引用应该使用元素文本内容，而不是 href 属性
     if (item.Shape) {
       if (typeof item.Shape === 'string') {
-        itemElement.ele('pdm:Shape').att('href', `#${item.Shape}`);
+        // 移除 # 前缀（如果有）
+        const shapeId = item.Shape.startsWith('#') ? item.Shape.substring(1) : item.Shape;
+        itemElement.ele('pdm:Shape').txt(shapeId);
       } else {
         // 对于复杂形状对象，需要根据具体类型处理
         // 这里暂时跳过，实际实现中应该根据形状类型进行序列化
