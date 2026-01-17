@@ -583,7 +583,9 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
       ItemType: ItemType.ASSEMBLY,
       ...baseItem,
       Identifier: this.createIdentifier('LAYER', layer.id),
-      UserProperties: this.createLayerProperties(layer)
+      UserProperties: this.createLayerProperties(layer),
+      // 添加 ReferenceName 用于组件的 AssembleToName 引用 - 根据需求 13.4
+      ReferenceName: layer.name || layer.id
     };
     
     // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
@@ -613,7 +615,9 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
       ItemType: ItemType.ASSEMBLY,
       ...baseItem,
       Identifier: this.createIdentifier('STACKUP', stackup.id),
-      UserProperties: this.createStackupProperties(stackup)
+      UserProperties: this.createStackupProperties(stackup),
+      // 添加 ReferenceName 用于组件的 AssembleToName 引用 - 根据需求 13.4
+      ReferenceName: stackup.name || stackup.id
     };
     
     // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式

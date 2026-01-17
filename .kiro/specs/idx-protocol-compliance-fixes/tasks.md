@@ -186,13 +186,13 @@
     - **Property 31: BaseLine 使用正确的格式**
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4**
 
-- [~] 6. 检查点 - 确保阶段 3 测试通过
+- [x] 6. 检查点 - 确保阶段 3 测试通过
   - 运行所有测试：`npm test`
   - 验证生成的 IDX 文件的 ItemType、CurveSet2d、ShapeDescriptionType 和 BaseLine 是否正确
   - 如有问题，请向用户报告
 
 - [ ] 7. 阶段 4：高级功能增强（P3 - 可选）
-  - [~] 7.1 实现 Z 轴定位系统
+  - [x] 7.1 实现 Z 轴定位系统
     - 修改组件导出逻辑，使用 2D 变换配合 AssembleToName
     - 确保 2D 变换只包含 xx、xy、yx、yy、tx、ty 分量
     - 添加 AssembleToName 属性，引用层或板表面的 ReferenceName

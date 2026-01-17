@@ -1,4 +1,4 @@
-import { EDMDItem, ItemType, EDMDIdentifier, EDMName, EDMDUserProperty } from '../../types/core';
+import { EDMDItem, ItemType, EDMDIdentifier, EDMName, EDMDUserSimpleProperty, EDMDTransformation2D, EDMDLengthProperty } from '../../types/core';
 
 /**
  * 组件数据接口
@@ -18,7 +18,7 @@ export interface ComponentData {
   packageName: EDMName;
   
   /** 用户属性（如 RefDes、PartNumber 等） */
-  userProperties: EDMDUserProperty[];
+  userProperties: EDMDUserSimpleProperty[];
   
   /** 形状 ID 列表 */
   shapeIds: string[];
@@ -34,25 +34,6 @@ export interface ComponentData {
   
   /** 可选：基线标记 */
   baseline?: boolean;
-}
-
-/**
- * 2D 变换矩阵接口
- * 根据 IDX V4.5 协议，不使用 xsi:type，而是使用 TransformationType 元素
- */
-export interface EDMDTransformation2D {
-  /** 变换类型（固定为 'd2'） */
-  TransformationType: 'd2';
-  
-  /** 旋转和缩放分量 */
-  xx: number;
-  xy: number;
-  yx: number;
-  yy: number;
-  
-  /** 平移分量（使用 foundation:Value 包装） */
-  tx: { Value: number };
-  ty: { Value: number };
 }
 
 /**

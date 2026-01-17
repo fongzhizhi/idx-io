@@ -365,16 +365,14 @@ export class XMLWriterWithComments extends XMLWriter {
       }
       this.buildTransformationInternal(instanceElement, instance.Transformation);
     }
-  }
-  
-  /**
-   * 判断是否为组件项目
-   */
-  private isComponentItem(item: EDMDItem): boolean {
-    return item.ItemType === ItemType.SINGLE && 
-           (item.geometryType === GeometryType.COMPONENT ||
-            item.geometryType === GeometryType.COMPONENT_MECHANICAL ||
-            (item.UserProperties?.some(p => p.Key?.ObjectName === 'RefDes') ?? false));
+    
+    // 添加 Z 偏移（如果有）- 根据需求 13.5
+    if (instance.zOffset !== undefined) {
+      if (this.options.enableComments) {
+        instanceElement.com(`Z 偏移: ${instance.zOffset}mm`);
+      }
+      instanceElement.ele('pdm:zOffset').txt(instance.zOffset.toString());
+    }
   }
   
   /**
@@ -615,6 +613,14 @@ export class XMLWriterWithComments extends XMLWriter {
         itemElement.com(`装配到: ${item.AssembleToName}`);
       }
       itemElement.ele('pdm:AssembleToName').txt(item.AssembleToName);
+    }
+    
+    // 构建参考名称 - 根据需求 13.4
+    if (item.ReferenceName) {
+      if (this.options.enableComments) {
+        itemElement.com(`参考名称: ${item.ReferenceName}`);
+      }
+      itemElement.ele('pdm:ReferenceName').txt(item.ReferenceName);
     }
   }
   

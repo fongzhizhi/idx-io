@@ -382,6 +382,11 @@ export class XMLWriter {
     if (instance.Transformation) {
       this.buildTransformation(instanceElement, instance.Transformation);
     }
+    
+    // 添加 Z 偏移（如果有）- 根据需求 13.5
+    if (instance.zOffset !== undefined) {
+      instanceElement.ele('pdm:zOffset').txt(instance.zOffset.toString());
+    }
   }
 
   /**
@@ -526,7 +531,7 @@ export class XMLWriter {
    * - 或者包含 RefDes 用户属性
    * - 或者包含 PackageName
    */
-  private isComponentItem(item: EDMDItem): boolean {
+  protected isComponentItem(item: EDMDItem): boolean {
     // 检查 geometryType
     if (item.geometryType === 'COMPONENT' || 
         item.geometryType === 'COMPONENT_MECHANICAL') {
@@ -575,14 +580,14 @@ export class XMLWriter {
       shapeIds: item.Shape ? [typeof item.Shape === 'string' ? item.Shape : item.Shape.toString()] : [],
       assembleToName: item.AssembleToName || 'TOP',
       transformation: item.ItemInstances && item.ItemInstances.length > 0 && item.ItemInstances[0].Transformation
-        ? item.ItemInstances[0].Transformation
+        ? item.ItemInstances[0].Transformation as any
         : {
-            TransformationType: 'd2',
+            TransformationType: 'd2' as const,
             xx: 1, xy: 0, yx: 0, yy: 1,
             tx: { Value: 0 },
             ty: { Value: 0 }
           },
-      baseline: item.BaseLine
+      baseline: typeof item.BaseLine === 'boolean' ? item.BaseLine : undefined
     };
     
     // 使用 ComponentStructureBuilder 构建三层结构
@@ -669,6 +674,11 @@ export class XMLWriter {
     // 构建装配到名称
     if (item.AssembleToName) {
       itemElement.ele('pdm:AssembleToName').txt(item.AssembleToName);
+    }
+    
+    // 构建参考名称 - 根据需求 13.4
+    if (item.ReferenceName) {
+      itemElement.ele('pdm:ReferenceName').txt(item.ReferenceName);
     }
   }
 
