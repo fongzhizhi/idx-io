@@ -230,7 +230,7 @@
     - **Property 41: 层堆叠包含 ReferenceName**
     - **Validates: Requirements 14.1, 14.2, 14.3, 14.4, 14.5**
   
-  - [~] 7.6 实现 ShapeElement 布尔运算
+  - [x] 7.6 实现 ShapeElement 布尔运算
     - 修改 `buildShapeElement` 方法
     - 切割特征（孔、挖槽）的 Inverted 属性设为 true
     - 实体特征（组件、板）的 Inverted 属性设为 false

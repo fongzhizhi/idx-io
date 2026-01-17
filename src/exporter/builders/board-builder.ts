@@ -339,11 +339,12 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     });
     
     // 4. 创建形状元素（ShapeElement）- 按demo格式
+    // 根据需求 15.2：实体特征（组件、板）的 Inverted 属性设为 false
     const shapeElementId = this.generateItemId('SHAPE', 'BOARD_OUTLINE');
     shapeElements.push({
       id: shapeElementId,
       'pdm:ShapeElementType': 'FeatureShapeElement',
-      'pdm:Inverted': 'false',
+      'pdm:Inverted': 'false', // 板子是实体特征，应该设为 false
       'pdm:DefiningShape': curveSetId
     });
     

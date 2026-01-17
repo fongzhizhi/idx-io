@@ -168,6 +168,8 @@ export class DatasetAssembler {
       body.Items.push(boardItem);
       
       // 收集板子的几何元素
+      // 根据需求 15.3 和 15.5：ShapeElement 顺序应反映布尔运算顺序（先加后减）
+      // 1. 板子（实体特征，Inverted=false）- 首先添加
       if (boardItem.geometricElements) {
         geometricElements.push(...boardItem.geometricElements);
         delete boardItem.geometricElements; // 清理临时属性
@@ -192,6 +194,7 @@ export class DatasetAssembler {
     }
 
     // 3. 构建组件
+    // 2. 组件（实体特征，Inverted=false）- 其次添加
     if (boardData.components && boardData.components.length > 0) {
       const componentBuilder = this.builders.get('component');
       if (componentBuilder) {
@@ -224,6 +227,7 @@ export class DatasetAssembler {
     }
 
     // 4. 构建孔和切口
+    // 3. 孔/过孔（切割特征，Inverted=true）- 然后减去
     if (boardData.holes && boardData.holes.length > 0) {
       for (const hole of boardData.holes) {
         try {
@@ -253,6 +257,7 @@ export class DatasetAssembler {
     }
 
     // 5. 构建保持区域
+    // 4. 禁止区（切割特征，Inverted=true）- 最后减去
     if (boardData.keepouts && boardData.keepouts.length > 0) {
       for (const keepout of boardData.keepouts) {
         try {

@@ -436,11 +436,12 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
     curveSet2Ds.push(curveSet2D);
     
     // # 创建ShapeElement
+    // 根据需求 15.1：切割特征（孔、挖槽）的 Inverted 属性设为 true
     const shapeElementId = this.generateItemId('SHAPE', `VIA_${processedData.id}`);
     const shapeElement = {
       id: shapeElementId,
       'pdm:ShapeElementType': 'FeatureShapeElement',
-      'pdm:Inverted': 'false',
+      'pdm:Inverted': 'true', // 过孔是切割特征，应该设为 true
       'pdm:DefiningShape': curveSet2D.id
     };
     shapeElements.push(shapeElement);

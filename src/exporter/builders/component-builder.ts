@@ -723,11 +723,12 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
     curveSet2Ds.push(curveSet2D);
     
     // # 创建ShapeElement
+    // 根据需求 15.2：实体特征（组件、板）的 Inverted 属性设为 false
     const shapeElementId = this.generateItemId('SHAPE', `COMP_${processedData.refDes}`);
     const shapeElement = {
       id: shapeElementId,
       'pdm:ShapeElementType': 'FeatureShapeElement',
-      'pdm:Inverted': 'false',
+      'pdm:Inverted': 'false', // 组件是实体特征，应该设为 false
       'pdm:DefiningShape': curveSet2D.id
     };
     shapeElements.push(shapeElement);
@@ -862,7 +863,7 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       id: this.generateItemId('SHAPE', `PIN_${pinNumber}`),
       ShapeElementType: ShapeElementType.COMPONENT_TERMINAL,
       DefiningShape: curveSet,
-      Inverted: false
+      Inverted: false // 组件引脚是实体特征，应该设为 false
     };
   }
   
