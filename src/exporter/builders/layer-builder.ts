@@ -607,9 +607,10 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
    */
   private async createLayerItem(layer: ProcessedLayerData): Promise<EDMDItem> {
     // # 创建基础项目结构
-    // 根据需求 6.2：层应该使用 ItemType="assembly" 而不是 ItemType="single"
+    // 根据协议专家反馈：层应该使用 ItemType="single" 而不是 ItemType="assembly"
+    // 层是独立的几何对象，不包含子项，因此应该使用 single 类型
     const baseItem = this.createBaseItem(
-      ItemType.ASSEMBLY,
+      ItemType.SINGLE,
       layer.normalizedType,
       layer.name,
       this.getLayerDescription(layer)
@@ -617,15 +618,13 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
     
     const layerItem: EDMDItem = {
       id: layer.processedId,
-      ItemType: ItemType.ASSEMBLY,
+      ItemType: ItemType.SINGLE,
       ...baseItem,
       Identifier: this.createIdentifier('LAYER', layer.id),
       UserProperties: this.createLayerProperties(layer),
-      // 添加 ReferenceName 用于组件的 AssembleToName 引用 - 根据需求 13.4
-      ReferenceName: {
-        SystemScope: this.config.creatorSystem || 'ECAD',
-        ObjectName: layer.name || layer.id
-      }
+      // 添加 ReferenceName 用于组件的 AssembleToName 引用
+      // 根据协议专家反馈，使用简洁明确的字符串值，而不是复杂的对象结构
+      ReferenceName: layer.id // 使用层ID作为引用名，确保唯一性和简洁性
     };
     
     // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
@@ -742,22 +741,45 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
           ObjectName: 'THICKNESS'
         },
         Value: layer.thickness.toString()
-      },
-      {
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'GEOMETRY_TYPE'
-        },
-        Value: layer.normalizedType
-      },
-      {
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'LAYER_PURPOSE'
-        },
-        Value: layer.layerPurpose
       }
     ];
+    
+    // 添加层边界定义 - 根据协议专家反馈
+    // 如果没有明确的Z位置信息，使用默认计算
+    const defaultLowerBound = 0; // 默认从底部开始
+    const defaultUpperBound = layer.thickness; // 厚度作为上边界
+    
+    properties.push({
+      Key: {
+        SystemScope: 'foundation',
+        ObjectName: 'LowerBound'
+      },
+      Value: defaultLowerBound.toString()
+    });
+    
+    properties.push({
+      Key: {
+        SystemScope: 'foundation',
+        ObjectName: 'UpperBound'
+      },
+      Value: defaultUpperBound.toString()
+    });
+    
+    properties.push({
+      Key: {
+        SystemScope: this.config.creatorSystem,
+        ObjectName: 'GEOMETRY_TYPE'
+      },
+      Value: layer.normalizedType
+    });
+    
+    properties.push({
+      Key: {
+        SystemScope: this.config.creatorSystem,
+        ObjectName: 'LAYER_PURPOSE'
+      },
+      Value: layer.layerPurpose
+    });
     
     // # 添加材料属性
     if (layer.material) {

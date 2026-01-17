@@ -188,9 +188,12 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    * @returns 处理后的板子数据
    */
   protected async preProcess(input: BoardData): Promise<ProcessedBoardData> {
-    // # 转换轮廓点
+    // # 生成唯一的板子前缀，避免ID冲突
+    const boardPrefix = `BOARD_${input.id.replace(/[^A-Z0-9]/gi, '_').toUpperCase()}`;
+    
+    // # 转换轮廓点，使用更唯一的ID命名
     const outlinePoints = input.outline.points.map((point, index) => ({
-      id: this.generateItemId('POINT', `OUTLINE_${index}`),
+      id: `${boardPrefix}_PT${index + 1}`,
       X: this.geometryUtils.roundValue(point.x),
       Y: this.geometryUtils.roundValue(point.y)
     }));
@@ -212,39 +215,74 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    * 构建PCB板EDMDItem
    * 
    * @remarks
-   * DESIGN: PCB板作为装配体项目，包含轮廓和所有特征
-   * BUSINESS: 根据配置使用简化或传统表示法
+   * DESIGN: 根据IDX v4.5规范创建正确的Item层次结构
+   * - 创建single类型的Item定义几何
+   * - 创建assembly类型的Item包含ItemInstance
+   * BUSINESS: 符合规范第19页和45-46页的要求
    * 
    * @param processedData - 处理后的板子数据
-   * @returns PCB板EDMDItem
+   * @returns PCB板EDMDItem（返回assembly类型，single类型通过geometricElements传递）
    */
   protected async construct(processedData: ProcessedBoardData): Promise<EDMDItem> {
-    // # 创建顶层板子项目（装配体）
-    const boardItem: EDMDItem = {
-      id: this.generateItemId('BOARD', processedData.id),
+    // # 生成独立的几何元素
+    const geometryData = this.createIndependentGeometry(processedData);
+    
+    // # 1. 创建single类型的Item（定义几何）
+    const boardPrefix = `BOARD_${processedData.id.replace(/[^A-Z0-9]/gi, '_').toUpperCase()}`;
+    const boardDefinitionItem: EDMDItem = {
+      id: `${boardPrefix}_DEF_001`,
+      ItemType: ItemType.SINGLE,
+      Name: `${processedData.name} Definition`,
+      Description: `Board geometry definition for ${processedData.name}`,
+      Identifier: this.createIdentifier('BOARD_DEF', processedData.id),
+      Shape: geometryData.shapeElementId,
+      BaseLine: false // 定义项不是基线
+    };
+    
+    // # 2. 创建assembly类型的Item（包含ItemInstance）
+    const boardAssemblyItem: EDMDItem = {
+      id: `${boardPrefix}_ASSY_001`,
       ItemType: ItemType.ASSEMBLY,
       Name: processedData.name,
       Description: `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`,
       geometryType: this.config.useSimplified ? GeometryType.BOARD_OUTLINE as any : undefined,
       BaseLine: true,
-      Identifier: this.createIdentifier('BOARD', processedData.id)
+      Identifier: this.createIdentifier('BOARD_ASSY', processedData.id),
+      
+      // # ItemInstance - 引用single类型的Item
+      ItemInstances: [{
+        id: `${boardPrefix}_INST_001`,
+        Item: boardDefinitionItem.id,
+        InstanceName: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'BoardInstance1'
+        },
+        // # 2D变换（无旋转，在原点）
+        Transformation: {
+          TransformationType: 'd2',
+          xx: 1,
+          xy: 0,
+          yx: 0,
+          yy: 1,
+          tx: { Value: 0 },
+          ty: { Value: 0 }
+        }
+      }],
+      
+      // # 参考表面（根据您的建议）
+      AssembleToName: 'BOTTOM'
     };
     
-    // # 添加用户属性
-    boardItem.UserProperties = this.createBoardProperties(processedData);
+    // # 添加用户属性到assembly项
+    boardAssemblyItem.UserProperties = this.createBoardProperties(processedData);
     
-    // # 生成独立的几何元素
-    const geometryData = this.createIndependentGeometry(processedData);
+    // # 将几何元素和定义项附加到assembly项上（临时存储，DatasetAssembler会提取）
+    (boardAssemblyItem as any).geometricElements = geometryData.geometricElements;
+    (boardAssemblyItem as any).curveSet2Ds = geometryData.curveSet2Ds;
+    (boardAssemblyItem as any).shapeElements = geometryData.shapeElements;
+    (boardAssemblyItem as any).boardDefinitionItem = boardDefinitionItem; // 传递定义项
     
-    // # 将几何元素附加到boardItem上（临时存储，DatasetAssembler会提取）
-    (boardItem as any).geometricElements = geometryData.geometricElements;
-    (boardItem as any).curveSet2Ds = geometryData.curveSet2Ds;
-    (boardItem as any).shapeElements = geometryData.shapeElements;
-    
-    // # 设置形状引用
-    boardItem.Shape = geometryData.shapeElementId;
-    
-    return boardItem;
+    return boardAssemblyItem;
   }
   
   // ============= 后处理 =============
@@ -303,8 +341,14 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     const curveSet2Ds: any[] = [];
     const shapeElements: any[] = [];
     
-    // 1. 创建轮廓点（CartesianPoint）- 按demo格式
-    processedData.outline.points.forEach(point => {
+    // # 生成唯一的板子前缀
+    const boardPrefix = `BOARD_${processedData.id.replace(/[^A-Z0-9]/gi, '_').toUpperCase()}`;
+    
+    // # 确保轮廓点为顺时针方向（根据您的分析）
+    const orderedPoints = this.ensureClockwiseOrder(processedData.outline.points);
+    
+    // 1. 创建轮廓点（CartesianPoint）- 使用改进的ID命名
+    orderedPoints.forEach(point => {
       geometricElements.push({
         id: point.id,
         'xsi:type': 'd2:EDMDCartesianPoint',
@@ -313,9 +357,9 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       });
     });
     
-    // 2. 创建轮廓多边形（PolyLine）- 按demo格式
-    const polyLineId = this.generateItemId('POLYLINE', 'BOARD_OUTLINE');
-    const polyLinePoints = processedData.outline.points.map(p => p.id);
+    // 2. 创建轮廓多边形（PolyLine）- 使用改进的ID命名
+    const polyLineId = `${boardPrefix}_OUTLINE`;
+    const polyLinePoints = orderedPoints.map(p => p.id);
     // 确保闭合多边形
     if (polyLinePoints[0] !== polyLinePoints[polyLinePoints.length - 1]) {
       polyLinePoints.push(polyLinePoints[0]);
@@ -327,20 +371,20 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'Point': polyLinePoints.map(pointId => ({ 'd2:Point': pointId }))
     });
     
-    // 3. 创建曲线集（CurveSet2D）- 按demo格式
-    const curveSetId = this.generateItemId('CURVESET', 'BOARD_OUTLINE');
+    // 3. 创建曲线集（CurveSet2D）- 使用改进的ID命名
+    const curveSetId = `${boardPrefix}_CURVESET`;
     curveSet2Ds.push({
       id: curveSetId,
       'xsi:type': 'd2:EDMDCurveSet2d',
       'pdm:ShapeDescriptionType': 'GeometricModel',
-      'd2:LowerBound': { 'property:Value': '0.00' },
+      'd2:LowerBound': { 'property:Value': '0' },
       'd2:UpperBound': { 'property:Value': processedData.outline.thickness.toString() },
       'd2:DetailedGeometricModelElement': polyLineId
     });
     
-    // 4. 创建形状元素（ShapeElement）- 按demo格式
+    // 4. 创建形状元素（ShapeElement）- 使用改进的ID命名
     // 根据需求 15.2：实体特征（组件、板）的 Inverted 属性设为 false
-    const shapeElementId = this.generateItemId('SHAPE', 'BOARD_OUTLINE');
+    const shapeElementId = `${boardPrefix}_SHAPE`;
     shapeElements.push({
       id: shapeElementId,
       'pdm:ShapeElementType': 'FeatureShapeElement',
@@ -354,6 +398,31 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       shapeElements,
       shapeElementId
     };
+  }
+  
+  /**
+   * 确保轮廓点为顺时针方向
+   * 
+   * @param points - 原始点数组
+   * @returns 顺时针排序的点数组
+   */
+  private ensureClockwiseOrder(points: CartesianPoint[]): CartesianPoint[] {
+    if (points.length < 3) return points;
+    
+    // 计算多边形面积（使用鞋带公式）
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += (points[j].X - points[i].X) * (points[j].Y + points[i].Y);
+    }
+    
+    // 如果面积为正，则为逆时针，需要反转为顺时针
+    // 根据IDX v4.5规范，添加材料的形状（Inverted=false）应使用顺时针方向
+    if (area > 0) {
+      return [...points].reverse();
+    }
+    
+    return points;
   }
   
   /**
@@ -377,6 +446,13 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
           ObjectName: 'POINT_COUNT'
         },
         Value: processedData.outline.points.length.toString()
+      },
+      {
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'MATERIAL'
+        },
+        Value: 'FR4' // 默认材质
       }
     ];
     

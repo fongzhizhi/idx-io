@@ -43,8 +43,7 @@ async function exportMultiLayerBoard() {
     },
     validation: {
       enabled: true,           // 启用协议合规性验证
-      strictMode: false,       // 非严格模式，允许警告
-      reportWarnings: true     // 报告警告信息
+      strictness: 'normal'     // 验证严格程度：'lenient' | 'normal' | 'strict'
     }
   }, {
     // 启用XML注释以便更好地理解层结构
@@ -229,7 +228,7 @@ async function exportMultiLayerBoard() {
     holes: [
       {
         id: 'VIA_VCC_001',
-        type: 'via',
+        type: 'plated',
         viaType: 'through',
         position: { x: 45, y: 35 },
         diameter: 0.2,
@@ -241,7 +240,7 @@ async function exportMultiLayerBoard() {
       },
       {
         id: 'VIA_GND_001',
-        type: 'via',
+        type: 'plated',
         viaType: 'through',
         position: { x: 55, y: 45 },
         diameter: 0.2,
@@ -253,7 +252,7 @@ async function exportMultiLayerBoard() {
       },
       {
         id: 'MOUNTING_HOLE_001',
-        type: 'mounting',
+        type: 'non-plated',
         position: { x: 10, y: 10 },
         diameter: 3.2,
         purpose: 'mounting'
@@ -300,34 +299,25 @@ async function exportMultiLayerBoard() {
       // 检查协议合规性验证结果
       if (result.validation) {
         console.log('\n🔍 协议合规性验证结果:');
-        console.log(`   验证通过: ${result.validation.valid ? '✅' : '❌'}`);
+        console.log(`   验证通过: ${result.validation.passed ? '✅' : '❌'}`);
         console.log(`   错误数量: ${result.validation.errors.length}`);
         console.log(`   警告数量: ${result.validation.warnings.length}`);
         
         if (result.validation.errors.length > 0) {
           console.log('\n❌ 协议合规性错误:');
-          result.validation.errors.forEach(error => {
-            console.error(`   [${error.code}] ${error.message}`);
-            if (error.location) {
-              console.error(`     位置: ${error.location}`);
-            }
-            if (error.suggestion) {
-              console.error(`     建议: ${error.suggestion}`);
-            }
+          result.validation.errors.forEach((error, index) => {
+            console.error(`   ${index + 1}. ${error}`);
           });
         }
         
         if (result.validation.warnings.length > 0) {
           console.log('\n⚠️  协议合规性警告:');
-          result.validation.warnings.forEach(warning => {
-            console.warn(`   [${warning.code}] ${warning.message}`);
-            if (warning.location) {
-              console.warn(`     位置: ${warning.location}`);
-            }
+          result.validation.warnings.forEach((warning, index) => {
+            console.warn(`   ${index + 1}. ${warning}`);
           });
         }
         
-        if (result.validation.valid) {
+        if (result.validation.passed) {
           console.log('\n🎉 生成的IDX文件完全符合IDX v4.5协议规范！');
         }
       }
@@ -355,6 +345,8 @@ async function exportMultiLayerBoard() {
       }
       
       // 在浏览器中创建下载链接
+      // 注意：此示例在Node.js环境中运行，浏览器相关代码已注释
+      /*
       if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         const downloadUrl = exporter.createDownloadUrl(result.xmlContent);
         const link = document.createElement('a');
@@ -372,6 +364,7 @@ async function exportMultiLayerBoard() {
         
         console.log('🔗 下载链接已创建');
       } else {
+      */
         // Node.js环境下保存文件
         const outputDir = './output';
         if (!fs.existsSync(outputDir)) {
@@ -382,7 +375,7 @@ async function exportMultiLayerBoard() {
         console.log(`\n💾 文件已保存: ${filePath}`);
         console.log(`📝 XML内容预览 (前500字符):`);
         console.log(result.xmlContent.substring(0, 500) + '...');
-      }
+      // }
       
       if (result.issues.length > 0) {
         console.log('\n⚠️  导出问题:');
@@ -420,8 +413,7 @@ async function exportSimple4LayerBoard() {
     },
     validation: {
       enabled: true,           // 启用验证功能
-      strictMode: false,       // 非严格模式
-      reportWarnings: true     // 报告警告
+      strictness: 'normal'     // 验证严格程度
     }
   });
 
@@ -454,7 +446,7 @@ async function exportSimple4LayerBoard() {
     
     // 显示验证结果
     if (result.validation) {
-      console.log(`🔍 验证结果: ${result.validation.valid ? '通过' : '失败'}`);
+      console.log(`🔍 验证结果: ${result.validation.passed ? '通过' : '失败'}`);
       if (result.validation.errors.length > 0) {
         console.log(`❌ 错误: ${result.validation.errors.length}个`);
       }
@@ -464,7 +456,7 @@ async function exportSimple4LayerBoard() {
     }
     
     // Node.js环境下保存文件
-    if (typeof window === 'undefined') {
+    // if (typeof window === 'undefined') {
       const outputDir = './output';
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
@@ -472,7 +464,7 @@ async function exportSimple4LayerBoard() {
       const filePath = path.join(outputDir, result.fileName);
       fs.writeFileSync(filePath, result.xmlContent, 'utf-8');
       console.log(`💾 文件已保存: ${filePath}`);
-    }
+    // }
   } else {
     console.error('❌ 简化4层板导出失败:', result.issues);
   }
@@ -483,11 +475,12 @@ async function exportSimple4LayerBoard() {
  */
 function createMultiLayerBrowserExample() {
   // 类型守卫：确保在浏览器环境中
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+  // if (typeof window === 'undefined' || typeof document === 'undefined') {
     console.log('此示例需要在浏览器环境中运行');
     return;
-  }
+  // }
 
+  /*
   // 创建控制面板
   const panel = document.createElement('div');
   panel.style.padding = '20px';
@@ -534,17 +527,18 @@ function createMultiLayerBrowserExample() {
   panel.appendChild(simpleButton);
   
   document.body.appendChild(panel);
+  */
 }
 
 // 运行示例
-if (typeof window !== 'undefined') {
+// if (typeof window !== 'undefined') {
   // 浏览器环境
-  createMultiLayerBrowserExample();
-} else {
+  // createMultiLayerBrowserExample();
+// } else {
   // Node.js环境 - 运行两个示例
   console.log('🚀 开始多层板导出示例...\n');
   
   exportMultiLayerBoard()
     .then(() => exportSimple4LayerBoard())
     .catch(console.error);
-}
+// }

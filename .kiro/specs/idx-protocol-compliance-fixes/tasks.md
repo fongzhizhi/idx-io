@@ -359,11 +359,95 @@
     - 确保性能下降不超过 10%
     - _Requirements: 11.3_
 
-- [~] 13. 最终检查点 - 确保所有测试通过
+- [x] 12. 最终检查点 - 确保所有测试通过
   - 运行所有测试：`npm test`
   - 验证生成的 IDX 文件完全符合 IDX V4.5 协议
   - 确保所有需求都已实现
   - 如有问题，请向用户报告
+
+- [ ] 13. 协议专家反馈修复（P0 - 关键问题）
+  - [x] 13.1 修复层定义结构问题
+    - 将所有层的 `ItemType` 从 `"assembly"` 改为 `"single"`
+    - 修复 `ReferenceName` 值，移除 `[object Object]` 错误
+    - 为每个层添加正确的 `UpperBound` 和 `LowerBound` UserProperty
+    - 确保 `ReferenceName` 使用简洁明确的值（如 "L1_TOP"）
+    - _Requirements: 6.2, 14.5_
+  
+  - [x] 13.2 修复层堆叠结构定义
+    - 在 Stackup 的 `ItemInstance` 中添加 `UpperBound`/`LowerBound` 定义
+    - 确保层实例按正确顺序排列（从底部到顶部）
+    - 添加可选的 `LayerType` UserProperty（如果在 Layer 中未定义）
+    - 修复层边界计算，确保与物理堆叠一致
+    - _Requirements: 14.2, 14.4_
+  
+  - [x] 13.3 重构组件为完整的两级结构
+    - 创建组件定义（single 类型）+ 组件实例（assembly 类型）结构
+    - 组件定义包含 `PackageName`、`Shape` 引用和用户属性
+    - 组件实例包含 `ItemInstance`、`AssembleToName` 和变换
+    - 确保组件实例引用组件定义，而非直接引用形状
+    - _Requirements: 3.1, 3.2, 3.3, 3.4_
+  
+  - [x] 13.4 修正过孔几何类型
+    - 将过孔的 `geometryType` 从 `"HOLE_PLATED"` 改为 `"VIA"`
+    - 填充过孔使用 `geometryType="FILLED_VIA"`
+    - 安装孔等非过孔保持使用 `"HOLE_NON_PLATED"`
+    - 更新几何类型映射器以反映正确的过孔类型
+    - _Requirements: 2.1, 2.2_
+  
+  - [x] 13.5 修复 Z 轴坐标系统
+    - 实现被动模型：z=0 为底部安装表面
+    - 组件使用 `AssembleToName` + 2D变换 + 可选 `zOffset`
+    - 组件形状的 Z 范围定义其厚度，而非绝对位置
+    - 修正所有组件 CurveSet2d 的 Z 范围定义
+    - _Requirements: 13.1, 13.2, 13.3_
+  
+  - [x] 13.6 清理 ProcessInstruction 结构
+    - 移除自定义的 `InstructionType` 子元素
+    - 确保只使用 `xsi:type` 属性定义指令类型
+    - 验证 ProcessInstruction 结构符合规范第31页
+    - _Requirements: 1.1, 1.2, 1.3_
+  
+  - [x] 13.7 规范 ID 命名和引用
+    - 移除 ID 中的特殊字符（如 `::`）
+    - 统一使用下划线或连字符的命名规范
+    - 确保所有引用的 ID 都存在且有效
+    - 修复所有 `[object Object]` 引用错误
+    - _Requirements: 通用质量要求_
+  
+  - [x] 13.8 完善形状元素链
+    - 确保组件形状正确定义为 2.5D 几何体
+    - 添加完整的 CurveSet2d → ShapeElement → Item 引用链
+    - 验证 `ShapeDescriptionType` 和 `Inverted` 属性正确性
+    - 确保形状的 Z 范围定义符合组件厚度
+    - _Requirements: 3.7, 9.1_
+  
+  - [ ] 13.9 添加协作标记（可选）
+    - 为非协作项目添加 `RoleOnItemInstance` 标记
+    - 区分电气和机械类别
+    - 添加所有者角色定义
+    - _Requirements: 12.1_
+
+- [ ] 14. 协议专家反馈验证
+  - [x] 14.1 生成修复后的测试文件
+    - 运行更新后的导出器生成新的 IDX 文件
+    - 验证所有专家反馈问题已修复
+    - 对比修复前后的文件差异
+  
+  - [ ] 14.2 专家验证清单
+    - [ ] 层定义使用 `ItemType="single"`
+    - [ ] `ReferenceName` 值正确且一致
+    - [ ] 层堆叠包含完整的边界定义
+    - [ ] 组件使用两级结构（定义+实例）
+    - [ ] 过孔使用 `geometryType="VIA"`
+    - [ ] Z 轴坐标符合被动模型
+    - [ ] ProcessInstruction 结构规范
+    - [ ] ID 命名规范且无特殊字符
+    - [ ] 形状元素链完整
+  
+  - [ ] 14.3 协议合规性最终验证
+    - 使用 XSD Schema 验证修复后的文件
+    - 确保所有元素和属性符合 IDX v4.5 规范
+    - 生成详细的合规性报告
 
 ## Notes
 

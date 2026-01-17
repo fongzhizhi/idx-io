@@ -124,12 +124,12 @@ export class TransformationBuilder {
     transElement.ele('pdm:yx').txt(this.formatNumeric(transformation.yx));
     transElement.ele('pdm:yy').txt(this.formatNumeric(transformation.yy));
     
-    // 添加平移分量（使用 foundation:Value 包装，根据需求 7.4）
+    // 添加平移分量（使用 property:Value 包装，根据IDX v4.5规范第21-22页）
     const txElement = transElement.ele('pdm:tx');
-    txElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.tx.Value));
+    txElement.ele('property:Value').txt(this.formatCoordinate(transformation.tx.Value));
     
     const tyElement = transElement.ele('pdm:ty');
-    tyElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.ty.Value));
+    tyElement.ele('property:Value').txt(this.formatCoordinate(transformation.ty.Value));
   }
   
   /**
@@ -168,15 +168,15 @@ export class TransformationBuilder {
     transElement.ele('pdm:zy').txt(this.formatNumeric(transformation.zy));
     transElement.ele('pdm:zz').txt(this.formatNumeric(transformation.zz));
     
-    // 添加平移分量（使用 foundation:Value 包装）
+    // 添加平移分量（使用 property:Value 包装）
     const txElement = transElement.ele('pdm:tx');
-    txElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.tx.Value));
+    txElement.ele('property:Value').txt(this.formatCoordinate(transformation.tx.Value));
     
     const tyElement = transElement.ele('pdm:ty');
-    tyElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.ty.Value));
+    tyElement.ele('property:Value').txt(this.formatCoordinate(transformation.ty.Value));
     
     const tzElement = transElement.ele('pdm:tz');
-    tzElement.ele('foundation:Value').txt(this.formatCoordinate(transformation.tz.Value));
+    tzElement.ele('property:Value').txt(this.formatCoordinate(transformation.tz.Value));
   }
   
   /**
@@ -219,7 +219,7 @@ export class TransformationBuilder {
    */
   addZOffset(instanceElement: any, zOffset: number): void {
     const zOffsetElement = instanceElement.ele('pdm:zOffset');
-    zOffsetElement.ele('foundation:Value').txt(this.formatCoordinate(zOffset));
+    zOffsetElement.ele('property:Value').txt(this.formatCoordinate(zOffset));
   }
   
   /**

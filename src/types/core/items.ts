@@ -141,8 +141,8 @@ export interface EDMDItem extends EDMDObject {
   /** 几何类型（IDX V4.5 标准几何类型，可选） */
   geometryType?: StandardGeometryType;
   
-  /** 参考名称（用于相对定位和被引用） */
-  ReferenceName?: EDMName;
+  /** 参考名称（用于相对定位和被引用）- 根据协议专家反馈，使用简洁的字符串值 */
+  ReferenceName?: string;
   
   /** 装配到名称（用于相对层定位，引用 ReferenceName） */
   AssembleToName?: string;

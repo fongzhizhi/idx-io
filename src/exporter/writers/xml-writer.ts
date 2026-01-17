@@ -204,6 +204,7 @@ export class XMLWriter {
    * 构建ProcessInstruction
    * 
    * 根据 IDX V4.5 协议第 31 页，ProcessInstruction 应该使用 computational 命名空间
+   * 不应包含 InstructionType 子元素，类型通过 xsi:type 属性定义
    */
   private buildProcessInstruction(root: any, instruction: EDMDProcessInstruction): void {
     const instructionElement = root.ele('foundation:ProcessInstruction', { 
@@ -211,7 +212,18 @@ export class XMLWriter {
       id: instruction.id
     });
     
-    instructionElement.ele('foundation:InstructionType').txt(instruction.instructionType);
+    // 根据协议专家反馈，移除 InstructionType 子元素
+    // 指令类型已通过 xsi:type 属性定义，不需要重复的子元素
+    
+    // 添加Actor属性（如果有）
+    if ((instruction as any).Actor) {
+      instructionElement.ele('computational:Actor').txt((instruction as any).Actor);
+    }
+    
+    // 添加Description属性（如果有）
+    if ((instruction as any).Description) {
+      instructionElement.ele('computational:Description').txt((instruction as any).Description);
+    }
     
     // 根据指令类型添加特定内容
     if (instruction.instructionType === 'SendChanges') {
@@ -316,11 +328,11 @@ export class XMLWriter {
   /**
    * 构建用户属性
    * 
-   * 根据 IDX V4.5 协议，用户属性应该使用 property:UserProperty 元素名称，
+   * 根据 IDX V4.5 协议规范，用户属性应该使用 foundation:UserProperty 元素名称，
    * 配合 xsi:type="property:EDMDUserSimpleProperty" 类型声明
    */
   private buildUserProperty(parent: any, prop: any): void {
-    const propElement = parent.ele('property:UserProperty', {
+    const propElement = parent.ele('foundation:UserProperty', {
       'xsi:type': 'property:EDMDUserSimpleProperty'
     });
     

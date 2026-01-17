@@ -21,10 +21,11 @@ export class GeometryTypeMapper {
     'COMPONENT',
     'COMPONENT_MECHANICAL',
     
-    // 孔相关
-    'HOLE_PLATED',
-    'HOLE_NON_PLATED',
-    'FILLED_VIA',
+    // 孔相关 - 根据协议专家反馈修正
+    'VIA',              // 普通过孔
+    'FILLED_VIA',       // 填充过孔
+    'HOLE_PLATED',      // 镀孔（非过孔）
+    'HOLE_NON_PLATED',  // 非镀孔
     
     // 禁止区相关
     'KEEPOUT_AREA_COMPONENT',
@@ -52,21 +53,23 @@ export class GeometryTypeMapper {
    * 定义了如何将内部使用的类型名称映射到 IDX 标准类型
    */
   private static readonly TYPE_MAPPING: Record<string, string> = {
-    // 过孔类型映射
-    'VIA': 'HOLE_PLATED',  // VIA 不是标准类型，应该使用 HOLE_PLATED
-    'via': 'HOLE_PLATED',
-    'plated': 'HOLE_PLATED',
-    'plated-hole': 'HOLE_PLATED',
-    'filled': 'FILLED_VIA',
+    // 过孔类型映射 - 根据协议专家反馈修正
+    'VIA': 'VIA',              // 过孔使用 VIA 类型
+    'via': 'VIA',
+    'through': 'VIA',          // 通孔过孔
+    'blind': 'VIA',            // 盲孔过孔
+    'buried': 'VIA',           // 埋孔过孔
+    'micro': 'VIA',            // 微孔过孔
+    'filled': 'FILLED_VIA',    // 填充过孔
     'filled-via': 'FILLED_VIA',
-    'micro': 'HOLE_PLATED',  // 微孔也是镀孔的一种
-    'micro-via': 'HOLE_PLATED',
     
-    // 非镀孔类型映射
+    // 非过孔的镀孔和非镀孔
+    'plated': 'HOLE_PLATED',      // 镀孔（非过孔，如测试孔）
+    'plated-hole': 'HOLE_PLATED',
     'non-plated': 'HOLE_NON_PLATED',
     'non-plated-hole': 'HOLE_NON_PLATED',
-    'mounting': 'MOUNTING_HOLE',
-    'mounting-hole': 'MOUNTING_HOLE',
+    'mounting': 'HOLE_NON_PLATED',     // 安装孔通常是非镀孔
+    'mounting-hole': 'HOLE_NON_PLATED',
     
     // 组件类型映射
     'component': 'COMPONENT',
@@ -214,22 +217,30 @@ export class GeometryTypeMapper {
    *   type: 'plated',
    *   purpose: 'via'
    * });
-   * // 返回: 'HOLE_PLATED'
+   * // 返回: 'VIA'
    * ```
    */
   static inferHoleType(holeData: {
     type?: 'plated' | 'non-plated' | 'filled' | 'micro';
-    viaType?: 'plated' | 'non-plated' | 'filled' | 'micro';
+    viaType?: 'plated' | 'non-plated' | 'filled' | 'micro' | 'through' | 'blind' | 'buried';
     purpose?: 'via' | 'mounting' | 'testpoint' | string;
     netName?: string;
   }): string {
     // 根据 purpose 判断
     if (holeData.purpose === 'mounting') {
-      return 'MOUNTING_HOLE';
+      return 'HOLE_NON_PLATED';  // 安装孔通常是非镀孔
     }
     
     if (holeData.purpose === 'testpoint') {
       return 'TESTPOINT';
+    }
+    
+    // 如果明确标识为过孔用途，使用 VIA 类型
+    if (holeData.purpose === 'via') {
+      if (holeData.type === 'filled' || holeData.viaType === 'filled') {
+        return 'FILLED_VIA';
+      }
+      return 'VIA';
     }
     
     // 根据 type 或 viaType 判断
@@ -239,11 +250,21 @@ export class GeometryTypeMapper {
       return 'FILLED_VIA';
     }
     
+    // 过孔相关类型都使用 VIA
+    if (holeType === 'through' || holeType === 'blind' || holeType === 'buried' || holeType === 'micro') {
+      return 'VIA';
+    }
+    
     if (holeType === 'non-plated') {
       return 'HOLE_NON_PLATED';
     }
     
-    // 默认为镀孔
+    // 如果有网络名称，很可能是过孔
+    if (holeData.netName) {
+      return 'VIA';
+    }
+    
+    // 默认：镀孔但不是过孔（如测试孔）
     return 'HOLE_PLATED';
   }
 

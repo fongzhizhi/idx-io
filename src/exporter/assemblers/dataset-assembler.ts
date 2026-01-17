@@ -164,23 +164,29 @@ export class DatasetAssembler {
     // 1. 构建板轮廓
     const boardBuilder = this.builders.get('board');
     if (boardBuilder) {
-      const boardItem = await boardBuilder.build(boardData);
-      body.Items.push(boardItem);
+      const boardAssemblyItem = await boardBuilder.build(boardData);
+      body.Items.push(boardAssemblyItem);
+      
+      // 如果有板定义项，也添加到Items中
+      if ((boardAssemblyItem as any).boardDefinitionItem) {
+        body.Items.push((boardAssemblyItem as any).boardDefinitionItem);
+        delete (boardAssemblyItem as any).boardDefinitionItem; // 清理临时属性
+      }
       
       // 收集板子的几何元素
       // 根据需求 15.3 和 15.5：ShapeElement 顺序应反映布尔运算顺序（先加后减）
       // 1. 板子（实体特征，Inverted=false）- 首先添加
-      if (boardItem.geometricElements) {
-        geometricElements.push(...boardItem.geometricElements);
-        delete boardItem.geometricElements; // 清理临时属性
+      if ((boardAssemblyItem as any).geometricElements) {
+        geometricElements.push(...(boardAssemblyItem as any).geometricElements);
+        delete (boardAssemblyItem as any).geometricElements; // 清理临时属性
       }
-      if (boardItem.shapeElements) {
-        shapeElements.push(...boardItem.shapeElements);
-        delete boardItem.shapeElements;
+      if ((boardAssemblyItem as any).shapeElements) {
+        shapeElements.push(...(boardAssemblyItem as any).shapeElements);
+        delete (boardAssemblyItem as any).shapeElements;
       }
-      if (boardItem.curveSet2Ds) {
-        curveSet2Ds.push(...boardItem.curveSet2Ds);
-        delete boardItem.curveSet2Ds;
+      if ((boardAssemblyItem as any).curveSet2Ds) {
+        curveSet2Ds.push(...(boardAssemblyItem as any).curveSet2Ds);
+        delete (boardAssemblyItem as any).curveSet2Ds;
       }
     }
 

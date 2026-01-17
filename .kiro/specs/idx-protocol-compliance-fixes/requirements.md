@@ -199,14 +199,71 @@
 5. THE 层堆叠 Item SHALL 包含 ReferenceName 属性，供其他元素引用
 6. THE 层堆叠结构 SHALL 遵循协议第 55-57 页的示例格式
 
-### Requirement 15: 正确使用 ShapeElement 布尔运算
+### Requirement 16: 正确的层定义结构
 
-**User Story:** 作为几何建模系统，我需要知道哪些形状是添加的，哪些是减去的，以便正确构建 3D 模型。
+**User Story:** 作为 IDX 解析器，我需要正确的层定义结构，以便准确理解层的属性和边界。
 
 #### Acceptance Criteria
 
-1. WHEN 定义切割特征（孔、挖槽）时，THE ShapeElement 的 Inverted 属性 SHALL 设为 true
-2. WHEN 定义实体特征（组件、板）时，THE ShapeElement 的 Inverted 属性 SHALL 设为 false
-3. WHEN 多个 ShapeElement 组合时，THE 顺序 SHALL 反映布尔运算的顺序
-4. THE Inverted 属性 SHALL 正确反映 CSG（构造实体几何）操作
-5. THE 布尔运算 SHALL 遵循先加后减的原则
+1. WHEN 定义层时，THE IDX_Exporter SHALL 使用 `ItemType="single"` 而不是 `ItemType="assembly"`
+2. THE 层的 ReferenceName SHALL 使用简洁明确的值（如 "L1_TOP"），不应包含对象引用错误
+3. EACH 层 SHALL 包含 UpperBound 和 LowerBound UserProperty 定义其在 Z 轴上的位置
+4. THE 层边界计算 SHALL 基于层叠结构中的实际位置和厚度
+5. THE 层定义 SHALL 遵循协议第 53-54 页的示例格式，使用 single ItemType
+
+### Requirement 17: 完整的组件两级结构
+
+**User Story:** 作为 MCAD 系统，我需要完整的组件定义和实例分离，以便正确处理组件库和实例化。
+
+#### Acceptance Criteria
+
+1. WHEN 导出组件时，THE IDX_Exporter SHALL 创建组件定义（single 类型）和组件实例（assembly 类型）的两级结构
+2. THE 组件定义 SHALL 包含 PackageName、Shape 引用、用户属性，使用 `ItemType="single"`
+3. THE 组件实例 SHALL 包含 ItemInstance、AssembleToName、变换矩阵，使用 `ItemType="assembly"`
+4. THE 组件实例的 ItemInstance SHALL 引用组件定义的 ID，而不是直接引用形状
+5. THE 组件定义和实例 SHALL 遵循协议第 71-74 页的规范结构
+
+### Requirement 18: 正确的过孔几何类型
+
+**User Story:** 作为 IDX 文件处理系统，我需要区分过孔和其他类型的孔，以便正确处理电气连接。
+
+#### Acceptance Criteria
+
+1. WHEN 导出过孔时，THE IDX_Exporter SHALL 使用 `geometryType="VIA"` 而不是 `geometryType="HOLE_PLATED"`
+2. WHEN 导出填充过孔时，THE IDX_Exporter SHALL 使用 `geometryType="FILLED_VIA"`
+3. WHEN 导出安装孔或其他非过孔时，THE IDX_Exporter SHALL 使用 `geometryType="HOLE_NON_PLATED"`
+4. THE 几何类型映射 SHALL 根据孔的用途（via、mounting、test等）选择正确的类型
+
+### Requirement 19: 规范的 ProcessInstruction 结构
+
+**User Story:** 作为 IDX 协议解析器，我需要标准的 ProcessInstruction 结构，以便正确识别消息类型。
+
+#### Acceptance Criteria
+
+1. THE ProcessInstruction SHALL 只使用 `xsi:type` 属性定义指令类型
+2. THE ProcessInstruction SHALL NOT 包含自定义的 `InstructionType` 子元素
+3. THE ProcessInstruction 结构 SHALL 遵循协议第 31 页的规范格式
+4. THE ProcessInstruction SHALL 使用 computational 命名空间的标准类型
+
+### Requirement 20: 被动 Z 轴坐标模型
+
+**User Story:** 作为 3D 装配系统，我需要正确的 Z 轴定位模型，以便准确计算组件在板上的位置。
+
+#### Acceptance Criteria
+
+1. THE Z 轴坐标系 SHALL 使用被动模型，z=0 定义为底部安装表面
+2. THE 组件定位 SHALL 使用 AssembleToName + 2D 变换 + 可选 zOffset 的组合
+3. THE 组件形状的 Z 范围 SHALL 定义其厚度，而不是绝对位置
+4. THE 组件 CurveSet2d 的 LowerBound 和 UpperBound SHALL 相对于组件本地坐标系定义
+5. THE AssembleToName SHALL 引用有效的层或表面 ReferenceName
+
+### Requirement 21: 规范的 ID 命名和引用
+
+**User Story:** 作为 XML 解析器，我需要有效的 ID 命名和引用，以便正确建立对象关系。
+
+#### Acceptance Criteria
+
+1. THE ID 值 SHALL NOT 包含特殊字符（如 ::、空格等）
+2. THE ID 命名 SHALL 使用一致的规范（统一使用下划线或连字符）
+3. THE 所有引用的 ID SHALL 存在且有效，不应出现 `[object Object]` 等错误值
+4. THE ReferenceName 值 SHALL 使用简洁明确的字符串，便于其他元素引用

@@ -462,8 +462,10 @@ export class IDXExporter {
       Body: body,
       ProcessInstruction: {
         id: 'INSTRUCTION_001',
-        instructionType: 'SendInformation'
-      }
+        instructionType: 'SendInformation',
+        Actor: this.config.collaboration.creatorSystem,
+        Description: 'Initial board baseline'
+      } as any
     };
     
     return dataset;

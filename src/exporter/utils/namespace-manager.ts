@@ -108,7 +108,7 @@ export class NamespaceManager {
     'zOffset': 'd2',
     
     // 属性元素
-    'UserProperty': 'property',  // 可以是 foundation 或 property
+    'UserProperty': 'foundation',  // 根据IDX v4.5规范，UserProperty使用foundation命名空间
     'UserSimpleProperty': 'property',
     'Key': 'property',
     'Value': 'property',
