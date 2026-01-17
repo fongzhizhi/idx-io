@@ -19,6 +19,7 @@ import {
   LayerData, LayerType, LayerStackupData, LayerStackupEntry,
   calculateStackupThickness, getLayerZPosition 
 } from '../../types/data-models';
+import { LayerStackupBuilder, LayerStackupData as StackupBuilderData } from './layer-stackup-builder';
 
 // # 处理后的层数据类型定义
 /**
@@ -106,6 +107,13 @@ interface ProcessedLayerStackupEntry {
  * ```
  */
 export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
+  
+  private layerStackupBuilder: LayerStackupBuilder;
+  
+  constructor(config: BuilderConfig, context: BuilderContext) {
+    super(config, context);
+    this.layerStackupBuilder = new LayerStackupBuilder();
+  }
   
   // ============= 输入验证 =============
   /**
@@ -504,8 +512,37 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
     // 如果有层叠结构定义，创建层叠结构项目
     if (input.layerStackup) {
       const processedStackup = await this.processLayerStackup(input.layerStackup, input.layers);
-      const stackupItem = await this.createStackupItem(processedStackup);
-      items.push(stackupItem);
+      
+      // 使用 LayerStackupBuilder 创建层叠结构
+      const stackupBuilderData: StackupBuilderData = {
+        id: processedStackup.id,
+        name: processedStackup.name,
+        identifier: this.createIdentifier('STACKUP', processedStackup.id),
+        layers: processedStackup.layers.map((layer, index) => ({
+          instanceId: `${processedStackup.processedId}_LAYER_${index + 1}_INSTANCE`,
+          layerItemId: layer.layerId,
+          layerName: layer.layerId,
+          position: layer.position - 1, // 转换为0-based索引
+          thickness: layer.thickness,
+          lowerBound: layer.zPosition - layer.thickness / 2,
+          upperBound: layer.zPosition + layer.thickness / 2,
+          material: layer.material,
+          layerType: 'LAYER'
+        })),
+        totalThickness: processedStackup.totalThickness,
+        userProperties: this.createStackupProperties(processedStackup),
+        baseline: true
+      };
+      
+      // 构建层叠结构
+      const layerStackupStructure = this.layerStackupBuilder.buildLayerStackup(stackupBuilderData);
+      
+      // 添加层叠结构 Item 到结果中
+      items.push(layerStackupStructure.stackupItem);
+      
+      // 记录层叠结构构建信息
+      this.context.addWarning('LAYER_STACKUP_BUILT',
+        `层叠结构构建完成: ${layerStackupStructure.stackupItem.Name}, 包含${layerStackupStructure.layerInstances.length}个层实例`);
     }
     
     return items;
@@ -601,29 +638,32 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
    * @returns 层叠结构EDMDItem
    */
   private async createStackupItem(stackup: ProcessedLayerStackupData): Promise<EDMDItem> {
-    // # 创建基础项目结构
-    // 根据需求 6.1：层叠结构应该使用 ItemType="assembly" 配合 geometryType="LAYER_STACKUP"
-    const baseItem = this.createBaseItem(
-      ItemType.ASSEMBLY,
-      GeometryType.LAYER_STACKUP,
-      stackup.name,
-      this.getStackupDescription(stackup)
-    );
-    
-    const stackupItem: EDMDItem = {
-      id: stackup.processedId,
-      ItemType: ItemType.ASSEMBLY,
-      ...baseItem,
-      Identifier: this.createIdentifier('STACKUP', stackup.id),
-      UserProperties: this.createStackupProperties(stackup),
-      // 添加 ReferenceName 用于组件的 AssembleToName 引用 - 根据需求 13.4
-      ReferenceName: stackup.name || stackup.id
+    // 使用 LayerStackupBuilder 创建层叠结构
+    const stackupBuilderData: StackupBuilderData = {
+      id: stackup.id,
+      name: stackup.name,
+      identifier: this.createIdentifier('STACKUP', stackup.id),
+      layers: stackup.layers.map((layer, index) => ({
+        instanceId: `${stackup.processedId}_LAYER_${index + 1}_INSTANCE`,
+        layerItemId: layer.layerId,
+        layerName: layer.layerId, // 使用层ID作为名称
+        position: layer.position - 1, // 转换为0-based索引
+        thickness: layer.thickness,
+        lowerBound: layer.zPosition - layer.thickness / 2,
+        upperBound: layer.zPosition + layer.thickness / 2,
+        material: layer.material,
+        layerType: 'LAYER' // 默认层类型
+      })),
+      totalThickness: stackup.totalThickness,
+      userProperties: this.createStackupProperties(stackup),
+      baseline: true
     };
     
-    // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
-    stackupItem.BaseLine = true;
+    // 使用 LayerStackupBuilder 构建层叠结构
+    const layerStackupStructure = this.layerStackupBuilder.buildLayerStackup(stackupBuilderData);
     
-    return stackupItem;
+    // 返回构建的层叠结构 Item
+    return layerStackupStructure.stackupItem;
   }
   
   /**

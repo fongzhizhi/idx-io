@@ -205,7 +205,7 @@
     - **Property 36: Z 偏移使用 zOffset 属性**
     - **Validates: Requirements 13.1, 13.2, 13.3, 13.4, 13.5**
   
-  - [~] 7.3 创建层堆叠结构构建器
+  - [x] 7.3 创建层堆叠结构构建器
     - 创建 `src/exporter/builders/layer-stackup-builder.ts` 文件
     - 实现 `LayerStackupBuilder` 类
     - 实现 `buildLayerStackup` 方法，构建层堆叠结构
@@ -214,7 +214,7 @@
     - 添加 ReferenceName 属性
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
   
-  - [~] 7.4 完善层堆叠结构
+  - [x] 7.4 完善层堆叠结构
     - 修改 `buildItem` 方法，使用 `LayerStackupBuilder`
     - 确保层堆叠使用 `ItemType="assembly"` 和 `geometryType="LAYER_STACKUP"`
     - 确保层使用 `ItemType="assembly"` 和 `geometryType="LAYER"`
