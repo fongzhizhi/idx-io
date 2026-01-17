@@ -276,10 +276,8 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       Value: new Date().toISOString()
     });
     
-    // # 添加基线标记 - 根据demo文件格式
-    output.Baseline = {
-      Value: 'true'
-    };
+    // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
+    output.BaseLine = true;
     
     // # 记录构建统计
     this.context.addWarning('BOARD_BUILT', 

@@ -154,8 +154,8 @@ export interface EDMDLine extends EDMDCurve {
  * REF: Section 7.1
  */
 export interface EDMDCurveSet2D extends EDMDObject {
-  /** 形状描述类型 */
-  ShapeDescriptionType: 'GeometricModel' | 'Implicit';
+  /** 形状描述类型 - 根据需求 9.4 扩展支持的值 */
+  ShapeDescriptionType: 'GeometricModel' | 'OUTLINE' | 'Implicit' | 'SimplifiedModel';
   
   /** Z轴下界（相对于参考面） */
   LowerBound: EDMDLengthProperty;

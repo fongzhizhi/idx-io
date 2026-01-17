@@ -352,10 +352,8 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
       Value: output.geometryType || 'UNKNOWN'
     });
     
-    // # 添加基线标记 - 根据demo文件格式
-    output.Baseline = {
-      Value: 'true'
-    };
+    // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
+    output.BaseLine = true;
     
     // # 将临时存储的几何元素移动到输出项目
     const currentItem = this.getCurrentBuildingItem();
@@ -422,10 +420,11 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
     geometricElements.push(circleCenter);
     
     // # 创建CurveSet2D
+    // 根据需求 9.1-9.4，过孔需要精确几何表示，使用 GeometricModel
     const curveSet2D = {
       id: this.generateItemId('CURVESET', `VIA_${processedData.id}`),
       'xsi:type': 'd2:EDMDCurveSet2d',  // 统一使用小写 d
-      'pdm:ShapeDescriptionType': 'OUTLINE',
+      'pdm:ShapeDescriptionType': 'GeometricModel',  // 过孔需要精确几何
       'd2:LowerBound': {
         'property:Value': processedData.lowerBound.toString()
       },

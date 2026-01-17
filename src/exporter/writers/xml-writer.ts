@@ -582,7 +582,7 @@ export class XMLWriter {
             tx: { Value: 0 },
             ty: { Value: 0 }
           },
-      baseline: item.Baseline ? (item.Baseline.Value === 'true' || item.Baseline.Value === true) : undefined
+      baseline: item.BaseLine
     };
     
     // 使用 ComponentStructureBuilder 构建三层结构
@@ -660,10 +660,10 @@ export class XMLWriter {
       }
     }
     
-    // 构建基线标记 - 根据demo格式
-    if (item.Baseline) {
-      const baselineElement = itemElement.ele('pdm:Baseline');
-      baselineElement.ele('property:Value').txt(item.Baseline.Value);
+    // 构建基线标记 - 根据需求 10.1-10.4 使用正确格式
+    if (item.BaseLine !== undefined) {
+      // 使用 <pdm:BaseLine>true</pdm:BaseLine> 格式，注意大小写
+      itemElement.ele('pdm:BaseLine').txt(item.BaseLine.toString());
     }
     
     // 构建装配到名称

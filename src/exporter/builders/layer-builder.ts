@@ -586,11 +586,8 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
       UserProperties: this.createLayerProperties(layer)
     };
     
-    // # 添加基线标记
+    // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
     layerItem.BaseLine = true;
-    layerItem.Baseline = {
-      Value: 'true'
-    };
     
     return layerItem;
   }
@@ -619,11 +616,8 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
       UserProperties: this.createStackupProperties(stackup)
     };
     
-    // # 添加基线标记
+    // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
     stackupItem.BaseLine = true;
-    stackupItem.Baseline = {
-      Value: 'true'
-    };
     
     return stackupItem;
   }

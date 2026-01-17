@@ -163,7 +163,7 @@
     - **Property 28: CurveSet2d 类型命名一致性**
     - **Validates: Requirements 8.1, 8.2**
   
-  - [-] 5.5 修正 ShapeDescriptionType 值
+  - [x] 5.5 修正 ShapeDescriptionType 值
     - 修改 `buildCurveSet2D` 和相关方法
     - 详细几何模型使用 `ShapeDescriptionType="GeometricModel"`
     - 简单 2.5D 轮廓可以使用 `ShapeDescriptionType="OUTLINE"`
@@ -175,7 +175,7 @@
     - **Property 30: ShapeDescriptionType 值有效**
     - **Validates: Requirements 9.1, 9.4**
   
-  - [~] 5.7 规范基线和属性格式
+  - [x] 5.7 规范基线和属性格式
     - 修改 `buildItem` 方法中的 BaseLine 构建逻辑
     - 将 `<pdm:Baseline><property:Value>true</property:Value></pdm:Baseline>` 改为 `<pdm:BaseLine>true</pdm:BaseLine>`
     - 确保 BaseLine 元素直接包含布尔值文本内容

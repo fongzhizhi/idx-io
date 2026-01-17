@@ -286,7 +286,6 @@ export async function testLayerBuilder() {
     console.assert(signalLayer.geometryType === GeometryType.LAYER_OTHERSIGNAL, "信号层几何类型正确");
     console.assert(signalLayer.Name === 'Top Signal', "层名称正确");
     console.assert(signalLayer.BaseLine === true, "层应该标记为基线");
-    console.assert(signalLayer.Baseline?.Value === 'true', "基线值正确");
     
     // 检查用户属性
     const properties = signalLayer.UserProperties || [];

@@ -422,10 +422,8 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
       Value: output.BaseLine ? 'true' : 'false'
     });
     
-    // # 添加基线标记 - 根据demo文件格式
-    output.Baseline = {
-      Value: 'true'
-    };
+    // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式
+    output.BaseLine = true;
     
     // # 将临时存储的几何元素移动到输出项目
     const currentItem = this.getCurrentBuildingItem();

@@ -600,13 +600,13 @@ export class XMLWriterWithComments extends XMLWriter {
       }
     }
     
-    // 构建基线标记
-    if (item.Baseline) {
+    // 构建基线标记 - 根据需求 10.1-10.4 使用正确格式
+    if (item.BaseLine !== undefined) {
       if (this.options.enableComments) {
         itemElement.com('版本控制的基线标记');
       }
-      const baselineElement = itemElement.ele('pdm:Baseline');
-      baselineElement.ele('property:Value').txt(item.Baseline.Value);
+      // 使用 <pdm:BaseLine>true</pdm:BaseLine> 格式，注意大小写
+      itemElement.ele('pdm:BaseLine').txt(item.BaseLine.toString());
     }
     
     // 构建装配到名称

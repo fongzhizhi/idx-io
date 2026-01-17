@@ -148,11 +148,9 @@ export class ComponentStructureBuilder {
       // 注意：不包含 Shape 属性（根据需求 3.3）
     };
     
-    // 添加基线标记（如果有）
+    // 添加基线标记（如果有）- 根据需求 10.1-10.4 使用正确格式
     if (component.baseline !== undefined) {
-      assemblyItem.Baseline = {
-        Value: component.baseline.toString()
-      };
+      assemblyItem.BaseLine = component.baseline;
     }
     
     return assemblyItem;
@@ -182,11 +180,9 @@ export class ComponentStructureBuilder {
       Shape: component.shapeIds.length > 0 ? component.shapeIds[0] : undefined,
     };
     
-    // 添加基线标记（如果有）
+    // 添加基线标记（如果有）- 根据需求 10.1-10.4 使用正确格式
     if (component.baseline !== undefined) {
-      singleItem.Baseline = {
-        Value: component.baseline.toString()
-      };
+      singleItem.BaseLine = component.baseline;
     }
     
     return singleItem;
