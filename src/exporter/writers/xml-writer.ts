@@ -314,6 +314,29 @@ export class XMLWriter {
   }
 
   /**
+   * 构建Stratum元素（IDX v4.5规范要求）
+   */
+  private buildStratumElement(parent: any, stratum: any): void {
+    const stratumElement = parent.ele('foundation:Stratum', { id: stratum.id });
+    
+    if (stratum['xsi:type']) {
+      stratumElement.att('xsi:type', stratum['xsi:type']);
+    }
+    
+    if (stratum['pdm:ShapeElement']) {
+      stratumElement.ele('pdm:ShapeElement').txt(stratum['pdm:ShapeElement']);
+    }
+    
+    if (stratum['pdm:StratumType']) {
+      stratumElement.ele('pdm:StratumType').txt(stratum['pdm:StratumType']);
+    }
+    
+    if (stratum['pdm:StratumSurfaceDesignation']) {
+      stratumElement.ele('pdm:StratumSurfaceDesignation').txt(stratum['pdm:StratumSurfaceDesignation']);
+    }
+  }
+
+  /**
    * 构建形状
    */
   private buildShape(parent: any, shape: any): void {
@@ -496,6 +519,13 @@ export class XMLWriter {
     if (body.ShapeElements && body.ShapeElements.length > 0) {
       for (const shapeElement of body.ShapeElements) {
         this.buildShapeElement(bodyElement, shapeElement);
+      }
+    }
+    
+    // 构建Stratum元素（IDX v4.5规范要求）
+    if ((body as any).StratumElements && (body as any).StratumElements.length > 0) {
+      for (const stratumElement of (body as any).StratumElements) {
+        this.buildStratumElement(bodyElement, stratumElement);
       }
     }
     

@@ -83,6 +83,7 @@ interface ProcessedBoardData {
   outline: {
     points: CartesianPoint[];
     thickness: number;
+    material?: string;
   };
   layerStackup?: LayerStackupData;
   cutouts: Array<{
@@ -95,6 +96,7 @@ interface ProcessedBoardData {
     name: string;
     shape: EDMDCurveSet2D;
   }>;
+  customProperties?: Record<string, any>;
 }
 
 // ============= PCB板构建器类 =============
@@ -208,11 +210,13 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       name: input.name,
       outline: {
         points: outlinePoints,
-        thickness: input.outline.thickness
+        thickness: input.outline.thickness,
+        material: input.outline.material
       },
       layerStackup: input.layerStackup,
       cutouts: [],
-      stiffeners: []
+      stiffeners: [],
+      customProperties: input.properties
     };
   }
   
@@ -292,6 +296,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     (boardAssemblyItem as any).geometricElements = geometryData.geometricElements;
     (boardAssemblyItem as any).curveSet2Ds = geometryData.curveSet2Ds;
     (boardAssemblyItem as any).shapeElements = geometryData.shapeElements;
+    (boardAssemblyItem as any).stratumElements = geometryData.stratumElements; // 新增Stratum元素
     (boardAssemblyItem as any).boardDefinitionItem = boardDefinitionItem; // 传递定义项
     
     return boardAssemblyItem;
@@ -347,6 +352,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     geometricElements: any[];
     curveSet2Ds: any[];
     shapeElements: any[];
+    stratumElements: any[];
     shapeElementId: string;
   } {
     const geometricElements: any[] = [];
@@ -420,6 +426,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     const geometricElements: any[] = [];
     const curveSet2Ds: any[] = [];
     const shapeElements: any[] = [];
+    const stratumElements: any[] = [];
     
     // 1. 创建中心点
     const centerPointId = `${boardPrefix}_CENTER`;
@@ -459,11 +466,22 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:DefiningShape': curveSetId
     });
     
+    // 5. 创建Stratum对象（IDX v4.5规范要求）
+    const stratumId = `${boardPrefix}_STRATUM`;
+    stratumElements.push({
+      id: stratumId,
+      'xsi:type': 'pdm:EDMDStratum',
+      'pdm:ShapeElement': shapeElementId,
+      'pdm:StratumType': 'DesignLayerStratum',
+      'pdm:StratumSurfaceDesignation': 'PrimarySurface'
+    });
+    
     return {
       geometricElements,
       curveSet2Ds,
       shapeElements,
-      shapeElementId
+      stratumElements,
+      shapeElementId: stratumId  // 返回Stratum ID而非ShapeElement ID
     };
   }
   
@@ -478,6 +496,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     const geometricElements: any[] = [];
     const curveSet2Ds: any[] = [];
     const shapeElements: any[] = [];
+    const stratumElements: any[] = [];
     
     // 1. 创建轮廓点（CartesianPoint）
     orderedPoints.forEach(point => {
@@ -523,11 +542,22 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:DefiningShape': curveSetId
     });
     
+    // 5. 创建Stratum对象（IDX v4.5规范要求）
+    const stratumId = `${boardPrefix}_STRATUM`;
+    stratumElements.push({
+      id: stratumId,
+      'xsi:type': 'pdm:EDMDStratum',
+      'pdm:ShapeElement': shapeElementId,
+      'pdm:StratumType': 'DesignLayerStratum',
+      'pdm:StratumSurfaceDesignation': 'PrimarySurface'
+    });
+    
     return {
       geometricElements,
       curveSet2Ds,
       shapeElements,
-      shapeElementId
+      stratumElements,
+      shapeElementId: stratumId  // 返回Stratum ID而非ShapeElement ID
     };
   }
   
@@ -557,13 +587,15 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   }
   
   /**
-   * 创建板子用户属性
+   * 创建板子用户属性（IDX v4.5规范简化版本）
    * 
    * @param processedData - 处理后的板子数据
    * @returns 用户属性数组
    */
   private createBoardProperties(processedData: ProcessedBoardData): EDMDUserSimpleProperty[] {
+    // 根据IDX协议专家建议，只保留必要的标准属性
     const properties: EDMDUserSimpleProperty[] = [
+      // 1. 厚度 - 制造必需
       {
         Key: {
           SystemScope: this.config.creatorSystem,
@@ -571,20 +603,19 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
         },
         Value: processedData.outline.thickness.toString()
       },
+      // 2. 材质 - 制造必需
       {
         Key: {
           SystemScope: this.config.creatorSystem,
           ObjectName: 'MATERIAL'
         },
-        Value: 'FR4' // 默认材质
+        Value: processedData.outline.material || 'FR4'
       }
     ];
     
-    // # 检测板子类型并添加相应属性
+    // 3. 板子形状 - 几何识别必需
     const circleInfo = this.detectCircularBoard(processedData.outline.points);
-    
     if (circleInfo) {
-      // 圆形板子属性
       properties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
@@ -593,6 +624,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
         Value: 'CIRCULAR'
       });
       
+      // 圆形板子的直径
       properties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
@@ -600,16 +632,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
         },
         Value: (circleInfo.radius * 2).toString()
       });
-      
-      properties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'RADIUS'
-        },
-        Value: circleInfo.radius.toString()
-      });
     } else {
-      // 多边形板子属性
       properties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
@@ -618,63 +641,40 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
         Value: 'POLYGON'
       });
       
-      properties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'POINT_COUNT'
-        },
-        Value: processedData.outline.points.length.toString()
-      });
-      
-      // 添加多边形方向信息
-      properties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'POLYGON_ORIENTATION'
-        },
-        Value: 'COUNTERCLOCKWISE'
-      });
-      
-      // 计算并添加板子尺寸
-      const dimensions = this.calculateBoardDimensions(processedData.outline.points);
-      properties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'BOARD_DIMENSIONS'
-        },
-        Value: `${dimensions.width}x${dimensions.height}mm`
-      });
-      
-      // 计算并添加板子面积
+      // 多边形板子的面积（制造成本计算必需）
       const area = this.calculatePolygonArea(processedData.outline.points);
       properties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
           ObjectName: 'BOARD_AREA'
         },
-        Value: `${area.toFixed(2)}mm²`
+        Value: area.toFixed(2)
       });
     }
     
-    // # 添加切口数量属性
-    if (processedData.cutouts.length > 0) {
-      properties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'CUTOUT_COUNT'
-        },
-        Value: processedData.cutouts.length.toString()
-      });
-    }
-    
-    // # 添加加强筋数量属性
-    if (processedData.stiffeners.length > 0) {
-      properties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'STIFFENER_COUNT'
-        },
-        Value: processedData.stiffeners.length.toString()
+    // 4. 只添加最核心的自定义属性（制造相关）
+    if (processedData.customProperties) {
+      const criticalProperties = ['MATERIAL', 'BOARD_TYPE', 'SURFACE_FINISH', 'COPPER_LAYERS'];
+      
+      Object.entries(processedData.customProperties).forEach(([key, value]) => {
+        if (criticalProperties.includes(key)) {
+          if (key === 'MATERIAL') {
+            // 更新现有的MATERIAL属性
+            const materialProp = properties.find(p => p.Key.ObjectName === 'MATERIAL');
+            if (materialProp) {
+              materialProp.Value = String(value);
+            }
+          } else {
+            // 添加其他核心属性
+            properties.push({
+              Key: {
+                SystemScope: this.config.creatorSystem,
+                ObjectName: key
+              },
+              Value: String(value)
+            });
+          }
+        }
       });
     }
     

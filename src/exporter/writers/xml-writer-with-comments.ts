@@ -199,6 +199,18 @@ export class XMLWriterWithComments extends XMLWriter {
       }
     }
     
+    // 构建Stratum元素（带注释，IDX v4.5规范要求）
+    if ((body as any).StratumElements && (body as any).StratumElements.length > 0) {
+      if (this.options.enableComments && this.options.includeSectionComments) {
+        bodyElement.com(this.commentGenerator.generateSectionComment('Stratum Elements', (body as any).StratumElements.length));
+        bodyElement.com('层定义元素，引用形状元素定义板子层');
+      }
+      
+      for (const stratumElement of (body as any).StratumElements) {
+        this.buildStratumElementWithComments(bodyElement, stratumElement);
+      }
+    }
+    
     // 构建所有项目（带注释）
     if (this.options.enableComments && this.options.includeSectionComments) {
       bodyElement.com(this.commentGenerator.generateSectionComment('Design Items', body.Items.length));
@@ -503,6 +515,41 @@ export class XMLWriterWithComments extends XMLWriter {
     shapeElementEl.ele('pdm:ShapeElementType').txt(shapeElement['pdm:ShapeElementType']);
     shapeElementEl.ele('pdm:Inverted').txt(shapeElement['pdm:Inverted']);
     shapeElementEl.ele('pdm:DefiningShape').txt(shapeElement['pdm:DefiningShape']);
+  }
+  
+  /**
+   * 构建带注释的Stratum元素
+   */
+  private buildStratumElementWithComments(parent: any, stratum: any): void {
+    if (this.options.enableComments && this.options.includeGeometryComments) {
+      const stratumComment = `层定义: ${stratum['pdm:StratumType']} | 表面: ${stratum['pdm:StratumSurfaceDesignation']} | 引用形状: ${stratum['pdm:ShapeElement']}`;
+      parent.com(stratumComment);
+    }
+    
+    this.buildStratumElementInternal(parent, stratum);
+  }
+  
+  /**
+   * 内部Stratum元素构建方法
+   */
+  private buildStratumElementInternal(parent: any, stratum: any): void {
+    const stratumElement = parent.ele('foundation:Stratum', { id: stratum.id });
+    
+    if (stratum['xsi:type']) {
+      stratumElement.att('xsi:type', stratum['xsi:type']);
+    }
+    
+    if (stratum['pdm:ShapeElement']) {
+      stratumElement.ele('pdm:ShapeElement').txt(stratum['pdm:ShapeElement']);
+    }
+    
+    if (stratum['pdm:StratumType']) {
+      stratumElement.ele('pdm:StratumType').txt(stratum['pdm:StratumType']);
+    }
+    
+    if (stratum['pdm:StratumSurfaceDesignation']) {
+      stratumElement.ele('pdm:StratumSurfaceDesignation').txt(stratum['pdm:StratumSurfaceDesignation']);
+    }
   }
   
   /**

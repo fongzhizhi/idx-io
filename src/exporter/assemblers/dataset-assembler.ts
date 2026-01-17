@@ -160,6 +160,7 @@ export class DatasetAssembler {
     const geometricElements: any[] = [];
     const shapeElements: any[] = [];
     const curveSet2Ds: any[] = [];
+    const stratumElements: any[] = []; // 新增Stratum元素支持
 
     // 1. 构建板轮廓
     const boardBuilder = this.builders.get('board');
@@ -187,6 +188,10 @@ export class DatasetAssembler {
       if ((boardAssemblyItem as any).curveSet2Ds) {
         curveSet2Ds.push(...(boardAssemblyItem as any).curveSet2Ds);
         delete (boardAssemblyItem as any).curveSet2Ds;
+      }
+      if ((boardAssemblyItem as any).stratumElements) {
+        stratumElements.push(...(boardAssemblyItem as any).stratumElements);
+        delete (boardAssemblyItem as any).stratumElements; // 清理临时属性
       }
     }
 
@@ -292,15 +297,20 @@ export class DatasetAssembler {
       }
     }
 
-    // 6. 将收集的几何元素添加到Body中（按demo文件的顺序）
+    // 6. 将收集的几何元素添加到Body中（按IDX v4.5规范顺序）
     // 先添加基础几何元素（点、线、圆等）
     body.GeometricElements = geometricElements;
     
     // 再添加曲线集
     body.CurveSet2Ds = curveSet2Ds;
     
-    // 最后添加形状元素
+    // 然后添加形状元素
     body.ShapeElements = shapeElements;
+    
+    // 最后添加Stratum元素（IDX v4.5规范要求）
+    if (stratumElements.length > 0) {
+      (body as any).StratumElements = stratumElements;
+    }
 
     return body;
   }
