@@ -343,6 +343,11 @@ export class TransformationBuilder {
    * 格式化坐标值
    */
   private formatCoordinate(value: number): string {
+    if (typeof value !== 'number') {
+      // Convert string to number if possible
+      const numValue = typeof value === 'string' ? parseFloat(value) : 0;
+      return isNaN(numValue) ? '0' : numValue.toFixed(this.numericFormat.coordinatePrecision);
+    }
     return value.toFixed(this.numericFormat.coordinatePrecision);
   }
   
@@ -350,6 +355,10 @@ export class TransformationBuilder {
    * 格式化通用数值
    */
   private formatNumeric(value: number): string {
+    if (typeof value !== 'number') {
+      const numValue = typeof value === 'string' ? parseFloat(value) : 0;
+      return isNaN(numValue) ? '0' : numValue.toFixed(this.numericFormat.numericPrecision);
+    }
     return value.toFixed(this.numericFormat.numericPrecision);
   }
   
@@ -357,6 +366,10 @@ export class TransformationBuilder {
    * 格式化角度值
    */
   private formatAngle(value: number): string {
+    if (typeof value !== 'number') {
+      const numValue = typeof value === 'string' ? parseFloat(value) : 0;
+      return isNaN(numValue) ? '0' : numValue.toFixed(this.numericFormat.anglePrecision);
+    }
     return value.toFixed(this.numericFormat.anglePrecision);
   }
   
@@ -364,6 +377,10 @@ export class TransformationBuilder {
    * 格式化尺寸值
    */
   private formatDimension(value: number): string {
+    if (typeof value !== 'number') {
+      const numValue = typeof value === 'string' ? parseFloat(value) : 0;
+      return isNaN(numValue) ? '0' : numValue.toFixed(this.numericFormat.dimensionPrecision);
+    }
     return value.toFixed(this.numericFormat.dimensionPrecision);
   }
 }

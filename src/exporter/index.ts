@@ -291,8 +291,13 @@ export class IDXExporter {
         statistics: {
           totalItems: dataset.Body.Items.length,
           components: this.countItemsByGeometryType(dataset, 'COMPONENT'),
-          holes: this.countItemsByGeometryType(dataset, 'VIA') + this.countItemsByGeometryType(dataset, 'HOLE_NON_PLATED'),
-          keepouts: this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA'),
+          holes: this.countItemsByGeometryType(dataset, 'HOLE_PLATED') + this.countItemsByGeometryType(dataset, 'HOLE_NON_PLATED') + this.countItemsByGeometryType(dataset, 'FILLED_VIA'),
+          keepouts: this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_ROUTE') + 
+                   this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_COMPONENT') + 
+                   this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_VIA') + 
+                   this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_TESTPOINT') + 
+                   this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_THERMAL') + 
+                   this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_OTHER'),
           layers: this.countItemsByGeometryType(dataset, 'LAYER'),
           fileSize: xmlSize,
           exportDuration

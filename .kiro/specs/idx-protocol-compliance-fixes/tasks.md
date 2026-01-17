@@ -242,7 +242,7 @@
     - **Property 43: 实体特征的 Inverted 为 false**
     - **Validates: Requirements 15.1, 15.2**
 
-- [~] 8. 检查点 - 确保阶段 4 测试通过
+- [x] 8. 检查点 - 确保阶段 4 测试通过
   - 运行所有测试：`npm test`
   - 验证生成的 IDX 文件的 Z 轴定位、层堆叠结构和 ShapeElement 是否正确
   - 如有问题，请向用户报告

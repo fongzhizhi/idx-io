@@ -98,10 +98,9 @@ describe('IDX Exporter Completion - Integration Tests', () => {
         holes: [
           {
             id: 'VIA_001',
-            type: 'plated',
+            viaType: 'plated',
             position: { x: 20, y: 20 },
             diameter: 0.2,
-            platingThickness: 0.025,
             startLayer: 'L1',
             endLayer: 'L4',
             netName: 'VCC'
@@ -148,14 +147,18 @@ describe('IDX Exporter Completion - Integration Tests', () => {
         keepouts: [
           {
             id: 'KEEPOUT_001',
-            type: 'component',
-            geometry: {
+            constraintType: 'component',
+            purpose: 'ComponentPlacement',
+            shape: {
               type: 'rectangle',
-              center: { x: 50, y: 40 },
-              width: 10,
-              height: 8
+              points: [
+                { x: 45, y: 32 },
+                { x: 55, y: 32 },
+                { x: 55, y: 48 },
+                { x: 45, y: 48 }
+              ]
             },
-            layers: ['TOP']
+            layer: 'TOP'
           }
         ]
       };
@@ -209,10 +212,9 @@ describe('IDX Exporter Completion - Integration Tests', () => {
         holes: [
           {
             id: 'VIA_001',
-            type: 'plated',
+            viaType: 'plated',
             position: { x: 30, y: 30 },
             diameter: 0.3,
-            platingThickness: 0.025,
             startLayer: 'L1',
             endLayer: 'L4',
             netName: 'GND'
@@ -221,13 +223,18 @@ describe('IDX Exporter Completion - Integration Tests', () => {
         keepouts: [
           {
             id: 'KEEPOUT_001',
-            type: 'via',
-            geometry: {
-              type: 'circle',
-              center: { x: 70, y: 60 },
-              radius: 5
+            constraintType: 'via',
+            purpose: 'ViaPlacement',
+            shape: {
+              type: 'rectangle',
+              points: [
+                { x: 65, y: 55 },
+                { x: 75, y: 55 },
+                { x: 75, y: 65 },
+                { x: 65, y: 65 }
+              ]
             },
-            layers: ['TOP', 'BOTTOM']
+            layer: 'TOP'
           }
         ]
       };
@@ -370,7 +377,7 @@ describe('IDX Exporter Completion - Integration Tests', () => {
       const result = await exporter.export(boardData);
       
       expect(result.success).toBe(true);
-      expect(result.statistics.layers).toBe(3);
+      expect(result.statistics.layers).toBe(4);
       expect(result.xmlContent).toContain('STACKUP_2L');
     });
 
@@ -926,20 +933,18 @@ describe('IDX Exporter Completion - Integration Tests', () => {
         holes: [
           {
             id: 'VIA_VCC',
-            type: 'plated',
+            viaType: 'plated',
             position: { x: 45, y: 35 },
             diameter: 0.2,
-            platingThickness: 0.025,
             startLayer: 'L1',
             endLayer: 'L3',
             netName: 'VCC'
           },
           {
             id: 'VIA_GND',
-            type: 'plated',
+            viaType: 'plated',
             position: { x: 55, y: 45 },
             diameter: 0.2,
-            platingThickness: 0.025,
             startLayer: 'L1',
             endLayer: 'L2',
             netName: 'GND'
@@ -948,13 +953,18 @@ describe('IDX Exporter Completion - Integration Tests', () => {
         keepouts: [
           {
             id: 'KEEPOUT_MOUNTING',
-            type: 'component',
-            geometry: {
-              type: 'circle',
-              center: { x: 10, y: 10 },
-              radius: 5
+            constraintType: 'component',
+            purpose: 'ComponentPlacement',
+            shape: {
+              type: 'rectangle',
+              points: [
+                { x: 5, y: 5 },
+                { x: 15, y: 5 },
+                { x: 15, y: 15 },
+                { x: 5, y: 15 }
+              ]
             },
-            layers: ['L1', 'L4']
+            layer: 'L1'
           }
         ]
       };
@@ -966,7 +976,7 @@ describe('IDX Exporter Completion - Integration Tests', () => {
       expect(result.statistics.components).toBe(2);
       expect(result.statistics.holes).toBe(2);
       expect(result.statistics.keepouts).toBe(1);
-      expect(result.statistics.layers).toBe(7);
+      expect(result.statistics.layers).toBe(8);
       
       // Verify XML structure
       expect(result.xmlContent).toContain('<?xml version="1.0"');

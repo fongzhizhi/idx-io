@@ -95,7 +95,7 @@ async function basicFileExport() {
     holes: [
       {
         id: 'VIA_001',
-        type: 'plated',
+        viaType: 'plated',
         position: { x: 25, y: 25 },
         diameter: 0.2,
         platingThickness: 0.025,

@@ -59,7 +59,7 @@ async function exportSimpleBoard() {
     holes: [
       {
         id: 'VIA_001',
-        type: 'plated',
+        viaType: 'plated',
         position: { x: 20, y: 20 },
         diameter: 0.2,
         platingThickness: 0.025,

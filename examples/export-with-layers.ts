@@ -213,7 +213,7 @@ async function exportMultiLayerBoard() {
     holes: [
       {
         id: 'VIA_VCC_001',
-        type: 'plated',
+        viaType: 'plated',
         position: { x: 45, y: 35 },
         diameter: 0.2,
         platingThickness: 0.025,
@@ -225,7 +225,7 @@ async function exportMultiLayerBoard() {
       },
       {
         id: 'VIA_GND_001',
-        type: 'plated',
+        viaType: 'plated',
         position: { x: 55, y: 45 },
         diameter: 0.2,
         platingThickness: 0.025,
@@ -237,7 +237,7 @@ async function exportMultiLayerBoard() {
       },
       {
         id: 'MOUNTING_HOLE_001',
-        type: 'non-plated',
+        viaType: 'non-plated',
         position: { x: 10, y: 10 },
         diameter: 3.2,
         purpose: 'mounting'
