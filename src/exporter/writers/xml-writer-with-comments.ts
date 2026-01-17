@@ -448,6 +448,18 @@ export class XMLWriterWithComments extends XMLWriter {
       const yElement = pointElement.ele('d2:Y');
       yElement.ele('property:Value').txt(this.formatCoordinate(element.Y['property:Value']));
       
+    } else if (element['xsi:type'] === 'd2:EDMDCircleCenter') {
+      // 构建CircleCenter
+      const circleElement = parent.ele('foundation:CircleCenter', { 
+        id: element.id,
+        'xsi:type': 'd2:EDMDCircleCenter'
+      });
+      
+      circleElement.ele('d2:CenterPoint').txt(element['d2:CenterPoint']);
+      
+      const diameterElement = circleElement.ele('d2:Diameter');
+      diameterElement.ele('property:Value').txt(this.formatDimension(element['d2:Diameter']['property:Value']));
+      
     } else if (element.type === 'PolyLine') {
       // 构建PolyLine
       const polyElement = parent.ele('foundation:PolyLine', { id: element.id });
@@ -457,14 +469,6 @@ export class XMLWriterWithComments extends XMLWriter {
           polyElement.ele('d2:Point').txt(point['d2:Point']);
         });
       }
-    } else if (element.type === 'CircleCenter') {
-      // 构建CircleCenter
-      const circleElement = parent.ele('foundation:CircleCenter', { id: element.id });
-      
-      circleElement.ele('d2:CenterPoint').txt(element.CenterPoint);
-      
-      const diameterElement = circleElement.ele('d2:Diameter');
-      diameterElement.ele('property:Value').txt(this.formatDimension(element.Diameter['property:Value']));
     }
   }
   

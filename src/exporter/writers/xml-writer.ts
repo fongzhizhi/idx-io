@@ -266,14 +266,17 @@ export class XMLWriter {
           polyElement.ele('d2:Point').txt(point['d2:Point']);
         });
       }
-    } else if (element.type === 'CircleCenter') {
+    } else if (element['xsi:type'] === 'd2:EDMDCircleCenter') {
       // 构建CircleCenter
-      const circleElement = parent.ele('foundation:CircleCenter', { id: element.id });
+      const circleElement = parent.ele('foundation:CircleCenter', { 
+        id: element.id,
+        'xsi:type': 'd2:EDMDCircleCenter'
+      });
       
-      circleElement.ele('d2:CenterPoint').txt(element.CenterPoint);
+      circleElement.ele('d2:CenterPoint').txt(element['d2:CenterPoint']);
       
       const diameterElement = circleElement.ele('d2:Diameter');
-      diameterElement.ele('property:Value').txt(this.formatDimension(element.Diameter['property:Value']));
+      diameterElement.ele('property:Value').txt(this.formatDimension(element['d2:Diameter']['property:Value']));
     }
   }
 

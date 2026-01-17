@@ -242,7 +242,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       Description: `Board geometry definition for ${processedData.name}`,
       Identifier: this.createIdentifier('BOARD_DEF', processedData.id),
       Shape: geometryData.shapeElementId,
-      BaseLine: false // 定义项不是基线
+      BaseLine: true // 在基线文件中，定义项也应该是基线的一部分
     };
     
     // # 2. 创建assembly类型的Item（包含ItemInstance）
@@ -356,10 +356,130 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     // # 生成唯一的板子前缀
     const boardPrefix = `BOARD_${processedData.id.replace(/[^A-Z0-9]/gi, '_').toUpperCase()}`;
     
-    // # 确保轮廓点为顺时针方向（根据您的分析）
-    const orderedPoints = this.ensureClockwiseOrder(processedData.outline.points);
+    // # 确保轮廓点为逆时针方向（外轮廓标准）
+    const orderedPoints = this.ensureCounterClockwiseOrder(processedData.outline.points);
     
-    // 1. 创建轮廓点（CartesianPoint）- 使用改进的ID命名
+    // # 检查是否为圆形板子
+    const circleInfo = this.detectCircularBoard(orderedPoints);
+    
+    if (circleInfo) {
+      // 使用圆形几何表示（更高效）
+      return this.createCircularGeometry(processedData, boardPrefix, circleInfo);
+    } else {
+      // 使用多边形几何表示
+      return this.createPolygonGeometry(processedData, boardPrefix, orderedPoints);
+    }
+  }
+  
+  /**
+   * 检测是否为圆形板子
+   * 
+   * @param points - 轮廓点数组
+   * @returns 圆形信息，如果不是圆形则返回null
+   */
+  private detectCircularBoard(points: CartesianPoint[]): { centerX: number; centerY: number; radius: number } | null {
+    if (points.length < 8) {
+      return null; // 点数太少，不太可能是圆形近似
+    }
+    
+    // 计算几何中心
+    const centerX = points.reduce((sum, p) => sum + p.X, 0) / points.length;
+    const centerY = points.reduce((sum, p) => sum + p.Y, 0) / points.length;
+    
+    // 计算到中心的距离
+    const distances = points.map(p => 
+      Math.sqrt(Math.pow(p.X - centerX, 2) + Math.pow(p.Y - centerY, 2))
+    );
+    
+    // 检查距离的一致性
+    const avgRadius = distances.reduce((sum, d) => sum + d, 0) / distances.length;
+    const maxDeviation = Math.max(...distances.map(d => Math.abs(d - avgRadius)));
+    
+    // 如果最大偏差小于平均半径的5%，认为是圆形
+    const tolerance = avgRadius * 0.05;
+    
+    if (maxDeviation <= tolerance && avgRadius > 0) {
+      return {
+        centerX: this.geometryUtils.roundValue(centerX),
+        centerY: this.geometryUtils.roundValue(centerY),
+        radius: this.geometryUtils.roundValue(avgRadius)
+      };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * 创建圆形几何元素
+   */
+  private createCircularGeometry(
+    processedData: ProcessedBoardData,
+    boardPrefix: string,
+    circleInfo: { centerX: number; centerY: number; radius: number }
+  ) {
+    const geometricElements: any[] = [];
+    const curveSet2Ds: any[] = [];
+    const shapeElements: any[] = [];
+    
+    // 1. 创建中心点
+    const centerPointId = `${boardPrefix}_CENTER`;
+    geometricElements.push({
+      id: centerPointId,
+      'xsi:type': 'd2:EDMDCartesianPoint',
+      'X': { 'property:Value': circleInfo.centerX.toString() },
+      'Y': { 'property:Value': circleInfo.centerY.toString() }
+    });
+    
+    // 2. 创建圆形
+    const circleId = `${boardPrefix}_CIRCLE`;
+    geometricElements.push({
+      id: circleId,
+      'xsi:type': 'd2:EDMDCircleCenter',
+      'd2:CenterPoint': centerPointId,
+      'd2:Diameter': { 'property:Value': (circleInfo.radius * 2).toString() }
+    });
+    
+    // 3. 创建曲线集（CurveSet2D）
+    const curveSetId = `${boardPrefix}_CURVESET`;
+    curveSet2Ds.push({
+      id: curveSetId,
+      'xsi:type': 'd2:EDMDCurveSet2d',
+      'pdm:ShapeDescriptionType': 'GeometricModel',
+      'd2:LowerBound': { 'property:Value': '0' },
+      'd2:UpperBound': { 'property:Value': processedData.outline.thickness.toString() },
+      'd2:DetailedGeometricModelElement': circleId
+    });
+    
+    // 4. 创建形状元素（ShapeElement）
+    const shapeElementId = `${boardPrefix}_SHAPE`;
+    shapeElements.push({
+      id: shapeElementId,
+      'pdm:ShapeElementType': 'FeatureShapeElement',
+      'pdm:Inverted': 'false',
+      'pdm:DefiningShape': curveSetId
+    });
+    
+    return {
+      geometricElements,
+      curveSet2Ds,
+      shapeElements,
+      shapeElementId
+    };
+  }
+  
+  /**
+   * 创建多边形几何元素
+   */
+  private createPolygonGeometry(
+    processedData: ProcessedBoardData,
+    boardPrefix: string,
+    orderedPoints: CartesianPoint[]
+  ) {
+    const geometricElements: any[] = [];
+    const curveSet2Ds: any[] = [];
+    const shapeElements: any[] = [];
+    
+    // 1. 创建轮廓点（CartesianPoint）
     orderedPoints.forEach(point => {
       geometricElements.push({
         id: point.id,
@@ -369,7 +489,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       });
     });
     
-    // 2. 创建轮廓多边形（PolyLine）- 使用改进的ID命名
+    // 2. 创建轮廓多边形（PolyLine）
     const polyLineId = `${boardPrefix}_OUTLINE`;
     const polyLinePoints = orderedPoints.map(p => p.id);
     // 确保闭合多边形
@@ -383,7 +503,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'Point': polyLinePoints.map(pointId => ({ 'd2:Point': pointId }))
     });
     
-    // 3. 创建曲线集（CurveSet2D）- 使用改进的ID命名
+    // 3. 创建曲线集（CurveSet2D）
     const curveSetId = `${boardPrefix}_CURVESET`;
     curveSet2Ds.push({
       id: curveSetId,
@@ -394,13 +514,12 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'd2:DetailedGeometricModelElement': polyLineId
     });
     
-    // 4. 创建形状元素（ShapeElement）- 使用改进的ID命名
-    // 根据需求 15.2：实体特征（组件、板）的 Inverted 属性设为 false
+    // 4. 创建形状元素（ShapeElement）
     const shapeElementId = `${boardPrefix}_SHAPE`;
     shapeElements.push({
       id: shapeElementId,
       'pdm:ShapeElementType': 'FeatureShapeElement',
-      'pdm:Inverted': 'false', // 板子是实体特征，应该设为 false
+      'pdm:Inverted': 'false',
       'pdm:DefiningShape': curveSetId
     });
     
@@ -413,12 +532,12 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   }
   
   /**
-   * 确保轮廓点为顺时针方向
+   * 确保轮廓点为逆时针方向（外轮廓标准）
    * 
    * @param points - 原始点数组
-   * @returns 顺时针排序的点数组
+   * @returns 逆时针排序的点数组
    */
-  private ensureClockwiseOrder(points: CartesianPoint[]): CartesianPoint[] {
+  private ensureCounterClockwiseOrder(points: CartesianPoint[]): CartesianPoint[] {
     if (points.length < 3) return points;
     
     // 计算多边形面积（使用鞋带公式）
@@ -428,9 +547,9 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       area += (points[j].X - points[i].X) * (points[j].Y + points[i].Y);
     }
     
-    // 如果面积为正，则为逆时针，需要反转为顺时针
-    // 根据IDX v4.5规范，添加材料的形状（Inverted=false）应使用顺时针方向
-    if (area > 0) {
+    // 如果面积为负，则为顺时针，需要反转为逆时针
+    // 根据CAD系统惯例和IDX指南，外轮廓应使用逆时针方向
+    if (area < 0) {
       return [...points].reverse();
     }
     
@@ -455,18 +574,87 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       {
         Key: {
           SystemScope: this.config.creatorSystem,
-          ObjectName: 'POINT_COUNT'
-        },
-        Value: processedData.outline.points.length.toString()
-      },
-      {
-        Key: {
-          SystemScope: this.config.creatorSystem,
           ObjectName: 'MATERIAL'
         },
         Value: 'FR4' // 默认材质
       }
     ];
+    
+    // # 检测板子类型并添加相应属性
+    const circleInfo = this.detectCircularBoard(processedData.outline.points);
+    
+    if (circleInfo) {
+      // 圆形板子属性
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'BOARD_SHAPE'
+        },
+        Value: 'CIRCULAR'
+      });
+      
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'DIAMETER'
+        },
+        Value: (circleInfo.radius * 2).toString()
+      });
+      
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'RADIUS'
+        },
+        Value: circleInfo.radius.toString()
+      });
+    } else {
+      // 多边形板子属性
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'BOARD_SHAPE'
+        },
+        Value: 'POLYGON'
+      });
+      
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'POINT_COUNT'
+        },
+        Value: processedData.outline.points.length.toString()
+      });
+      
+      // 添加多边形方向信息
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'POLYGON_ORIENTATION'
+        },
+        Value: 'COUNTERCLOCKWISE'
+      });
+      
+      // 计算并添加板子尺寸
+      const dimensions = this.calculateBoardDimensions(processedData.outline.points);
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'BOARD_DIMENSIONS'
+        },
+        Value: `${dimensions.width}x${dimensions.height}mm`
+      });
+      
+      // 计算并添加板子面积
+      const area = this.calculatePolygonArea(processedData.outline.points);
+      properties.push({
+        Key: {
+          SystemScope: this.config.creatorSystem,
+          ObjectName: 'BOARD_AREA'
+        },
+        Value: `${area.toFixed(2)}mm²`
+      });
+    }
     
     // # 添加切口数量属性
     if (processedData.cutouts.length > 0) {
@@ -491,6 +679,49 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     }
     
     return properties;
+  }
+  
+  /**
+   * 计算板子边界框尺寸
+   */
+  private calculateBoardDimensions(points: CartesianPoint[]): { width: number; height: number } {
+    if (points.length === 0) {
+      return { width: 0, height: 0 };
+    }
+    
+    let minX = points[0].X;
+    let maxX = points[0].X;
+    let minY = points[0].Y;
+    let maxY = points[0].Y;
+    
+    for (const point of points) {
+      minX = Math.min(minX, point.X);
+      maxX = Math.max(maxX, point.X);
+      minY = Math.min(minY, point.Y);
+      maxY = Math.max(maxY, point.Y);
+    }
+    
+    return {
+      width: this.geometryUtils.roundValue(maxX - minX),
+      height: this.geometryUtils.roundValue(maxY - minY)
+    };
+  }
+  
+  /**
+   * 计算多边形面积
+   */
+  private calculatePolygonArea(points: CartesianPoint[]): number {
+    if (points.length < 3) {
+      return 0;
+    }
+    
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += points[i].X * points[j].Y - points[j].X * points[i].Y;
+    }
+    
+    return Math.abs(area / 2);
   }
   
   /**
