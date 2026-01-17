@@ -14,6 +14,7 @@ import {
   CartesianPoint, EDMDPolyLine, EDMDCurveSet2D,
   EDMDUserSimpleProperty
 } from '../../types/core';
+import { LayerStackupData } from '../../types/data-models';
 
 // # 输入数据类型定义
 /**
@@ -44,6 +45,9 @@ export interface BoardData {
     /** 表面处理（可选） */
     finish?: string;
   };
+  
+  /** 层叠结构（可选） */
+  layerStackup?: LayerStackupData;
   
   /** 切口列表（可选） */
   cutouts?: Array<{
@@ -80,6 +84,7 @@ interface ProcessedBoardData {
     points: CartesianPoint[];
     thickness: number;
   };
+  layerStackup?: LayerStackupData;
   cutouts: Array<{
     id: string;
     shape: EDMDCurveSet2D;
@@ -205,6 +210,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
         points: outlinePoints,
         thickness: input.outline.thickness
       },
+      layerStackup: input.layerStackup,
       cutouts: [],
       stiffeners: []
     };
@@ -246,7 +252,6 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       Name: processedData.name,
       Description: `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`,
       geometryType: this.config.useSimplified ? GeometryType.BOARD_OUTLINE as any : undefined,
-      BaseLine: true,
       Identifier: this.createIdentifier('BOARD_ASSY', processedData.id),
       
       // # ItemInstance - 引用single类型的Item
@@ -267,11 +272,18 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
           tx: { Value: 0 },
           ty: { Value: 0 }
         }
-      }],
-      
-      // # 参考表面（根据您的建议）
-      AssembleToName: 'BOTTOM'
+      }]
     };
+    
+    // # 根据是否有层叠结构决定AssembleToName
+    if (processedData.layerStackup && processedData.layerStackup.layers.length > 0) {
+      // 有层叠结构时，引用底层作为参考表面
+      const bottomLayer = this.getBottomLayer(processedData.layerStackup);
+      if (bottomLayer) {
+        boardAssemblyItem.AssembleToName = bottomLayer.layerId;
+      }
+    }
+    // 没有层叠结构时，不设置AssembleToName（符合IDX v4.5指南4.1.1节）
     
     // # 添加用户属性到assembly项
     boardAssemblyItem.UserProperties = this.createBoardProperties(processedData);
@@ -479,5 +491,37 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     }
     
     return properties;
+  }
+  
+  /**
+   * 获取层叠结构中的底层
+   * 
+   * @param layerStackup - 层叠结构数据
+   * @returns 底层信息，如果没有找到则返回undefined
+   */
+  private getBottomLayer(layerStackup: LayerStackupData) {
+    if (!layerStackup.layers || layerStackup.layers.length === 0) {
+      return undefined;
+    }
+    
+    // 按位置排序，找到最底层（position最小的）
+    const sortedLayers = [...layerStackup.layers].sort((a, b) => a.position - b.position);
+    return sortedLayers[0];
+  }
+  
+  /**
+   * 获取层叠结构中的顶层
+   * 
+   * @param layerStackup - 层叠结构数据
+   * @returns 顶层信息，如果没有找到则返回undefined
+   */
+  private getTopLayer(layerStackup: LayerStackupData) {
+    if (!layerStackup.layers || layerStackup.layers.length === 0) {
+      return undefined;
+    }
+    
+    // 按位置排序，找到最顶层（position最大的）
+    const sortedLayers = [...layerStackup.layers].sort((a, b) => b.position - a.position);
+    return sortedLayers[0];
   }
 }
