@@ -622,7 +622,10 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
       Identifier: this.createIdentifier('LAYER', layer.id),
       UserProperties: this.createLayerProperties(layer),
       // 添加 ReferenceName 用于组件的 AssembleToName 引用 - 根据需求 13.4
-      ReferenceName: layer.name || layer.id
+      ReferenceName: {
+        SystemScope: this.config.creatorSystem || 'ECAD',
+        ObjectName: layer.name || layer.id
+      }
     };
     
     // # 添加基线标记 - 根据需求 10.1-10.4 使用正确格式

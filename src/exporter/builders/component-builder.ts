@@ -516,7 +516,7 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
     processedData: ProcessedComponentData
   ): EDMDItem {
     // # 设置几何类型
-    assemblyItem.geometryType = processedData.geometryType;
+    assemblyItem.geometryType = processedData.geometryType as any;
     
     // # 添加用户属性
     assemblyItem.UserProperties = [

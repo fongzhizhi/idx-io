@@ -7,6 +7,85 @@ import { EDMDObject, EDMName, EDMDTransformation, EDMDLengthProperty, EDMDUserSi
 import { ItemType, GeometryType } from "./enums";
 import { ShapeType, EDMD3DModel, EDMDShapeElement } from "./geometry";
 
+// ------------ 标准几何类型枚举 ------------
+/**
+ * 标准几何类型枚举
+ * 
+ * @remarks
+ * 基于 IDX V4.5 协议表 8 定义的标准几何类型
+ * 用于 geometryType 属性的类型约束
+ * REF: IDX V4.5 Protocol Table 8
+ */
+export enum StandardGeometryType {
+  // 板相关
+  BOARD_OUTLINE = 'BOARD_OUTLINE',
+  BOARD_AREA_FLEXIBLE = 'BOARD_AREA_FLEXIBLE',
+  BOARD_AREA_RIGID = 'BOARD_AREA_RIGID',
+  BOARD_AREA_STIFFENER = 'BOARD_AREA_STIFFENER',
+  
+  // 组件相关
+  COMPONENT = 'COMPONENT',
+  COMPONENT_MECHANICAL = 'COMPONENT_MECHANICAL',
+  
+  // 孔相关
+  HOLE_PLATED = 'HOLE_PLATED',
+  HOLE_NON_PLATED = 'HOLE_NON_PLATED',
+  HOLE_PLATED_MILLED = 'HOLE_PLATED_MILLED',
+  HOLE_NONPLATED_MILLED = 'HOLE_NONPLATED_MILLED',
+  FILLED_VIA = 'FILLED_VIA',
+  
+  // 禁止区域相关
+  KEEPOUT_AREA_ROUTE = 'KEEPOUT_AREA_ROUTE',
+  KEEPOUT_AREA_COMPONENT = 'KEEPOUT_AREA_COMPONENT',
+  KEEPOUT_AREA_VIA = 'KEEPOUT_AREA_VIA',
+  KEEPOUT_AREA_TESTPOINT = 'KEEPOUT_AREA_TESTPOINT',
+  KEEPOUT_AREA_THERMAL = 'KEEPOUT_AREA_THERMAL',
+  KEEPOUT_AREA_OTHER = 'KEEPOUT_AREA_OTHER',
+  
+  // 保持区域相关
+  KEEPIN_AREA_ROUTE = 'KEEPIN_AREA_ROUTE',
+  KEEPIN_AREA_COMPONENT = 'KEEPIN_AREA_COMPONENT',
+  KEEPIN_AREA_VIA = 'KEEPIN_AREA_VIA',
+  KEEPIN_AREA_TESTPOINT = 'KEEPIN_AREA_TESTPOINT',
+  KEEPIN_AREA_THERMAL = 'KEEPIN_AREA_THERMAL',
+  KEEPIN_AREA_OTHER = 'KEEPIN_AREA_OTHER',
+  
+  // 布局区域
+  PLACEMENT_GROUP_AREA = 'PLACEMENT_GROUP_AREA',
+  OTHER_OUTLINE = 'OTHER_OUTLINE',
+  
+  // 层相关
+  LAYER_SOLDERMASK = 'LAYER_SOLDERMASK',
+  LAYER_SOLDERPASTE = 'LAYER_SOLDERPASTE',
+  LAYER_SILKSCREEN = 'LAYER_SILKSCREEN',
+  LAYER_GENERIC = 'LAYER_GENERIC',
+  LAYER_GLUE = 'LAYER_GLUE',
+  LAYER_GLUEMASK = 'LAYER_GLUEMASK',
+  LAYER_PASTEMASK = 'LAYER_PASTEMASK',
+  LAYER_OTHERSIGNAL = 'LAYER_OTHERSIGNAL',
+  LAYER_LANDSONLY = 'LAYER_LANDSONLY',
+  LAYER_POWERGROUND = 'LAYER_POWERGROUND',
+  LAYER_EMBEDDED_CAP_DIELECTRIC = 'LAYER_EMBEDDED_CAP_DIELECTRIC',
+  LAYER_EMBEDDED_RESISTOR = 'LAYER_EMBEDDED_RESISTOR',
+  LAYER_DIELECTRIC = 'LAYER_DIELECTRIC',
+  LAYER_STACKUP = 'LAYER_STACKUP',
+  LAYER = 'LAYER',
+  
+  // 弯曲区域
+  BEND = 'BEND',
+  
+  // 铜相关
+  COPPER_PAD = 'COPPER_PAD',
+  COPPER_TRACE = 'COPPER_TRACE',
+  COPPER_AREA = 'COPPER_AREA'
+}
+
+// 为了向后兼容，创建一个映射函数
+export function mapGeometryTypeToStandard(geometryType: GeometryType): StandardGeometryType {
+  // 直接映射，因为枚举值相同
+  return geometryType as unknown as StandardGeometryType;
+}
+
 // ------------ 项目实例 ------------
 /**
  * 项目实例，表示项目中某个具体实例
@@ -16,7 +95,7 @@ import { ShapeType, EDMD3DModel, EDMDShapeElement } from "./geometry";
  * REF: Section 4.1, Figure 7-8
  */
 export interface EDMDItemInstance extends EDMDObject {
-  /** 引用的项目（项目类型） */
+  /** 引用的项目（项目 ID 字符串引用） */
   Item: string;  // 引用EDMDItem的id
   
   /** 实例名称 */
@@ -25,8 +104,11 @@ export interface EDMDItemInstance extends EDMDObject {
   /** 变换矩阵（实例的位置和方向） */
   Transformation?: EDMDTransformation;
   
-  /** Z轴偏移（相对于装配到的表面） */
-  zOffset?: EDMDLengthProperty;
+  /** Z轴偏移（相对于装配到的表面，IDX v4.5+） */
+  zOffset?: number;
+  
+  /** 装配到名称（用于相对层定位，引用 ReferenceName） */
+  AssembleToName?: string;
   
   /** 弯曲序列号（用于柔性板弯曲顺序） */
   bendSequenceNumber?: number;
@@ -56,19 +138,19 @@ export interface EDMDItem extends EDMDObject {
   /** 包名称（用于组件） */
   PackageName?: EDMName;
   
-  /** 几何类型（IDXv4.0简化表示） */
-  geometryType?: GeometryType;
+  /** 几何类型（IDX V4.5 标准几何类型，可选） */
+  geometryType?: StandardGeometryType;
   
-  /** 参考名称（用于相对定位） */
-  ReferenceName?: string;
+  /** 参考名称（用于相对定位和被引用） */
+  ReferenceName?: EDMName;
   
-  /** 装配到名称（用于相对层定位） */
+  /** 装配到名称（用于相对层定位，引用 ReferenceName） */
   AssembleToName?: string;
   
   /** 基线标记（是否属于基线） */
-  BaseLine?: boolean | EDMDUserSimpleProperty;
+  BaseLine?: boolean;
   
-  /** 基线标记（demo格式） */
+  /** 基线标记（demo格式，已废弃） */
   Baseline?: {
     Value: string;
   };
@@ -256,6 +338,12 @@ export interface EDMDProcessInstruction extends EDMDObject {
  */
 export interface EDMDProcessInstructionSendInformation extends EDMDProcessInstruction {
   instructionType: 'SendInformation';
+  
+  /** 执行者（可选） */
+  Actor?: string;
+  
+  /** 描述信息（可选） */
+  Description?: string;
 }
 
 /**
@@ -270,6 +358,15 @@ export interface EDMDProcessInstructionSendChanges extends EDMDProcessInstructio
   
   /** 执行者 */
   Actor?: string;
+  
+  /** 描述信息（可选） */
+  Description?: string;
+  
+  /** 变更类型（可选） */
+  ChangeType?: 'Proposal' | 'Response';
+  
+  /** 相关指令引用（可选） */
+  RelatedInstruction?: string;
   
   /** 变更交易 */
   Changes?: EDMDTransaction[];

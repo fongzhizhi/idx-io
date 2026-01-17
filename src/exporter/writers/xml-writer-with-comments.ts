@@ -379,10 +379,10 @@ export class XMLWriterWithComments extends XMLWriter {
    * 判断是否为层项目
    */
   private isLayerItem(item: EDMDItem): boolean {
-    return item.geometryType === GeometryType.LAYER_GENERIC ||
-           item.geometryType === GeometryType.LAYER_SOLDERMASK ||
-           item.geometryType === GeometryType.LAYER_SILKSCREEN ||
-           item.geometryType === GeometryType.LAYER_OTHERSIGNAL ||
+    return item.geometryType === 'LAYER_GENERIC' ||
+           item.geometryType === 'LAYER_SOLDERMASK' ||
+           item.geometryType === 'LAYER_SILKSCREEN' ||
+           item.geometryType === 'LAYER_OTHERSIGNAL' ||
            (item.UserProperties?.some(p => p.Key?.ObjectName === 'LayerType') ?? false);
   }
   
@@ -392,9 +392,9 @@ export class XMLWriterWithComments extends XMLWriter {
    * 根据 IDX V4.5 协议，VIA 不是标准几何类型，应该使用 HOLE_PLATED
    */
   private isHoleItem(item: EDMDItem): boolean {
-    return item.geometryType === GeometryType.HOLE_PLATED ||
-           item.geometryType === GeometryType.HOLE_NON_PLATED ||
-           item.geometryType === GeometryType.FILLED_VIA ||
+    return item.geometryType === 'HOLE_PLATED' ||
+           item.geometryType === 'HOLE_NON_PLATED' ||
+           item.geometryType === 'FILLED_VIA' ||
            (item.UserProperties?.some(p => p.Key?.ObjectName === 'HoleType') ?? false);
   }
   
@@ -402,9 +402,9 @@ export class XMLWriterWithComments extends XMLWriter {
    * 判断是否为禁止区项目
    */
   private isKeepoutItem(item: EDMDItem): boolean {
-    return item.geometryType === GeometryType.KEEPOUT_AREA_COMPONENT ||
-           item.geometryType === GeometryType.KEEPOUT_AREA_ROUTE ||
-           item.geometryType === GeometryType.KEEPOUT_AREA_VIA ||
+    return item.geometryType === 'KEEPOUT_AREA_COMPONENT' ||
+           item.geometryType === 'KEEPOUT_AREA_ROUTE' ||
+           item.geometryType === 'KEEPOUT_AREA_VIA' ||
            (item.UserProperties?.some(p => p.Key?.ObjectName === 'KeepoutType') ?? false);
   }
   

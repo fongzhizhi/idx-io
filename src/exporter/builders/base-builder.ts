@@ -361,7 +361,7 @@ export abstract class BaseBuilder<TInput, TOutput> {
     // ## 简化表示法
     // DESIGN: 当配置启用简化表示法时，添加geometryType属性
     if (this.config.useSimplified && geometryType) {
-      baseItem.geometryType = geometryType;
+      baseItem.geometryType = geometryType as any; // 临时类型转换，等待后续统一
     }
     
     return baseItem;

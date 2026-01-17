@@ -158,7 +158,10 @@ export class LayerStackupBuilder {
       Identifier: stackupData.identifier,
       ItemInstances: layerInstances,
       // 根据需求 14.5：添加 ReferenceName 属性
-      ReferenceName: stackupData.name,
+      ReferenceName: {
+        SystemScope: 'ECAD',
+        ObjectName: stackupData.name
+      },
       UserProperties: stackupData.userProperties || []
     };
     

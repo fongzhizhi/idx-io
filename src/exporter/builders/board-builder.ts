@@ -225,7 +225,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       ItemType: ItemType.ASSEMBLY,
       Name: processedData.name,
       Description: `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`,
-      geometryType: this.config.useSimplified ? GeometryType.BOARD_OUTLINE : undefined,
+      geometryType: this.config.useSimplified ? GeometryType.BOARD_OUTLINE as any : undefined,
       BaseLine: true,
       Identifier: this.createIdentifier('BOARD', processedData.id)
     };

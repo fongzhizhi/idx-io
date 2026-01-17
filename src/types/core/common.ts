@@ -116,10 +116,14 @@ export interface EDMName {
  * 
  * @remarks
  * 用于存储ECAD/MCAD系统的特定属性
+ * 使用正确的类型名称 property:EDMDUserSimpleProperty
  * TEST_CASE: 添加组件参数属性
  * TEST_EXPECT: 正确序列化为XML属性
  */
 export interface EDMDUserSimpleProperty {
+  /** XML 类型声明，使用正确的命名空间 */
+  '@type'?: 'property:EDMDUserSimpleProperty';
+  
   Key: EDMName;
   Value: string | number | boolean;
   IsChanged?: boolean;
@@ -134,10 +138,13 @@ export interface EDMDUserSimpleProperty {
  * 
  * @remarks
  * 用于描述2D空间中的平移、旋转和缩放
+ * 移除 xsi:type，使用 TransformationType 元素
+ * 平移分量使用 { Value: number } 格式
  * REF: Section 4.1.1.1
  * DESIGN: 使用标准变换矩阵表示，与3D图形系统兼容
  */
 export interface EDMDTransformation2D {
+  /** 变换类型标识 */
   TransformationType: 'd2';
   
   // 旋转分量
@@ -146,12 +153,12 @@ export interface EDMDTransformation2D {
   yx: number;  // sinθ
   yy: number;  // cosθ
   
-  // 平移分量
-  tx: EDMDLengthProperty;
-  ty: EDMDLengthProperty;
+  // 平移分量（使用 foundation:Value 包装）
+  tx: { Value: number };
+  ty: { Value: number };
   
   // 可选Z偏移，用于相对层定位
-  zOffset?: EDMDLengthProperty;
+  zOffset?: { Value: number };
 }
 
 /**
@@ -159,9 +166,11 @@ export interface EDMDTransformation2D {
  * 
  * @remarks
  * 完整3D变换，用于绝对定位
+ * 平移分量使用 { Value: number } 格式
  * PERFORMANCE: 3D变换在大多数IDX实现中较少使用
  */
 export interface EDMDTransformation3D {
+  /** 变换类型标识 */
   TransformationType: 'd3';
   
   // 旋转分量
@@ -169,10 +178,10 @@ export interface EDMDTransformation3D {
   yx: number; yy: number; yz: number;
   zx: number; zy: number; zz: number;
   
-  // 平移分量
-  tx: EDMDLengthProperty;
-  ty: EDMDLengthProperty;
-  tz: EDMDLengthProperty;
+  // 平移分量（使用 foundation:Value 包装）
+  tx: { Value: number };
+  ty: { Value: number };
+  tz: { Value: number };
 }
 
 export type EDMDTransformation = EDMDTransformation2D | EDMDTransformation3D;

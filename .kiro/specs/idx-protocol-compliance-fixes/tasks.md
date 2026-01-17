@@ -276,14 +276,14 @@
     - **Property 33: 验证报告包含所有问题**
     - **Validates: Requirements 11.2, 11.4**
 
-- [ ] 10. 类型定义更新
-  - [~] 10.1 更新 ProcessInstruction 类型定义
+- [x] 10. 类型定义更新
+  - [x] 10.1 更新 ProcessInstruction 类型定义
     - 修改 `src/types/core/messages.ts`
     - 添加 Actor 和 Description 属性到 ProcessInstruction 接口
     - 添加 ChangeType 和 RelatedInstruction 到 SendChanges 接口
     - _Requirements: 1.1, 1.2, 1.3_
   
-  - [~] 10.2 更新 Item 类型定义
+  - [x] 10.2 更新 Item 类型定义
     - 修改 `src/types/core/items.ts`
     - 将 geometryType 改为可选的 StandardGeometryType 枚举
     - 添加 ReferenceName 属性
@@ -291,24 +291,24 @@
     - 修正 BaseLine 为布尔类型
     - _Requirements: 2.4, 6.1, 6.2, 10.1, 13.4, 14.5_
   
-  - [~] 10.3 创建 StandardGeometryType 枚举
+  - [x] 10.3 创建 StandardGeometryType 枚举
     - 在 `src/types/core/items.ts` 中添加 StandardGeometryType 枚举
     - 包含所有 IDX V4.5 协议表 8 定义的标准几何类型
     - _Requirements: 2.4_
   
-  - [~] 10.4 更新 ItemInstance 类型定义
+  - [x] 10.4 更新 ItemInstance 类型定义
     - 修改 `src/types/core/items.ts`
     - 将 Item 改为字符串类型（ID 引用）
     - 添加 zOffset 属性
     - 添加 AssembleToName 属性
     - _Requirements: 3.5, 13.5_
   
-  - [~] 10.5 更新 UserProperty 类型定义
+  - [x] 10.5 更新 UserProperty 类型定义
     - 修改 `src/types/core/common.ts`
     - 使用正确的类型名称 `property:EDMDUserSimpleProperty`
     - _Requirements: 5.1_
   
-  - [~] 10.6 更新 Transformation 类型定义
+  - [x] 10.6 更新 Transformation 类型定义
     - 修改 `src/types/core/common.ts`
     - 移除 xsi:type，添加 TransformationType 元素
     - 修改 tx、ty、tz 为 `{ Value: number }` 格式
