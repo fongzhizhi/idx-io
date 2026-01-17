@@ -25,7 +25,7 @@ import {
 /**
  * 测试组件数据类型
  */
-function testComponentData() {
+function testComponentData(): ComponentData {
   const component: ComponentData = {
     refDes: "U1",
     partNumber: "STM32F407VGT6",
@@ -67,7 +67,7 @@ function testComponentData() {
 /**
  * 测试孔数据类型
  */
-function testHoleData() {
+function testHoleData(): HoleData {
   const via: HoleData = {
     id: "VIA_001",
     type: "plated",
@@ -92,7 +92,7 @@ function testHoleData() {
 /**
  * 测试禁止区数据类型
  */
-function testKeepoutData() {
+function testKeepoutData(): KeepoutData {
   const keepout: KeepoutData = {
     id: "KEEPOUT_001",
     type: "component",
@@ -119,7 +119,7 @@ function testKeepoutData() {
 /**
  * 测试层数据类型
  */
-function testLayerData() {
+function testLayerData(): LayerData {
   const layer: LayerData = {
     id: "L1",
     name: "Top Signal",
@@ -142,7 +142,7 @@ function testLayerData() {
 /**
  * 测试层叠结构数据类型
  */
-function testLayerStackupData() {
+function testLayerStackupData(): LayerStackupData {
   const stackup: LayerStackupData = {
     id: "STACKUP_4L",
     name: "4-Layer Standard",
@@ -181,7 +181,7 @@ function testLayerStackupData() {
 /**
  * 测试扩展导出源数据类型
  */
-function testExtendedExportSourceData() {
+function testExtendedExportSourceData(): ExtendedExportSourceData {
   const component = testComponentData();
   const hole = testHoleData();
   const keepout = testKeepoutData();
@@ -222,7 +222,7 @@ function testExtendedExportSourceData() {
 /**
  * 测试默认层叠结构创建
  */
-function testDefaultStackup() {
+function testDefaultStackup(): LayerStackupData {
   const defaultStackup = createDefault4LayerStackup();
   console.log("Default 4-layer stackup created:", defaultStackup.name);
   console.log("Total thickness:", calculateStackupThickness(defaultStackup), "mm");
@@ -231,6 +231,52 @@ function testDefaultStackup() {
 }
 
 // ============= 运行所有测试 =============
+
+describe('Data Models', () => {
+  test('Component data type validation', () => {
+    const component = testComponentData();
+    expect(isValidComponentData(component)).toBe(true);
+  });
+
+  test('Hole data type validation', () => {
+    const hole = testHoleData();
+    expect(isValidHoleData(hole)).toBe(true);
+  });
+
+  test('Keepout data type validation', () => {
+    const keepout = testKeepoutData();
+    expect(isValidKeepoutData(keepout)).toBe(true);
+    expect(validateGeometry(keepout.geometry)).toBe(true);
+  });
+
+  test('Layer data type validation', () => {
+    const layer = testLayerData();
+    expect(isValidLayerData(layer)).toBe(true);
+  });
+
+  test('Layer stackup data type validation', () => {
+    const stackup = testLayerStackupData();
+    expect(isValidLayerStackupData(stackup)).toBe(true);
+    
+    const calculatedThickness = calculateStackupThickness(stackup);
+    expect(calculatedThickness).toBeCloseTo(1.6, 2);
+    
+    const l1Position = getLayerZPosition(stackup, "L1");
+    expect(typeof l1Position).toBe('number');
+  });
+
+  test('Extended export source data type validation', () => {
+    const exportData = testExtendedExportSourceData();
+    expect(exportData).toBeDefined();
+    expect(exportData.board).toBeDefined();
+  });
+
+  test('Default stackup creation', () => {
+    const defaultStackup = testDefaultStackup();
+    expect(defaultStackup.name).toBeDefined();
+    expect(calculateStackupThickness(defaultStackup)).toBeGreaterThan(0);
+  });
+});
 
 export function runDataModelTests() {
   console.log("=== 数据模型类型测试开始 ===");

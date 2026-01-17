@@ -711,7 +711,7 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
     // # 创建CurveSet2D
     const curveSet2D = {
       id: this.generateItemId('CURVESET', `COMP_${processedData.refDes}`),
-      'xsi:type': 'd2:EDMDCurveSet2D',
+      'xsi:type': 'd2:EDMDCurveSet2d',  // 统一使用小写 d
       'pdm:ShapeDescriptionType': 'OUTLINE',
       'd2:LowerBound': {
         'property:Value': '0.0'

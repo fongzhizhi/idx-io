@@ -570,8 +570,9 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
    */
   private async createLayerItem(layer: ProcessedLayerData): Promise<EDMDItem> {
     // # 创建基础项目结构
+    // 根据需求 6.2：层应该使用 ItemType="assembly" 而不是 ItemType="single"
     const baseItem = this.createBaseItem(
-      ItemType.SINGLE,
+      ItemType.ASSEMBLY,
       layer.normalizedType,
       layer.name,
       this.getLayerDescription(layer)
@@ -579,7 +580,7 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
     
     const layerItem: EDMDItem = {
       id: layer.processedId,
-      ItemType: ItemType.SINGLE,
+      ItemType: ItemType.ASSEMBLY,
       ...baseItem,
       Identifier: this.createIdentifier('LAYER', layer.id),
       UserProperties: this.createLayerProperties(layer)
@@ -602,8 +603,9 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
    */
   private async createStackupItem(stackup: ProcessedLayerStackupData): Promise<EDMDItem> {
     // # 创建基础项目结构
+    // 根据需求 6.1：层叠结构应该使用 ItemType="assembly" 配合 geometryType="LAYER_STACKUP"
     const baseItem = this.createBaseItem(
-      ItemType.SINGLE,
+      ItemType.ASSEMBLY,
       GeometryType.LAYER_STACKUP,
       stackup.name,
       this.getStackupDescription(stackup)
@@ -611,7 +613,7 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
     
     const stackupItem: EDMDItem = {
       id: stackup.processedId,
-      ItemType: ItemType.SINGLE,
+      ItemType: ItemType.ASSEMBLY,
       ...baseItem,
       Identifier: this.createIdentifier('STACKUP', stackup.id),
       UserProperties: this.createStackupProperties(stackup)

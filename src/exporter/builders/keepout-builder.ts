@@ -537,7 +537,7 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
     // # 创建CurveSet2D
     const curveSet2D = {
       id: this.generateItemId('CURVESET', `KEEPOUT_${processedData.id}`),
-      'xsi:type': 'd2:EDMDCurveSet2D',
+      'xsi:type': 'd2:EDMDCurveSet2d',  // 统一使用小写 d
       'pdm:ShapeDescriptionType': 'OUTLINE',
       'd2:LowerBound': {
         'property:Value': processedData.lowerBound.toString()

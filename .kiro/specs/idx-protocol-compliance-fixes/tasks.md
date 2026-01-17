@@ -131,13 +131,13 @@
     - **Property 26: 平移分量使用 foundation:Value 包装**
     - **Validates: Requirements 7.1, 7.2, 7.3, 7.4**
 
-- [ ] 4. 检查点 - 确保阶段 2 测试通过
+- [x] 4. 检查点 - 确保阶段 2 测试通过
   - 运行所有测试：`npm test`
   - 验证生成的 IDX 文件的几何类型、组件结构和变换矩阵是否正确
   - 如有问题，请向用户报告
 
 - [ ] 5. 阶段 3：类型和属性修复（P2 - 优化问题）
-  - [ ] 5.1 修正 ItemType 使用
+  - [x] 5.1 修正 ItemType 使用
     - 修改 `buildItem` 方法，根据对象类型选择正确的 ItemType
     - 层叠结构使用 `ItemType="assembly"` 配合 `geometryType="LAYER_STACKUP"`
     - 单个层使用 `ItemType="assembly"` 配合 `geometryType="LAYER"`
@@ -152,7 +152,7 @@
     - **Property 22: 独立几何对象使用 single**
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
   
-  - [ ] 5.3 统一 CurveSet2d 类型命名
+  - [x] 5.3 统一 CurveSet2d 类型命名
     - 修改 `buildCurveSet2D` 方法
     - 确保所有 CurveSet2d 使用 `d2:EDMDCurveSet2d`（小写 d）
     - 移除任何 `EDMDCurveSet2D`（大写 D）的使用
@@ -163,7 +163,7 @@
     - **Property 28: CurveSet2d 类型命名一致性**
     - **Validates: Requirements 8.1, 8.2**
   
-  - [ ] 5.5 修正 ShapeDescriptionType 值
+  - [-] 5.5 修正 ShapeDescriptionType 值
     - 修改 `buildCurveSet2D` 和相关方法
     - 详细几何模型使用 `ShapeDescriptionType="GeometricModel"`
     - 简单 2.5D 轮廓可以使用 `ShapeDescriptionType="OUTLINE"`
@@ -175,7 +175,7 @@
     - **Property 30: ShapeDescriptionType 值有效**
     - **Validates: Requirements 9.1, 9.4**
   
-  - [ ] 5.7 规范基线和属性格式
+  - [~] 5.7 规范基线和属性格式
     - 修改 `buildItem` 方法中的 BaseLine 构建逻辑
     - 将 `<pdm:Baseline><property:Value>true</property:Value></pdm:Baseline>` 改为 `<pdm:BaseLine>true</pdm:BaseLine>`
     - 确保 BaseLine 元素直接包含布尔值文本内容
@@ -186,13 +186,13 @@
     - **Property 31: BaseLine 使用正确的格式**
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4**
 
-- [ ] 6. 检查点 - 确保阶段 3 测试通过
+- [~] 6. 检查点 - 确保阶段 3 测试通过
   - 运行所有测试：`npm test`
   - 验证生成的 IDX 文件的 ItemType、CurveSet2d、ShapeDescriptionType 和 BaseLine 是否正确
   - 如有问题，请向用户报告
 
 - [ ] 7. 阶段 4：高级功能增强（P3 - 可选）
-  - [ ] 7.1 实现 Z 轴定位系统
+  - [~] 7.1 实现 Z 轴定位系统
     - 修改组件导出逻辑，使用 2D 变换配合 AssembleToName
     - 确保 2D 变换只包含 xx、xy、yx、yy、tx、ty 分量
     - 添加 AssembleToName 属性，引用层或板表面的 ReferenceName
@@ -205,7 +205,7 @@
     - **Property 36: Z 偏移使用 zOffset 属性**
     - **Validates: Requirements 13.1, 13.2, 13.3, 13.4, 13.5**
   
-  - [ ] 7.3 创建层堆叠结构构建器
+  - [~] 7.3 创建层堆叠结构构建器
     - 创建 `src/exporter/builders/layer-stackup-builder.ts` 文件
     - 实现 `LayerStackupBuilder` 类
     - 实现 `buildLayerStackup` 方法，构建层堆叠结构
@@ -214,7 +214,7 @@
     - 添加 ReferenceName 属性
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
   
-  - [ ] 7.4 完善层堆叠结构
+  - [~] 7.4 完善层堆叠结构
     - 修改 `buildItem` 方法，使用 `LayerStackupBuilder`
     - 确保层堆叠使用 `ItemType="assembly"` 和 `geometryType="LAYER_STACKUP"`
     - 确保层使用 `ItemType="assembly"` 和 `geometryType="LAYER"`
@@ -230,7 +230,7 @@
     - **Property 41: 层堆叠包含 ReferenceName**
     - **Validates: Requirements 14.1, 14.2, 14.3, 14.4, 14.5**
   
-  - [ ] 7.6 实现 ShapeElement 布尔运算
+  - [~] 7.6 实现 ShapeElement 布尔运算
     - 修改 `buildShapeElement` 方法
     - 切割特征（孔、挖槽）的 Inverted 属性设为 true
     - 实体特征（组件、板）的 Inverted 属性设为 false
@@ -242,13 +242,13 @@
     - **Property 43: 实体特征的 Inverted 为 false**
     - **Validates: Requirements 15.1, 15.2**
 
-- [ ] 8. 检查点 - 确保阶段 4 测试通过
+- [~] 8. 检查点 - 确保阶段 4 测试通过
   - 运行所有测试：`npm test`
   - 验证生成的 IDX 文件的 Z 轴定位、层堆叠结构和 ShapeElement 是否正确
   - 如有问题，请向用户报告
 
 - [ ] 9. 协议验证功能
-  - [ ] 9.1 创建协议验证器
+  - [~] 9.1 创建协议验证器
     - 创建 `src/exporter/validators/protocol-validator.ts` 文件
     - 实现 `ProtocolValidator` 类
     - 实现 `validate` 方法，使用 XSD Schema 验证 XML
@@ -257,7 +257,7 @@
     - 实现 `generateReport` 方法，生成验证报告
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
   
-  - [ ] 9.2 集成验证功能到 XMLWriter
+  - [~] 9.2 集成验证功能到 XMLWriter
     - 在 `XMLWriter` 中添加 `validationEnabled` 选项
     - 在 `serialize` 方法中添加可选的验证步骤
     - 如果验证失败，记录详细的错误信息
@@ -277,13 +277,13 @@
     - **Validates: Requirements 11.2, 11.4**
 
 - [ ] 10. 类型定义更新
-  - [ ] 10.1 更新 ProcessInstruction 类型定义
+  - [~] 10.1 更新 ProcessInstruction 类型定义
     - 修改 `src/types/core/messages.ts`
     - 添加 Actor 和 Description 属性到 ProcessInstruction 接口
     - 添加 ChangeType 和 RelatedInstruction 到 SendChanges 接口
     - _Requirements: 1.1, 1.2, 1.3_
   
-  - [ ] 10.2 更新 Item 类型定义
+  - [~] 10.2 更新 Item 类型定义
     - 修改 `src/types/core/items.ts`
     - 将 geometryType 改为可选的 StandardGeometryType 枚举
     - 添加 ReferenceName 属性
@@ -291,43 +291,43 @@
     - 修正 BaseLine 为布尔类型
     - _Requirements: 2.4, 6.1, 6.2, 10.1, 13.4, 14.5_
   
-  - [ ] 10.3 创建 StandardGeometryType 枚举
+  - [~] 10.3 创建 StandardGeometryType 枚举
     - 在 `src/types/core/items.ts` 中添加 StandardGeometryType 枚举
     - 包含所有 IDX V4.5 协议表 8 定义的标准几何类型
     - _Requirements: 2.4_
   
-  - [ ] 10.4 更新 ItemInstance 类型定义
+  - [~] 10.4 更新 ItemInstance 类型定义
     - 修改 `src/types/core/items.ts`
     - 将 Item 改为字符串类型（ID 引用）
     - 添加 zOffset 属性
     - 添加 AssembleToName 属性
     - _Requirements: 3.5, 13.5_
   
-  - [ ] 10.5 更新 UserProperty 类型定义
+  - [~] 10.5 更新 UserProperty 类型定义
     - 修改 `src/types/core/common.ts`
     - 使用正确的类型名称 `property:EDMDUserSimpleProperty`
     - _Requirements: 5.1_
   
-  - [ ] 10.6 更新 Transformation 类型定义
+  - [~] 10.6 更新 Transformation 类型定义
     - 修改 `src/types/core/common.ts`
     - 移除 xsi:type，添加 TransformationType 元素
     - 修改 tx、ty、tz 为 `{ Value: number }` 格式
     - _Requirements: 7.1, 7.3, 7.4_
 
 - [ ] 11. 文档和示例更新
-  - [ ] 11.1 更新 README.md
+  - [~] 11.1 更新 README.md
     - 添加协议合规性修复的说明
     - 更新使用示例，反映新的 API（如果有变化）
     - 添加验证功能的使用说明
     - _Requirements: 12.1_
   
-  - [ ] 11.2 更新示例文件
+  - [~] 11.2 更新示例文件
     - 更新 `examples/export-with-layers.ts`，使用新的 API
     - 添加验证功能的示例
     - 确保示例代码可以正常运行
     - _Requirements: 12.1, 12.3_
   
-  - [ ] 11.3 创建迁移指南
+  - [~] 11.3 创建迁移指南
     - 创建 `docs/migration-guide.md` 文件
     - 说明从旧版本迁移到新版本的步骤
     - 列出 API 变化（如果有）
@@ -335,31 +335,31 @@
     - _Requirements: 12.1_
 
 - [ ] 12. 回归测试和验证
-  - [ ] 12.1 更新现有测试用例
+  - [~] 12.1 更新现有测试用例
     - 更新所有现有测试的预期输出
     - 确保所有测试通过
     - _Requirements: 12.2_
   
-  - [ ] 12.2 运行完整的测试套件
+  - [~] 12.2 运行完整的测试套件
     - 运行所有单元测试：`npm test`
     - 运行所有属性测试
     - 确保测试覆盖率不低于 80%
     - _Requirements: 12.2, 12.4_
   
-  - [ ] 12.3 生成测试 IDX 文件
+  - [~] 12.3 生成测试 IDX 文件
     - 使用示例代码生成 IDX 文件
     - 使用 XSD Schema 验证生成的文件
     - 与参考 IDX 文件对比（如果有）
     - _Requirements: 11.1, 12.4_
   
-  - [ ] 12.4 性能测试
+  - [~] 12.4 性能测试
     - 测量导出大型设计的时间
     - 比较修复前后的性能
     - 测量启用/禁用验证的性能差异
     - 确保性能下降不超过 10%
     - _Requirements: 11.3_
 
-- [ ] 13. 最终检查点 - 确保所有测试通过
+- [~] 13. 最终检查点 - 确保所有测试通过
   - 运行所有测试：`npm test`
   - 验证生成的 IDX 文件完全符合 IDX V4.5 协议
   - 确保所有需求都已实现

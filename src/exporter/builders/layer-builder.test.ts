@@ -45,6 +45,149 @@ const config: BuilderConfig = {
   precision: 6
 };
 
+describe('LayerBuilder', () => {
+  let builder: LayerBuilder;
+  let mockContext: MockBuilderContext;
+  let config: BuilderConfig;
+
+  beforeEach(() => {
+    mockContext = new MockBuilderContext();
+    config = {
+      useSimplified: true,
+      defaultUnit: GlobalUnit.UNIT_MM,
+      creatorSystem: 'TestSystem',
+      idPrefix: 'TEST',
+      precision: 6
+    };
+    builder = new LayerBuilder(config, mockContext);
+  });
+
+  test('should validate empty array', () => {
+    const result = (builder as any).validateInput([]);
+    expect(result.valid).toBe(true);
+    expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  test('should validate valid layer data', () => {
+    const validLayerData: LayerData[] = [
+      {
+        id: 'L1',
+        name: 'Top Signal',
+        type: LayerType.SIGNAL,
+        thickness: 0.035,
+        material: 'Copper',
+        copperWeight: 1
+      }
+    ];
+    
+    const result = (builder as any).validateInput(validLayerData);
+    expect(result.valid).toBe(true);
+    expect(result.errors.length).toBe(0);
+  });
+
+  test('should reject invalid thickness', () => {
+    const invalidThicknessData: LayerData[] = [
+      {
+        id: 'L1',
+        name: 'Top Signal',
+        type: LayerType.SIGNAL,
+        thickness: -0.1 // 无效的负厚度
+      }
+    ];
+    
+    const result = (builder as any).validateInput(invalidThicknessData);
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  test('should normalize layer types correctly', () => {
+    const signalType = (builder as any).normalizeLayerType(LayerType.SIGNAL);
+    expect(signalType).toBe(GeometryType.LAYER_OTHERSIGNAL);
+    
+    const soldermaskType = (builder as any).normalizeLayerType(LayerType.SOLDERMASK);
+    expect(soldermaskType).toBe(GeometryType.LAYER_SOLDERMASK);
+  });
+
+  test('should build complete layer structure', async () => {
+    const testLayers: LayerData[] = [
+      {
+        id: 'L1',
+        name: 'Top Signal',
+        type: LayerType.SIGNAL,
+        thickness: 0.035,
+        material: 'Copper',
+        copperWeight: 1
+      },
+      {
+        id: 'SM_TOP',
+        name: 'Top Soldermask',
+        type: LayerType.SOLDERMASK,
+        thickness: 0.025,
+        material: 'Solder Resist',
+        color: 'Green'
+      }
+    ];
+    
+    const result = await builder.build(testLayers);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+    
+    // 检查第一个层（信号层）
+    const signalLayer = result[0];
+    expect(signalLayer.ItemType).toBe(ItemType.ASSEMBLY);
+    expect(signalLayer.geometryType).toBe(GeometryType.LAYER_OTHERSIGNAL);
+    expect(signalLayer.Name).toBe('Top Signal');
+    expect(signalLayer.BaseLine).toBe(true);
+    
+    // 检查用户属性
+    const properties = signalLayer.UserProperties || [];
+    const layerIdProp = properties.find(p => p.Key.ObjectName === 'LAYER_ID');
+    expect(layerIdProp?.Value).toBe('L1');
+    
+    const thicknessProp = properties.find(p => p.Key.ObjectName === 'THICKNESS');
+    expect(thicknessProp?.Value).toBe('0.035');
+    
+    const materialProp = properties.find(p => p.Key.ObjectName === 'MATERIAL');
+    expect(materialProp?.Value).toBe('Copper');
+    
+    // 检查第二个层（阻焊层）
+    const soldermaskLayer = result[1];
+    expect(soldermaskLayer.geometryType).toBe(GeometryType.LAYER_SOLDERMASK);
+    expect(soldermaskLayer.Name).toBe('Top Soldermask');
+    
+    const smProperties = soldermaskLayer.UserProperties || [];
+    const colorProp = smProperties.find(p => p.Key.ObjectName === 'COLOR');
+    expect(colorProp?.Value).toBe('Green');
+  });
+
+  test('should handle dielectric layer properties', async () => {
+    const dielectricLayers: LayerData[] = [
+      {
+        id: 'D1',
+        name: 'Prepreg 1',
+        type: LayerType.DIELECTRIC,
+        thickness: 0.2,
+        material: 'FR4',
+        dielectricConstant: 4.5,
+        lossTangent: 0.02
+      }
+    ];
+    
+    const result = await builder.build(dielectricLayers);
+    expect(result.length).toBe(1);
+    
+    const dielectricLayer = result[0];
+    expect(dielectricLayer.geometryType).toBe(GeometryType.LAYER_DIELECTRIC);
+    
+    const properties = dielectricLayer.UserProperties || [];
+    const dielectricConstantProp = properties.find(p => p.Key.ObjectName === 'DIELECTRIC_CONSTANT');
+    expect(dielectricConstantProp?.Value).toBe('4.5');
+    
+    const lossTangentProp = properties.find(p => p.Key.ObjectName === 'LOSS_TANGENT');
+    expect(lossTangentProp?.Value).toBe('0.02');
+  });
+});
+
 /**
  * 测试LayerBuilder基本功能
  */
@@ -52,6 +195,14 @@ export async function testLayerBuilder() {
   console.log("=== LayerBuilder测试开始 ===");
   
   try {
+    const mockContext = new MockBuilderContext();
+    const config: BuilderConfig = {
+      useSimplified: true,
+      defaultUnit: GlobalUnit.UNIT_MM,
+      creatorSystem: 'TestSystem',
+      idPrefix: 'TEST',
+      precision: 6
+    };
     const builder = new LayerBuilder(config, mockContext);
     
     // 测试用例1: 空数组验证
@@ -131,7 +282,7 @@ export async function testLayerBuilder() {
     
     // 检查第一个层（信号层）
     const signalLayer = result[0];
-    console.assert(signalLayer.ItemType === ItemType.SINGLE, "层应该是SINGLE类型");
+    console.assert(signalLayer.ItemType === ItemType.ASSEMBLY, "层应该是ASSEMBLY类型");
     console.assert(signalLayer.geometryType === GeometryType.LAYER_OTHERSIGNAL, "信号层几何类型正确");
     console.assert(signalLayer.Name === 'Top Signal', "层名称正确");
     console.assert(signalLayer.BaseLine === true, "层应该标记为基线");

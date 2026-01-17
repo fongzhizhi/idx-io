@@ -472,11 +472,13 @@ export class XMLWriterWithComments extends XMLWriter {
   
   /**
    * 内部曲线集2D构建方法
+   * 
+   * 根据需求 8.1-8.2，统一使用 d2:EDMDCurveSet2d（小写 d）类型命名
    */
   private buildCurveSet2DInternal(parent: any, curveSet: any): void {
     const curveSetElement = parent.ele('foundation:CurveSet2d', { 
       id: curveSet.id, 
-      'xsi:type': curveSet['xsi:type'] 
+      'xsi:type': 'd2:EDMDCurveSet2d'  // 统一使用小写 d
     });
     
     curveSetElement.ele('pdm:ShapeDescriptionType').txt(curveSet['pdm:ShapeDescriptionType']);

@@ -267,11 +267,13 @@ export class XMLWriter {
 
   /**
    * 构建曲线集2D
+   * 
+   * 根据需求 8.1-8.2，统一使用 d2:EDMDCurveSet2d（小写 d）类型命名
    */
   private buildCurveSet2D(parent: any, curveSet: any): void {
     const curveSetElement = parent.ele('foundation:CurveSet2d', { 
       id: curveSet.id, 
-      'xsi:type': curveSet['xsi:type'] 
+      'xsi:type': 'd2:EDMDCurveSet2d'  // 统一使用小写 d
     });
     
     curveSetElement.ele('pdm:ShapeDescriptionType').txt(curveSet['pdm:ShapeDescriptionType']);
@@ -614,7 +616,9 @@ export class XMLWriter {
     if (item.Name) itemElement.ele('foundation:Name').txt(item.Name);
     if (item.Description) itemElement.ele('foundation:Description').txt(item.Description);
     
-    itemElement.ele('pdm:ItemType').txt(item.ItemType);
+    // 根据需求 6.1-6.4 确定正确的 ItemType
+    const correctItemType = this.determineCorrectItemType(item);
+    itemElement.ele('pdm:ItemType').txt(correctItemType);
     
     // 构建标识符
     if (item.Identifier) {
@@ -636,7 +640,7 @@ export class XMLWriter {
     }
     
     // 构建项目实例（仅装配体）
-    if (item.ItemType === ItemType.ASSEMBLY && item.ItemInstances) {
+    if (correctItemType === ItemType.ASSEMBLY && item.ItemInstances) {
       for (const instance of item.ItemInstances) {
         this.buildItemInstance(itemElement, instance);
       }
@@ -666,6 +670,75 @@ export class XMLWriter {
     if (item.AssembleToName) {
       itemElement.ele('pdm:AssembleToName').txt(item.AssembleToName);
     }
+  }
+
+  /**
+   * 根据需求 9.1-9.4 确定正确的 ShapeDescriptionType
+   * 
+   * @param geometryType - 几何类型
+   * @param hasDetailedGeometry - 是否包含详细几何信息
+   * @param hasPreciseZBounds - 是否有精确的Z边界
+   * @returns 正确的 ShapeDescriptionType
+   */
+  protected determineShapeDescriptionType(
+    geometryType?: string,
+    hasDetailedGeometry: boolean = true,
+    hasPreciseZBounds: boolean = true
+  ): 'GeometricModel' | 'OUTLINE' {
+    // 需求 9.1: 详细几何模型使用 GeometricModel
+    // 需求 9.2: 简单 2.5D 轮廓可以使用 OUTLINE
+    // 需求 9.3: 根据几何复杂度和精度要求选择
+    
+    // 对于需要精确几何表示的对象，使用 GeometricModel
+    if (geometryType === 'BOARD_OUTLINE' || 
+        geometryType === 'COMPONENT' ||
+        geometryType === 'HOLE_PLATED' ||
+        geometryType === 'HOLE_NON_PLATED' ||
+        geometryType === 'FILLED_VIA') {
+      return 'GeometricModel';
+    }
+    
+    // 对于简单的约束区域，可以使用 OUTLINE
+    if (geometryType?.startsWith('KEEPOUT_') || 
+        geometryType === 'PLACEMENT_KEEPOUT' ||
+        geometryType === 'ROUTING_KEEPOUT') {
+      return 'OUTLINE';
+    }
+    
+    // 默认情况：如果有详细几何或精确Z边界，使用 GeometricModel
+    if (hasDetailedGeometry || hasPreciseZBounds) {
+      return 'GeometricModel';
+    }
+    
+    // 简单情况使用 OUTLINE
+    return 'OUTLINE';
+  }
+
+  /**
+   * 根据需求 6.1-6.4 确定正确的 ItemType
+   * 
+   * @param item - EDMDItem 对象
+   * @returns 正确的 ItemType
+   */
+  private determineCorrectItemType(item: EDMDItem): ItemType {
+    // 需求 6.1: 层叠结构使用 ItemType="assembly" 配合 geometryType="LAYER_STACKUP"
+    if (item.geometryType === 'LAYER_STACKUP') {
+      return ItemType.ASSEMBLY;
+    }
+    
+    // 需求 6.2: 单个层使用 ItemType="assembly" 而不是 ItemType="single"
+    if (item.geometryType && item.geometryType.startsWith('LAYER_')) {
+      return ItemType.ASSEMBLY;
+    }
+    
+    // 需求 6.3: 包含子项的对象使用 ItemType="assembly"
+    if (item.ItemInstances && item.ItemInstances.length > 0) {
+      return ItemType.ASSEMBLY;
+    }
+    
+    // 需求 6.4: 独立的几何对象使用 ItemType="single"
+    // 如果没有子项且不是层或层叠结构，则使用 single
+    return ItemType.SINGLE;
   }
 
   /**
