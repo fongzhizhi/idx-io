@@ -20,7 +20,7 @@ import {
 import {
   LayerData, LayerStackupInput, ProcessedLayerData, ProcessedLayerStackupData,
   ProcessedLayerStackupEntry, LayerGeometryType, LayerType, LayerCategory
-} from '../../types/exporter/builder';
+} from '../../types/exporter/builders';
 import { LayerStackupBuilder, LayerStackupData as StackupBuilderData } from './LayerStackupBuilder';
 
 // ============= 层构建器类 =============

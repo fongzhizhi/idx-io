@@ -20,7 +20,7 @@ import { LayerStackupData } from '../../types/exporter/idx-exporter';
 import {
   BoardData, ProcessedBoardData, GeometryData, CircleInfo,
   BoardGeometryType, ZAxisReference
-} from '../../types/exporter/builder';
+} from '../../types/exporter/builders';
 
 // ============= PCB板构建器类 =============
 
