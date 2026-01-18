@@ -11,14 +11,7 @@ import {
   LayerStackupData,
   ExtendedExportSourceData,
   BrowserExportResult,
-  XMLCommentConfig,
-  LegacyComponentData,
-  LegacyHoleData,
-  LegacyKeepoutData,
-  LegacyLayerData,
-  LegacyLayerStackupData,
-  LegacyExportSourceData,
-  convertLegacyExportSourceData
+  XMLCommentConfig
 } from '../types/exporter/idx-exporter';
 import { BoardBuilder } from './builders/BoardBuilder';
 import { ComponentBuilder } from './builders/ComponentBuilder';
@@ -28,7 +21,7 @@ import { LayerBuilder } from './builders/LayerBuilder';
 import { BuilderConfig, BuilderContext } from './builders/BaseBuilder';
 import { XMLWriter } from './writers/xml-writer';
 import { XMLWriterWithComments, XMLWriterWithCommentsOptions } from './writers/xml-writer-with-comments';
-import { DatasetAssembler, BoardData, BuilderRegistry, AssemblerConfig } from './assemblers/dataset-assembler';
+import { DatasetAssembler, BoardData, BuilderRegistry, AssemblerConfig, ComponentData as AssemblerComponentData, HoleData as AssemblerHoleData, KeepoutData as AssemblerKeepoutData, LayerData as AssemblerLayerData, LayerStackupData as AssemblerLayerStackupData } from './assemblers/dataset-assembler';
 
 /**
  * 导出上下文实现
@@ -150,24 +143,29 @@ export class IDXExporter {
   /**
    * 主要导出方法 - 返回XML内容而不是写入文件
    * 
-   * @param data - 导出源数据，支持新旧两种格式
+   * @param data - 导出源数据，使用ExtendedExportSourceData格式
    * @returns 浏览器导出结果，包含XML内容和统计信息
    * 
    * @remarks
-   * BUSINESS: 支持向后兼容，自动识别和转换旧格式数据
+   * BUSINESS: 支持完整的PCB设计数据导出，包括组件、孔、禁止区等
    * PERFORMANCE: 包含详细的性能统计信息
    * 
    * @example
    * ```typescript
-   * // TEST_CASE: Export with legacy data format
-   * // TEST_INPUT: LegacyExportSourceData format
-   * // TEST_EXPECT: Successfully converts and exports
-   * const legacyData: LegacyExportSourceData = { ... };
-   * const result = await exporter.export(legacyData);
+   * // TEST_CASE: Export with board data
+   * // TEST_INPUT: ExtendedExportSourceData format
+   * // TEST_EXPECT: Successfully exports with full feature support
+   * const boardData: ExtendedExportSourceData = {
+   *   board: { id: 'PCB001', name: 'Main Board', outline: {...} },
+   *   components: [...],
+   *   holes: [...],
+   *   keepouts: [...]
+   * };
+   * const result = await exporter.export(boardData);
    * assert(result.success === true);
    * ```
    */
-  async export(data: LegacyExportSourceData | ExtendedExportSourceData): Promise<BrowserExportResult> {
+  async export(data: ExtendedExportSourceData): Promise<BrowserExportResult> {
     const context = new ExportContextImpl();
     const startTime = Date.now();
     
@@ -354,6 +352,161 @@ export class IDXExporter {
   }
   
   /**
+   * 转换组件数据为DatasetAssembler格式
+   * 
+   * @param components - 新格式组件数据
+   * @returns DatasetAssembler格式组件数据
+   */
+  private convertToAssemblerComponents(components?: ComponentData[]): AssemblerComponentData[] | undefined {
+    if (!components) return undefined;
+    
+    return components.map(comp => ({
+      refDes: comp.refDes,
+      partNumber: comp.partNumber,
+      packageName: comp.packageName,
+      position: {
+        x: comp.position.x,
+        y: comp.position.y,
+        z: comp.position.z,
+        rotation: comp.position.rotation
+      },
+      dimensions: comp.dimensions,
+      layer: comp.layer,
+      isMechanical: comp.isMechanical,
+      electrical: comp.electrical,
+      thermal: comp.thermal,
+      model3D: comp.model3D,
+      pins: comp.pins,
+      properties: comp.properties
+    }));
+  }
+  
+  /**
+   * 转换孔数据为DatasetAssembler格式
+   * 
+   * @param holes - 新格式孔数据
+   * @returns DatasetAssembler格式孔数据
+   */
+  private convertToAssemblerHoles(holes?: HoleData[]): AssemblerHoleData[] | undefined {
+    if (!holes) return undefined;
+    
+    return holes.map(hole => ({
+      id: hole.id,
+      name: hole.id,
+      position: hole.position,
+      diameter: hole.diameter,
+      viaType: this.mapToAssemblerViaType(hole.type, hole.viaType),
+      startLayer: hole.startLayer || 'L1',
+      endLayer: hole.endLayer || 'L4',
+      padDiameter: hole.padDiameter,
+      antiPadDiameter: hole.antiPadDiameter,
+      netName: hole.netName,
+      properties: hole.properties
+    }));
+  }
+  
+  /**
+   * 映射孔类型到DatasetAssembler格式
+   */
+  private mapToAssemblerViaType(type: 'plated' | 'non-plated', viaType?: string): 'plated' | 'non-plated' | 'filled' | 'micro' {
+    if (viaType) {
+      switch (viaType) {
+        case 'through': return 'plated';
+        case 'blind': return 'plated';
+        case 'buried': return 'plated';
+        case 'micro': return 'micro';
+        default: return type;
+      }
+    }
+    return type;
+  }
+  
+  /**
+   * 转换禁止区数据为DatasetAssembler格式
+   * 
+   * @param keepouts - 新格式禁止区数据
+   * @returns DatasetAssembler格式禁止区数据
+   */
+  private convertToAssemblerKeepouts(keepouts?: KeepoutData[]): AssemblerKeepoutData[] | undefined {
+    if (!keepouts) return undefined;
+    
+    return keepouts.map(keepout => ({
+      id: keepout.id,
+      name: keepout.id,
+      constraintType: this.mapToAssemblerConstraintType(keepout.type),
+      purpose: keepout.purpose || 'other',
+      shape: {
+        type: keepout.geometry.type,
+        points: keepout.geometry.points || [],
+        radius: keepout.geometry.radius
+      },
+      height: keepout.height ? {
+        min: keepout.height.min,
+        max: keepout.height.max === 'infinity' ? 'infinity' : keepout.height.max
+      } : undefined,
+      layer: keepout.layers[0] || 'ALL',
+      enabled: keepout.enabled !== false,
+      properties: keepout.properties
+    }));
+  }
+  
+  /**
+   * 映射禁止区类型到DatasetAssembler格式
+   */
+  private mapToAssemblerConstraintType(type: string): 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other' {
+    switch (type) {
+      case 'trace': return 'route';
+      case 'component': return 'component';
+      case 'via': return 'via';
+      case 'testpoint': return 'testpoint';
+      case 'thermal': return 'thermal';
+      default: return 'other';
+    }
+  }
+  
+  /**
+   * 转换层数据为DatasetAssembler格式
+   * 
+   * @param layers - 新格式层数据
+   * @returns DatasetAssembler格式层数据
+   */
+  private convertToAssemblerLayers(layers?: LayerData[]): AssemblerLayerData[] | undefined {
+    if (!layers) return undefined;
+    
+    return layers.map(layer => ({
+      id: layer.id,
+      name: layer.name,
+      type: layer.type,
+      thickness: layer.thickness,
+      material: layer.material,
+      copperWeight: layer.copperWeight,
+      dielectricConstant: layer.dielectricConstant,
+      properties: layer.properties
+    }));
+  }
+  
+  /**
+   * 转换层叠结构数据为DatasetAssembler格式
+   * 
+   * @param layerStackup - 新格式层叠结构数据
+   * @returns DatasetAssembler格式层叠结构数据
+   */
+  private convertToAssemblerLayerStackup(layerStackup?: LayerStackupData): AssemblerLayerStackupData | undefined {
+    if (!layerStackup) return undefined;
+    
+    return {
+      id: layerStackup.id,
+      name: layerStackup.name,
+      totalThickness: layerStackup.totalThickness,
+      layers: layerStackup.layers.map(layer => ({
+        layerId: layer.layerId,
+        position: layer.position,
+        thickness: layer.thickness
+      }))
+    };
+  }
+  
+  /**
    * 构建IDX数据集
    * 
    * @param data - 导出源数据
@@ -361,12 +514,12 @@ export class IDXExporter {
    * @returns IDX数据集
    * 
    * @remarks
-   * BUSINESS: 支持新旧两种数据格式，自动转换确保向后兼容
+   * BUSINESS: 直接使用ExtendedExportSourceData格式，提供完整的数据支持
    * DESIGN: 使用组装器模式，支持不同类型的数据集构建
    */
-  private async buildDataset(data: LegacyExportSourceData | ExtendedExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
-    // DESIGN: 标准化数据格式，统一后续处理流程
-    const normalizedData = this.normalizeExportData(data);
+  private async buildDataset(data: ExtendedExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
+    // DESIGN: 直接使用ExtendedExportSourceData格式
+    const normalizedData = data;
     
     const builderConfig: BuilderConfig = {
       useSimplified: this.config.geometry.useSimplified,
@@ -397,14 +550,14 @@ export class IDXExporter {
     };
     
     // ============= 数据合并 =============
-    // DESIGN: 合并数据到BoardData结构中以保持向后兼容性
+    // DESIGN: 转换新格式数据为DatasetAssembler期望的格式
     const enrichedBoardData: BoardData = {
       ...normalizedData.board,
-      components: normalizedData.components || normalizedData.board.components,
-      holes: normalizedData.holes || normalizedData.board.holes,
-      keepouts: normalizedData.keepouts || normalizedData.board.keepouts,
-      layers: normalizedData.layers || normalizedData.board.layers,
-      layerStackup: normalizedData.layerStackup || normalizedData.board.layerStackup
+      components: this.convertToAssemblerComponents(normalizedData.components || normalizedData.board.components),
+      holes: this.convertToAssemblerHoles(normalizedData.holes || normalizedData.board.holes),
+      keepouts: this.convertToAssemblerKeepouts(normalizedData.keepouts || normalizedData.board.keepouts),
+      layers: this.convertToAssemblerLayers(normalizedData.layers || normalizedData.board.layers),
+      layerStackup: this.convertToAssemblerLayerStackup(normalizedData.layerStackup || normalizedData.board.layerStackup)
     };
     
     // ============= 主体构建 =============
@@ -424,226 +577,7 @@ export class IDXExporter {
     
     return dataset;
   }
-  
-  /**
-   * 标准化导出数据，将ExtendedExportSourceData转换为LegacyExportSourceData
-   * 
-   * @param data - 输入数据，可能是新格式或旧格式
-   * @returns 标准化后的旧格式数据
-   * 
-   * @remarks
-   * BUSINESS: 确保向后兼容性，支持新旧两种数据格式
-   * DESIGN: 自动检测数据格式并进行相应转换
-   */
-  private normalizeExportData(data: LegacyExportSourceData | ExtendedExportSourceData): LegacyExportSourceData {
-    // DESIGN: 如果已经是旧格式，直接返回
-    if (this.isLegacyExportSourceData(data)) {
-      return data;
-    }
-    
-    // DESIGN: 转换新格式到旧格式
-    const extendedData = data as ExtendedExportSourceData;
-    
-    return {
-      board: {
-        id: extendedData.board.id,
-        name: extendedData.board.name,
-        outline: extendedData.board.outline,
-        components: this.convertComponents(extendedData.components || extendedData.board.components),
-        holes: this.convertHoles(extendedData.holes || extendedData.board.holes),
-        keepouts: this.convertKeepouts(extendedData.keepouts || extendedData.board.keepouts),
-        layers: this.convertLayers(extendedData.layers || extendedData.board.layers),
-        layerStackup: this.convertLayerStackup(extendedData.layerStackup || extendedData.board.layerStackup),
-        properties: extendedData.board.properties
-      },
-      components: this.convertComponents(extendedData.components),
-      holes: this.convertHoles(extendedData.holes),
-      keepouts: this.convertKeepouts(extendedData.keepouts),
-      layers: this.convertLayers(extendedData.layers),
-      layerStackup: this.convertLayerStackup(extendedData.layerStackup)
-    };
-  }
-  
-  /**
-   * 检查是否为旧版ExportSourceData接口
-   * 
-   * @param data - 待检查的数据
-   * @returns 是否为旧版接口
-   * 
-   * @remarks
-   * DESIGN: 通过特征检测判断数据格式版本
-   */
-  private isLegacyExportSourceData(data: any): data is LegacyExportSourceData {
-    // DESIGN: 简单的类型检查：新接口的组件有pins属性，旧接口没有
-    if (data.components && data.components.length > 0) {
-      const firstComponent = data.components[0];
-      // DESIGN: 如果有pins属性，说明是新接口
-      return !firstComponent.pins;
-    }
-    return true; // DESIGN: 默认认为是旧接口
-  }
-  
-  /**
-   * 转换组件数据
-   * 
-   * @param components - 新格式组件数据
-   * @returns 旧格式组件数据
-   */
-  private convertComponents(components?: ComponentData[]): LegacyComponentData[] | undefined {
-    if (!components) return undefined;
-    
-    return components.map(comp => ({
-      refDes: comp.refDes,
-      partNumber: comp.partNumber,
-      packageName: comp.packageName,
-      position: {
-        x: comp.position.x,
-        y: comp.position.y,
-        z: comp.position.z,
-        rotation: comp.position.rotation
-      },
-      dimensions: comp.dimensions,
-      layer: comp.layer,
-      isMechanical: comp.isMechanical,
-      electrical: comp.electrical,
-      thermal: comp.thermal,
-      model3D: comp.model3D,
-      pins: comp.pins,
-      properties: comp.properties
-    }));
-  }
-  
-  /**
-   * 转换孔数据
-   * 
-   * @param holes - 新格式孔数据
-   * @returns 旧格式孔数据
-   */
-  private convertHoles(holes?: HoleData[]): LegacyHoleData[] | undefined {
-    if (!holes) return undefined;
-    
-    return holes.map(hole => ({
-      id: hole.id,
-      name: hole.id,
-      position: hole.position,
-      diameter: hole.diameter,
-      viaType: this.mapHoleTypeToViaType(hole.type, hole.viaType),
-      startLayer: hole.startLayer || 'L1',
-      endLayer: hole.endLayer || 'L4',
-      padDiameter: hole.padDiameter,
-      antiPadDiameter: hole.antiPadDiameter,
-      netName: hole.netName,
-      properties: hole.properties
-    }));
-  }
-  
-  /**
-   * 映射孔类型到过孔类型
-   * 
-   * @param type - 新格式孔类型
-   * @param viaType - 过孔子类型
-   * @returns 旧格式过孔类型
-   */
-  private mapHoleTypeToViaType(type: 'plated' | 'non-plated', viaType?: string): 'plated' | 'non-plated' | 'filled' | 'micro' {
-    if (viaType) {
-      switch (viaType) {
-        case 'through': return 'plated';
-        case 'blind': return 'plated';
-        case 'buried': return 'plated';
-        case 'micro': return 'micro';
-        default: return type;
-      }
-    }
-    return type;
-  }
-  
-  /**
-   * 转换禁止区数据
-   * 
-   * @param keepouts - 新格式禁止区数据
-   * @returns 旧格式禁止区数据
-   */
-  private convertKeepouts(keepouts?: KeepoutData[]): LegacyKeepoutData[] | undefined {
-    if (!keepouts) return undefined;
-    
-    return keepouts.map(keepout => ({
-      id: keepout.id,
-      name: keepout.id,
-      constraintType: this.mapKeepoutType(keepout.type),
-      purpose: keepout.purpose || 'other',
-      shape: {
-        type: keepout.geometry.type,
-        points: keepout.geometry.points || [],
-        radius: keepout.geometry.radius
-      },
-      height: keepout.height ? {
-        min: keepout.height.min,
-        max: keepout.height.max === 'infinity' ? 'infinity' : keepout.height.max
-      } : undefined,
-      layer: keepout.layers[0] || 'ALL',
-      enabled: keepout.enabled !== false,
-      properties: keepout.properties
-    }));
-  }
-  
-  /**
-   * 映射禁止区类型
-   * 
-   * @param type - 新格式禁止区类型
-   * @returns 旧格式约束类型
-   */
-  private mapKeepoutType(type: string): 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other' {
-    switch (type) {
-      case 'trace': return 'route';
-      case 'component': return 'component';
-      case 'via': return 'via';
-      case 'testpoint': return 'testpoint';
-      case 'thermal': return 'thermal';
-      default: return 'other';
-    }
-  }
-  
-  /**
-   * 转换层数据
-   * 
-   * @param layers - 新格式层数据
-   * @returns 旧格式层数据
-   */
-  private convertLayers(layers?: LayerData[]): LegacyLayerData[] | undefined {
-    if (!layers) return undefined;
-    
-    return layers.map(layer => ({
-      id: layer.id,
-      name: layer.name,
-      type: layer.type,
-      thickness: layer.thickness,
-      material: layer.material,
-      copperWeight: layer.copperWeight,
-      dielectricConstant: layer.dielectricConstant,
-      properties: layer.properties
-    }));
-  }
-  
-  /**
-   * 转换层叠结构数据
-   * 
-   * @param layerStackup - 新格式层叠结构数据
-   * @returns 旧格式层叠结构数据
-   */
-  private convertLayerStackup(layerStackup?: LayerStackupData): LegacyLayerStackupData | undefined {
-    if (!layerStackup) return undefined;
-    
-    return {
-      id: layerStackup.id,
-      name: layerStackup.name,
-      totalThickness: layerStackup.totalThickness,
-      layers: layerStackup.layers.map(layer => ({
-        layerId: layer.layerId,
-        position: layer.position,
-        thickness: layer.thickness
-      }))
-    };
-  }
+
   
   /**
    * 合并配置选项
@@ -707,7 +641,7 @@ export class IDXExporter {
 export { GlobalUnit } from '../types/core';
 export type { IDXExportConfig, ExportResult } from '../types/core';
 
-// DESIGN: 导出新的数据模型类型（推荐使用）
+// DESIGN: 导出新的数据模型类型
 export type { 
   ComponentData,
   HoleData,
@@ -724,14 +658,4 @@ export type {
   LayerStackupEntry,
   BrowserExportResult,
   XMLCommentConfig
-} from '../types/exporter/idx-exporter';
-
-// DESIGN: 导出遗留类型以保持向后兼容性
-export type {
-  LegacyComponentData,
-  LegacyHoleData,
-  LegacyKeepoutData,
-  LegacyLayerData,
-  LegacyLayerStackupData,
-  LegacyExportSourceData
 } from '../types/exporter/idx-exporter';
