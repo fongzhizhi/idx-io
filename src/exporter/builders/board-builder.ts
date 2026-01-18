@@ -1,22 +1,53 @@
 // ============= src/exporter/builders/board-builder.ts =============
 
 // # PCB板构建器
-// DESIGN: 支持多种板类型：刚性板、柔性板、加强筋区域等
-// REF: IDXv4.5规范第6.1节，特别是2.5D几何表示
+// DESIGN: 支持两种板子建模类型：BOARD_OUTLINE 和 BOARD_AREA_RIGID
+// REF: IDXv4.5规范第46-61页，板子建模详细说明
 // BUSINESS: 板子是所有其他元素的容器，必须首先构建
 
+// ## 板子类型说明
+// 
+// ### BOARD_OUTLINE（简单板）
+// - 用途：描述整个PCB板的外部轮廓和整体厚度
+// - 特点：
+//   * 使用LowerBound/UpperBound定义绝对Z范围
+//   * 通常LowerBound=0, UpperBound=厚度
+//   * 没有AssembleToName属性
+//   * 适用于单层板或不需要分层详细信息的板子
+// 
+// ### BOARD_AREA_RIGID（刚性区域）
+// - 用途：描述板子内部的一个区域，该区域使用特定的层堆叠
+// - 特点：
+//   * 必须通过AssembleToName关联到一个层堆叠（Layer Stackup）
+//   * 几何形状定义该区域的XY范围
+//   * Z范围由关联的层堆叠决定
+//   * 用于多层板、刚柔结合板的不同区域
+// 
+// ## 选择规则
+// - 简单板，无详细层信息 → BOARD_OUTLINE
+// - 多层板，需要详细层信息 → BOARD_AREA_RIGID + LAYER_STACKUP
+// - 刚柔结合板 → BOARD_AREA_RIGID + BOARD_AREA_FLEXIBLE
+// - 有不同厚度区域 → 多个BOARD_AREA_*区域
+
 import { 
-  BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationResult 
+  BaseBuilder, BuildError, ValidationResult 
 } from './base-builder';
 import {
-  EDMDItem, ItemType, GeometryType, 
-  EDMDShapeElement, ShapeElementType,
-  CartesianPoint, EDMDPolyLine, EDMDCurveSet2D,
-  EDMDUserSimpleProperty
+  EDMDItem, ItemType, StandardGeometryType, 
+  CartesianPoint, EDMDCurveSet2D,
+  EDMDUserSimpleProperty, StratumType, StratumSurfaceDesignation,
+  ShapeElementType
 } from '../../types/core';
 import { LayerStackupData } from '../../types/data-models';
 
-// # 输入数据类型定义
+// # Z轴参考类型定义
+/**
+ * Z轴参考点类型
+ * 
+ * @remarks
+ * 定义板子厚度的参考点位置
+ */
+export type ZAxisReference = 'BOTTOM' | 'CENTER' | 'TOP';
 /**
  * PCB板数据接口
  * 
@@ -226,19 +257,30 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    * 
    * @remarks
    * DESIGN: 根据IDX v4.5规范创建正确的Item层次结构
-   * - 创建single类型的Item定义几何
-   * - 创建assembly类型的Item包含ItemInstance
-   * BUSINESS: 符合规范第19页和45-46页的要求
+   * - 根据是否有层叠结构决定使用 BOARD_OUTLINE 还是 BOARD_AREA_RIGID
+   * - BOARD_OUTLINE: 简单板，无层叠结构，无 AssembleToName
+   * - BOARD_AREA_RIGID: 复杂板的区域，有层叠结构，必须有 AssembleToName
+   * BUSINESS: 符合规范第46-61页的板子建模要求
    * 
    * @param processedData - 处理后的板子数据
    * @returns PCB板EDMDItem（返回assembly类型，single类型通过geometricElements传递）
    */
   protected async construct(processedData: ProcessedBoardData): Promise<EDMDItem> {
-    // # 生成独立的几何元素
-    const geometryData = this.createIndependentGeometry(processedData);
+    // # 1. 根据是否有层叠结构决定板子类型
+    const hasLayerStackup = processedData.layerStackup && processedData.layerStackup.layers.length > 0;
+    const boardType: StandardGeometryType.BOARD_OUTLINE | StandardGeometryType.BOARD_AREA_RIGID = 
+      hasLayerStackup ? StandardGeometryType.BOARD_AREA_RIGID : StandardGeometryType.BOARD_OUTLINE;
     
-    // # 1. 创建single类型的Item（定义几何）
-    const boardPrefix = `BOARD_${processedData.id.replace(/[^A-Z0-9]/gi, '_').toUpperCase()}`;
+    // # 2. 验证层堆叠有效性（如果存在）
+    if (hasLayerStackup) {
+      this.validateLayerStackup(processedData.layerStackup!);
+    }
+    
+    // # 3. 生成独立的几何元素（根据板子类型决定是否使用 Stratum）
+    const geometryData = this.createIndependentGeometry(processedData, boardType);
+    
+    // # 4. 创建single类型的Item（定义几何）
+    const boardPrefix = this.generateValidId(`BOARD_${processedData.id}`);
     const boardDefinitionItem: EDMDItem = {
       id: `${boardPrefix}_DEF_001`,
       ItemType: ItemType.SINGLE,
@@ -249,13 +291,13 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       BaseLine: true // 在基线文件中，定义项也应该是基线的一部分
     };
     
-    // # 2. 创建assembly类型的Item（包含ItemInstance）
+    // # 5. 创建assembly类型的Item（包含ItemInstance）
     const boardAssemblyItem: EDMDItem = {
       id: `${boardPrefix}_ASSY_001`,
       ItemType: ItemType.ASSEMBLY,
       Name: processedData.name,
-      Description: `PCB板: ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`,
-      geometryType: this.config.useSimplified ? GeometryType.BOARD_OUTLINE as any : undefined,
+      Description: `PCB板 (${boardType}): ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`,
+      geometryType: boardType, // 使用枚举类型
       Identifier: this.createIdentifier('BOARD_ASSY', processedData.id),
       
       // # ItemInstance - 引用single类型的Item
@@ -279,20 +321,23 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       }]
     };
     
-    // # 根据是否有层叠结构决定AssembleToName
-    if (processedData.layerStackup && processedData.layerStackup.layers.length > 0) {
-      // 有层叠结构时，引用底层作为参考表面
-      const bottomLayer = this.getBottomLayer(processedData.layerStackup);
-      if (bottomLayer) {
-        boardAssemblyItem.AssembleToName = bottomLayer.layerId;
+    // # 6. 根据板子类型设置 AssembleToName
+    if (boardType === StandardGeometryType.BOARD_AREA_RIGID) {
+      // BOARD_AREA_RIGID 必须关联到层堆叠
+      if (hasLayerStackup) {
+        // 关联到层堆叠的引用名称
+        boardAssemblyItem.AssembleToName = this.getLayerStackupReferenceName(processedData.layerStackup!);
+      } else {
+        // 这种情况不应该发生，但为了安全起见
+        throw new BuildError('BOARD_AREA_RIGID 类型必须有层叠结构');
       }
     }
-    // 没有层叠结构时，不设置AssembleToName（符合IDX v4.5指南4.1.1节）
+    // BOARD_OUTLINE 不设置 AssembleToName（符合IDX v4.5规范第46-48页）
     
-    // # 添加用户属性到assembly项
-    boardAssemblyItem.UserProperties = this.createBoardProperties(processedData);
+    // # 7. 添加用户属性到assembly项
+    boardAssemblyItem.UserProperties = this.createBoardProperties(processedData, boardType);
     
-    // # 将几何元素和定义项附加到assembly项上（临时存储，DatasetAssembler会提取）
+    // # 8. 将几何元素和定义项附加到assembly项上（临时存储，DatasetAssembler会提取）
     (boardAssemblyItem as any).geometricElements = geometryData.geometricElements;
     (boardAssemblyItem as any).curveSet2Ds = geometryData.curveSet2Ds;
     (boardAssemblyItem as any).shapeElements = geometryData.shapeElements;
@@ -342,25 +387,120 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   }
   
   // ============= 私有辅助方法 =============
+  
+  /**
+   * 验证层堆叠有效性
+   * 
+   * @param layerStackup - 层叠结构数据
+   */
+  private validateLayerStackup(layerStackup: LayerStackupData): void {
+    if (!layerStackup.id && !layerStackup.name) {
+      throw new BuildError('层堆叠必须有ID或名称');
+    }
+    
+    // 验证层定义完整性
+    layerStackup.layers.forEach((layer, index) => {
+      if (layer.thickness <= 0) {
+        throw new BuildError(`层 ${index} 厚度必须大于0: ${layer.thickness}`);
+      }
+      
+      if (!layer.layerId) {
+        throw new BuildError(`层 ${index} 缺少layerId`);
+      }
+      
+      if (!layer.material) {
+        this.context.addWarning('LAYER_MISSING_MATERIAL', 
+          `层 ${layer.layerId} 缺少材料信息，将使用默认值`);
+      }
+    });
+    
+    // 验证总厚度一致性
+    const calculatedThickness = layerStackup.layers.reduce((sum, layer) => sum + layer.thickness, 0);
+    if (layerStackup.totalThickness && 
+        Math.abs(calculatedThickness - layerStackup.totalThickness) > 0.001) {
+      this.context.addWarning('THICKNESS_MISMATCH', 
+        `层堆叠总厚度不匹配: 计算值=${calculatedThickness}, 声明值=${layerStackup.totalThickness}`);
+    }
+  }
+  
+  /**
+   * 生成有效的XML ID
+   * 
+   * @param base - 基础名称
+   * @param suffix - 可选后缀
+   * @returns 有效的XML ID
+   */
+  private generateValidId(base: string, suffix?: string): string {
+    // 1. 移除无效字符，只保留字母、数字、下划线、连字符、点
+    let validId = base.replace(/[^A-Za-z0-9_\-\.]/g, '_');
+    
+    // 2. 确保不以数字开头（XML ID要求）
+    if (/^\d/.test(validId)) {
+      validId = `ID_${validId}`;
+    }
+    
+    // 3. 限制长度（避免过长的ID）
+    if (validId.length > 50) {
+      validId = validId.substring(0, 50);
+    }
+    
+    // 4. 添加后缀
+    if (suffix) {
+      validId = `${validId}_${suffix}`;
+    }
+    
+    // 5. 确保不为空
+    if (!validId || validId === '_') {
+      validId = 'GENERATED_ID';
+    }
+    
+    return validId;
+  }
+  
+  /**
+   * 计算Z轴边界
+   * 
+   * @param boardData - 板子数据
+   * @param zReference - Z轴参考点
+   * @returns Z轴边界
+   */
+  private getZBounds(
+    boardData: ProcessedBoardData, 
+    zReference: ZAxisReference = 'BOTTOM'
+  ): { lower: number; upper: number } {
+    const thickness = boardData.outline.thickness;
+    
+    switch (zReference) {
+      case 'BOTTOM':
+        return { lower: 0, upper: thickness };
+      case 'TOP':
+        return { lower: -thickness, upper: 0 };
+      case 'CENTER':
+        const halfThickness = thickness / 2;
+        return { lower: -halfThickness, upper: halfThickness };
+      default:
+        return { lower: 0, upper: thickness };
+    }
+  }
   /**
    * 创建独立的几何元素
    * 
    * @param processedData - 处理后的板子数据
+   * @param boardType - 板子类型，决定是否使用 Stratum
    * @returns 几何元素数据
    */
-  private createIndependentGeometry(processedData: ProcessedBoardData): {
+  private createIndependentGeometry(
+    processedData: ProcessedBoardData, 
+    boardType: StandardGeometryType.BOARD_OUTLINE | StandardGeometryType.BOARD_AREA_RIGID
+  ): {
     geometricElements: any[];
     curveSet2Ds: any[];
     shapeElements: any[];
     stratumElements: any[];
     shapeElementId: string;
   } {
-    const geometricElements: any[] = [];
-    const curveSet2Ds: any[] = [];
-    const shapeElements: any[] = [];
-    
-    // # 生成唯一的板子前缀
-    const boardPrefix = `BOARD_${processedData.id.replace(/[^A-Z0-9]/gi, '_').toUpperCase()}`;
+    // # 生成有效的板子前缀
+    const boardPrefix = this.generateValidId(`BOARD_${processedData.id}`);
     
     // # 确保轮廓点为逆时针方向（外轮廓标准）
     const orderedPoints = this.ensureCounterClockwiseOrder(processedData.outline.points);
@@ -368,12 +508,15 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     // # 检查是否为圆形板子
     const circleInfo = this.detectCircularBoard(orderedPoints);
     
+    // # 根据板子类型决定是否使用 Stratum
+    const useStratum = boardType === StandardGeometryType.BOARD_AREA_RIGID;
+    
     if (circleInfo) {
       // 使用圆形几何表示（更高效）
-      return this.createCircularGeometry(processedData, boardPrefix, circleInfo);
+      return this.createCircularGeometry(processedData, boardPrefix, circleInfo, useStratum);
     } else {
       // 使用多边形几何表示
-      return this.createPolygonGeometry(processedData, boardPrefix, orderedPoints);
+      return this.createPolygonGeometry(processedData, boardPrefix, orderedPoints, useStratum);
     }
   }
   
@@ -417,11 +560,17 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   
   /**
    * 创建圆形几何元素
+   * 
+   * @param processedData - 处理后的板子数据
+   * @param boardPrefix - 板子前缀
+   * @param circleInfo - 圆形信息
+   * @param useStratum - 是否使用 Stratum（BOARD_AREA_RIGID 时为 true）
    */
   private createCircularGeometry(
     processedData: ProcessedBoardData,
     boardPrefix: string,
-    circleInfo: { centerX: number; centerY: number; radius: number }
+    circleInfo: { centerX: number; centerY: number; radius: number },
+    useStratum: boolean
   ) {
     const geometricElements: any[] = [];
     const curveSet2Ds: any[] = [];
@@ -448,12 +597,13 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     
     // 3. 创建曲线集（CurveSet2D）
     const curveSetId = `${boardPrefix}_CURVESET`;
+    const zBounds = this.getZBounds(processedData);
     curveSet2Ds.push({
       id: curveSetId,
       'xsi:type': 'd2:EDMDCurveSet2d',
       'pdm:ShapeDescriptionType': 'GeometricModel',
-      'd2:LowerBound': { 'property:Value': '0' },
-      'd2:UpperBound': { 'property:Value': processedData.outline.thickness.toString() },
+      'd2:LowerBound': { 'property:Value': zBounds.lower.toString() },
+      'd2:UpperBound': { 'property:Value': zBounds.upper.toString() },
       'd2:DetailedGeometricModelElement': circleId
     });
     
@@ -466,32 +616,45 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:DefiningShape': curveSetId
     });
     
-    // 5. 创建Stratum对象（IDX v4.5规范要求）
-    const stratumId = `${boardPrefix}_STRATUM`;
-    stratumElements.push({
-      id: stratumId,
-      'xsi:type': 'pdm:EDMDStratum',
-      'pdm:ShapeElement': shapeElementId,
-      'pdm:StratumType': 'DesignLayerStratum',
-      'pdm:StratumSurfaceDesignation': 'PrimarySurface'
-    });
+    let finalShapeElementId = shapeElementId;
+    
+    // 5. 根据板子类型决定是否创建 Stratum 对象
+    if (useStratum) {
+      // BOARD_AREA_RIGID: 创建 Stratum 对象
+      const stratumId = `${boardPrefix}_STRATUM`;
+      stratumElements.push({
+        id: stratumId,
+        'xsi:type': 'pdm:EDMDStratum',
+        'pdm:ShapeElement': shapeElementId,
+        'pdm:StratumType': StratumType.DESIGN_LAYER_STRATUM,
+        'pdm:StratumSurfaceDesignation': StratumSurfaceDesignation.PRIMARY_SURFACE
+      });
+      finalShapeElementId = stratumId; // 返回 Stratum ID
+    }
+    // BOARD_OUTLINE: 直接使用 ShapeElement，不创建 Stratum
     
     return {
       geometricElements,
       curveSet2Ds,
       shapeElements,
       stratumElements,
-      shapeElementId: stratumId  // 返回Stratum ID而非ShapeElement ID
+      shapeElementId: finalShapeElementId
     };
   }
   
   /**
    * 创建多边形几何元素
+   * 
+   * @param processedData - 处理后的板子数据
+   * @param boardPrefix - 板子前缀
+   * @param orderedPoints - 排序后的轮廓点
+   * @param useStratum - 是否使用 Stratum（BOARD_AREA_RIGID 时为 true）
    */
   private createPolygonGeometry(
     processedData: ProcessedBoardData,
     boardPrefix: string,
-    orderedPoints: CartesianPoint[]
+    orderedPoints: CartesianPoint[],
+    useStratum: boolean
   ) {
     const geometricElements: any[] = [];
     const curveSet2Ds: any[] = [];
@@ -524,12 +687,13 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     
     // 3. 创建曲线集（CurveSet2D）
     const curveSetId = `${boardPrefix}_CURVESET`;
+    const zBounds = this.getZBounds(processedData);
     curveSet2Ds.push({
       id: curveSetId,
       'xsi:type': 'd2:EDMDCurveSet2d',
       'pdm:ShapeDescriptionType': 'GeometricModel',
-      'd2:LowerBound': { 'property:Value': '0' },
-      'd2:UpperBound': { 'property:Value': processedData.outline.thickness.toString() },
+      'd2:LowerBound': { 'property:Value': zBounds.lower.toString() },
+      'd2:UpperBound': { 'property:Value': zBounds.upper.toString() },
       'd2:DetailedGeometricModelElement': polyLineId
     });
     
@@ -542,22 +706,29 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:DefiningShape': curveSetId
     });
     
-    // 5. 创建Stratum对象（IDX v4.5规范要求）
-    const stratumId = `${boardPrefix}_STRATUM`;
-    stratumElements.push({
-      id: stratumId,
-      'xsi:type': 'pdm:EDMDStratum',
-      'pdm:ShapeElement': shapeElementId,
-      'pdm:StratumType': 'DesignLayerStratum',
-      'pdm:StratumSurfaceDesignation': 'PrimarySurface'
-    });
+    let finalShapeElementId = shapeElementId;
+    
+    // 5. 根据板子类型决定是否创建 Stratum 对象
+    if (useStratum) {
+      // BOARD_AREA_RIGID: 创建 Stratum 对象
+      const stratumId = `${boardPrefix}_STRATUM`;
+      stratumElements.push({
+        id: stratumId,
+        'xsi:type': 'pdm:EDMDStratum',
+        'pdm:ShapeElement': shapeElementId,
+        'pdm:StratumType': StratumType.DESIGN_LAYER_STRATUM,
+        'pdm:StratumSurfaceDesignation': StratumSurfaceDesignation.PRIMARY_SURFACE
+      });
+      finalShapeElementId = stratumId; // 返回 Stratum ID
+    }
+    // BOARD_OUTLINE: 直接使用 ShapeElement，不创建 Stratum
     
     return {
       geometricElements,
       curveSet2Ds,
       shapeElements,
       stratumElements,
-      shapeElementId: stratumId  // 返回Stratum ID而非ShapeElement ID
+      shapeElementId: finalShapeElementId
     };
   }
   
@@ -587,45 +758,63 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   }
   
   /**
-   * 创建板子用户属性（IDX v4.5规范简化版本）
+   * 创建板子用户属性（使用IDX标准属性）
    * 
    * @param processedData - 处理后的板子数据
+   * @param boardType - 板子类型枚举
    * @returns 用户属性数组
    */
-  private createBoardProperties(processedData: ProcessedBoardData): EDMDUserSimpleProperty[] {
-    // 根据IDX协议专家建议，只保留必要的标准属性
-    const properties: EDMDUserSimpleProperty[] = [
-      // 1. 厚度 - 制造必需
+  private createBoardProperties(
+    processedData: ProcessedBoardData, 
+    boardType: StandardGeometryType.BOARD_OUTLINE | StandardGeometryType.BOARD_AREA_RIGID
+  ): EDMDUserSimpleProperty[] {
+    // 使用IDX标准属性名（参考规范表11，第140-141页）
+    const standardProperties: EDMDUserSimpleProperty[] = [
+      // 1. 厚度 - 制造必需的标准属性
       {
         Key: {
           SystemScope: this.config.creatorSystem,
           ObjectName: 'THICKNESS'
         },
         Value: processedData.outline.thickness.toString()
-      },
-      // 2. 材质 - 制造必需
-      {
+      }
+    ];
+    
+    // 2. 材质 - 如果是标准材质，添加MATERIAL属性
+    const material = processedData.outline.material || 'FR4';
+    const standardMaterials = ['FR4', 'FR408', 'ISOLA', 'LCP', 'ROGERS', 'POLYIMIDE'];
+    if (standardMaterials.includes(material.toUpperCase())) {
+      standardProperties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
           ObjectName: 'MATERIAL'
         },
-        Value: processedData.outline.material || 'FR4'
-      }
-    ];
+        Value: material
+      });
+    }
     
-    // 3. 板子形状 - 几何识别必需
+    // 3. 板子类型 - 用于区分建模方式
+    standardProperties.push({
+      Key: {
+        SystemScope: this.config.creatorSystem,
+        ObjectName: 'MODELING_TYPE'
+      },
+      Value: boardType // 直接使用枚举值
+    });
+    
+    // 4. 几何特征 - 用于制造成本计算
     const circleInfo = this.detectCircularBoard(processedData.outline.points);
     if (circleInfo) {
-      properties.push({
+      // 圆形板子
+      standardProperties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
-          ObjectName: 'BOARD_SHAPE'
+          ObjectName: 'GEOMETRY_TYPE'
         },
         Value: 'CIRCULAR'
       });
       
-      // 圆形板子的直径
-      properties.push({
+      standardProperties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
           ObjectName: 'DIAMETER'
@@ -633,17 +822,18 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
         Value: (circleInfo.radius * 2).toString()
       });
     } else {
-      properties.push({
+      // 多边形板子
+      standardProperties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
-          ObjectName: 'BOARD_SHAPE'
+          ObjectName: 'GEOMETRY_TYPE'
         },
         Value: 'POLYGON'
       });
       
-      // 多边形板子的面积（制造成本计算必需）
+      // 计算面积（制造成本计算必需）
       const area = this.calculatePolygonArea(processedData.outline.points);
-      properties.push({
+      standardProperties.push({
         Key: {
           SystemScope: this.config.creatorSystem,
           ObjectName: 'BOARD_AREA'
@@ -652,59 +842,36 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       });
     }
     
-    // 4. 只添加最核心的自定义属性（制造相关）
+    // 5. 处理自定义属性（使用前缀区分）
+    const customProperties: EDMDUserSimpleProperty[] = [];
     if (processedData.customProperties) {
-      const criticalProperties = ['MATERIAL', 'BOARD_TYPE', 'SURFACE_FINISH', 'COPPER_LAYERS'];
+      // 只添加制造相关的核心属性
+      const criticalProperties = ['SURFACE_FINISH', 'COPPER_LAYERS', 'BOARD_CLASS', 'IPC_CLASS'];
       
       Object.entries(processedData.customProperties).forEach(([key, value]) => {
         if (criticalProperties.includes(key)) {
-          if (key === 'MATERIAL') {
-            // 更新现有的MATERIAL属性
-            const materialProp = properties.find(p => p.Key.ObjectName === 'MATERIAL');
-            if (materialProp) {
-              materialProp.Value = String(value);
-            }
-          } else {
-            // 添加其他核心属性
-            properties.push({
-              Key: {
-                SystemScope: this.config.creatorSystem,
-                ObjectName: key
-              },
-              Value: String(value)
-            });
-          }
+          customProperties.push({
+            Key: {
+              SystemScope: this.config.creatorSystem,
+              ObjectName: key
+            },
+            Value: String(value)
+          });
+        } else {
+          // 其他属性使用CUSTOM_前缀
+          const prefixedKey = key.startsWith('CUSTOM_') ? key : `CUSTOM_${key}`;
+          customProperties.push({
+            Key: {
+              SystemScope: this.config.creatorSystem,
+              ObjectName: prefixedKey
+            },
+            Value: String(value)
+          });
         }
       });
     }
     
-    return properties;
-  }
-  
-  /**
-   * 计算板子边界框尺寸
-   */
-  private calculateBoardDimensions(points: CartesianPoint[]): { width: number; height: number } {
-    if (points.length === 0) {
-      return { width: 0, height: 0 };
-    }
-    
-    let minX = points[0].X;
-    let maxX = points[0].X;
-    let minY = points[0].Y;
-    let maxY = points[0].Y;
-    
-    for (const point of points) {
-      minX = Math.min(minX, point.X);
-      maxX = Math.max(maxX, point.X);
-      minY = Math.min(minY, point.Y);
-      maxY = Math.max(maxY, point.Y);
-    }
-    
-    return {
-      width: this.geometryUtils.roundValue(maxX - minX),
-      height: this.geometryUtils.roundValue(maxY - minY)
-    };
+    return [...standardProperties, ...customProperties];
   }
   
   /**
@@ -725,6 +892,27 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   }
   
   /**
+   * 获取层叠结构的引用名称
+   * 
+   * @param layerStackup - 层叠结构数据
+   * @returns 层堆叠的引用名称
+   */
+  private getLayerStackupReferenceName(layerStackup: LayerStackupData): string {
+    // 优先使用明确定义的id
+    if (layerStackup.id) {
+      return layerStackup.id;
+    }
+    
+    // 如果没有id，使用名称
+    if (layerStackup.name) {
+      return layerStackup.name.replace(/[^A-Z0-9]/gi, '_').toUpperCase();
+    }
+    
+    // 最后使用默认名称
+    return 'PRIMARY_STACKUP';
+  }
+  
+  /**
    * 获取层叠结构中的底层
    * 
    * @param layerStackup - 层叠结构数据
@@ -737,22 +925,6 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     
     // 按位置排序，找到最底层（position最小的）
     const sortedLayers = [...layerStackup.layers].sort((a, b) => a.position - b.position);
-    return sortedLayers[0];
-  }
-  
-  /**
-   * 获取层叠结构中的顶层
-   * 
-   * @param layerStackup - 层叠结构数据
-   * @returns 顶层信息，如果没有找到则返回undefined
-   */
-  private getTopLayer(layerStackup: LayerStackupData) {
-    if (!layerStackup.layers || layerStackup.layers.length === 0) {
-      return undefined;
-    }
-    
-    // 按位置排序，找到最顶层（position最大的）
-    const sortedLayers = [...layerStackup.layers].sort((a, b) => b.position - a.position);
     return sortedLayers[0];
   }
 }
