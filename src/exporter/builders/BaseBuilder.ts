@@ -9,7 +9,8 @@ import {
   EDMDObject, EDMDLengthProperty, CartesianPoint, 
   StandardGeometryType, ItemType, GlobalUnit, EDMDItem,
   EDMDIdentifier, EDMDCurveSet2D, EDMDPolyLine,
-  EDMDCircleCenter
+  EDMDCircleCenter, EDMDStratumTechnology, TechnologyType, LayerPurpose,
+  EDMDCurve
 } from '../../types/core';
 
 // # 基础构建器接口定义
@@ -76,24 +77,36 @@ export interface BuilderContext {
   currentBuildingItem?: any;
 }
 
+// ============= 类型定义增强 =============
+
 /**
- * 构建器输入验证结果
+ * 详细几何模型元素类型
  * 
- * @example
- * ```typescript
- * // TEST_CASE: 验证通过的组件数据
- * const result: ValidationResult<ComponentData> = {
- *   valid: true,
- *   data: componentData,
- *   warnings: []
- * };
- * ```
+ * @remarks
+ * 根据IDXv4.5规范第47-48页，支持引用ID或直接定义
+ */
+export type EDMDDetailedGeometricModelElement = 
+  | { 'd2:DetailedGeometricModelElement': string }  // 引用ID
+  | { 'd2:Line'?: any }                            // 直接定义线
+  | { 'd2:PolyLine'?: any }                        // 直接定义多边形
+  | { 'd2:Circle'?: any }                          // 直接定义圆
+  | string;                                        // 简单ID引用
+
+/**
+ * 验证结果接口增强
+ * 
+ * @remarks
+ * 增加更详细的验证信息和上下文
  */
 export interface ValidationResult<T> {
   valid: boolean;
   data?: T;
   warnings: string[];
   errors: string[];
+  /** 验证阶段信息 */
+  stage?: 'input' | 'geometry' | 'constraints';
+  /** 验证时间戳 */
+  timestamp?: string;
 }
 
 // ============= 基础构建器抽象类 =============
@@ -126,6 +139,9 @@ export abstract class BaseBuilder<TInput, TOutput> {
   protected shapeCache: Map<string, any> = new Map();
   protected itemCache: Map<string, any> = new Map();
   
+  // ## ID生成计数器
+  private idCounters: Map<string, number> = new Map();
+  
   // # 构造函数
   /**
    * 创建基础构建器实例
@@ -157,7 +173,7 @@ export abstract class BaseBuilder<TInput, TOutput> {
     this.geometryUtils = new GeometryUtils({
       defaultUnit: config.defaultUnit,
       precision: config.precision || 6
-    });
+    }, this);
   }
   
   // ============= 模板方法：标准构建流程 =============
@@ -187,7 +203,10 @@ export abstract class BaseBuilder<TInput, TOutput> {
       if (!validation.valid) {
         const errorMsg = `输入验证失败: ${validation.errors.join(', ')}`;
         this.context.addError('VALIDATION_FAILED', errorMsg);
-        throw new ValidationError(errorMsg);
+        throw new ValidationError(errorMsg, validation.errors, {
+          stage: 'input',
+          timestamp: new Date().toISOString()
+        });
       }
       
       // --- 输出验证警告 ---
@@ -221,7 +240,12 @@ export abstract class BaseBuilder<TInput, TOutput> {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const buildError = new BuildError(
         `构建过程中发生未预期错误: ${errorMessage}`,
-        { originalError: error instanceof Error ? error : undefined, input }
+        { 
+          originalError: error instanceof Error ? error : undefined, 
+          input,
+          stage: 'construct',
+          timestamp: new Date().toISOString()
+        }
       );
       this.context.addError('UNEXPECTED_ERROR', buildError.message);
       throw buildError;
@@ -281,10 +305,11 @@ export abstract class BaseBuilder<TInput, TOutput> {
   
   // ============= 通用工具方法 =============
   /**
-   * 生成IDX项目ID
+   * 生成确定性ID
    * 
    * @remarks
-   * IDX要求ID在文档中唯一，使用类型前缀确保唯一性
+   * 使用计数器生成可预测的ID，便于测试和调试
+   * DESIGN: 避免使用随机数，确保ID的可重现性
    * 
    * @param type - 项目类型（如'COMPONENT', 'HOLE'等）
    * @param identifier - 可选标识符（如元件位号）
@@ -299,13 +324,78 @@ export abstract class BaseBuilder<TInput, TOutput> {
    */
   protected generateItemId(type: string, identifier?: string): string {
     const prefix = this.config.idPrefix ? `${this.config.idPrefix}_${type}` : type;
-    const seq = this.context.getNextSequence(type);
+    
+    // 使用计数器而不是随机数
+    const counterKey = identifier ? `${type}_${identifier}` : type;
+    const currentCount = this.idCounters.get(counterKey) || 0;
+    const nextCount = currentCount + 1;
+    this.idCounters.set(counterKey, nextCount);
     
     if (identifier) {
-      return `${prefix}_${identifier}_${seq.toString().padStart(3, '0')}`;
+      return `${prefix}_${identifier}_${nextCount.toString().padStart(3, '0')}`;
     }
     
-    return `${prefix}_${Date.now()}_${seq.toString().padStart(3, '0')}`;
+    return `${prefix}_${nextCount.toString().padStart(3, '0')}`;
+  }
+  
+  /**
+   * 生成确定性几何ID
+   * 
+   * @remarks
+   * 为几何元素生成可预测的ID
+   * 
+   * @param prefix - ID前缀
+   * @param seed - 可选种子值
+   * @returns 几何元素ID
+   */
+  protected generateGeometryId(prefix: string, seed?: string): string {
+    const counterKey = seed ? `${prefix}_${seed}` : prefix;
+    const currentCount = this.idCounters.get(counterKey) || 0;
+    const nextCount = currentCount + 1;
+    this.idCounters.set(counterKey, nextCount);
+    
+    return seed ? `${prefix}_${seed}_${nextCount}` : `${prefix}_${nextCount}`;
+  }
+  
+  /**
+   * 获取缓存的形状
+   * 
+   * @remarks
+   * 实现形状缓存机制，避免重复创建相同的几何
+   * PERFORMANCE: 大幅提升包含重复几何的PCB构建性能
+   * 
+   * @param cacheKey - 缓存键
+   * @param factory - 形状创建工厂函数
+   * @returns 缓存或新创建的形状
+   */
+  protected getCachedShape<T>(cacheKey: string, factory: () => T): T {
+    if (this.shapeCache.has(cacheKey)) {
+      this.context.addWarning('CACHE_HIT', `使用缓存的形状: ${cacheKey}`);
+      return this.shapeCache.get(cacheKey);
+    }
+    
+    const shape = factory();
+    this.shapeCache.set(cacheKey, shape);
+    return shape;
+  }
+  
+  /**
+   * 生成缓存键
+   * 
+   * @remarks
+   * 根据类型和参数生成唯一的缓存键
+   * 
+   * @param type - 形状类型
+   * @param params - 参数对象
+   * @returns 缓存键字符串
+   */
+  protected generateCacheKey(type: string, params: Record<string, any>): string {
+    // 对参数键进行排序，确保缓存键的一致性
+    const sortedParams = Object.keys(params)
+      .sort()
+      .map(key => `${key}=${JSON.stringify(params[key])}`)
+      .join('|');
+    return `${type}:${sortedParams}`;
   }
   
   /**
@@ -395,47 +485,139 @@ export abstract class BaseBuilder<TInput, TOutput> {
    * 
    * @remarks
    * 2.5D几何表示的核心：2D曲线 + Z轴范围
-   * REF: Section 7.1
+   * REF: IDXv4.5规范第47-48页，曲线集结构
+   * DESIGN: 修正协议符合性问题，使用正确的元素结构
    * 
    * @param lowerBound - Z轴下界
    * @param upperBound - Z轴上界
-   * @param curves - 2D曲线数组
+   * @param curves - 2D曲线数组或ID引用
    * @returns EDMDCurveSet2D对象
    */
   protected createCurveSet2D(
     lowerBound: number,
     upperBound: number,
-    curves: any[]
+    curves: Array<EDMDCurve | string>
   ): EDMDCurveSet2D {
-    // BUSINESS: 确保下界不大于上界
-    if (lowerBound > upperBound) {
-      throw new ValidationError(`曲线集Z轴范围无效：下界(${lowerBound})大于上界(${upperBound})`);
+    // # 验证Z轴范围
+    const zValidation = GeometryValidator.validateZRange(lowerBound, upperBound);
+    if (!zValidation.valid) {
+      throw new ValidationError(`曲线集Z轴范围验证失败: ${zValidation.errors.join(', ')}`, zValidation.errors, {
+        stage: 'geometry'
+      });
     }
     
     return {
-      id: this.context.generateId('CURVESET'),
-      ShapeDescriptionType: 'GeometricModel',
+      id: this.generateGeometryId('CURVESET'),
+      ShapeDescriptionType: 'GeometricModel' as const, // 使用字面量类型
       LowerBound: this.createLengthProperty(lowerBound),
       UpperBound: this.createLengthProperty(upperBound),
       DetailedGeometricModelElement: curves
     };
   }
   
+  /**
+   * 创建地层技术对象
+   * 
+   * @remarks
+   * 根据IDXv4.5规范第51页表4，为复杂板子创建StratumTechnology
+   * DESIGN: 修正协议符合性问题，添加缺失的StratumTechnology对象
+   * 
+   * @param technologyType - 技术类型
+   * @param layerPurpose - 层目的
+   * @returns EDMDStratumTechnology对象
+   */
+  protected createStratumTechnology(
+    technologyType: TechnologyType = TechnologyType.DESIGN,
+    layerPurpose: LayerPurpose = LayerPurpose.OTHERSIGNAL
+  ): EDMDStratumTechnology {
+    return {
+      id: this.generateGeometryId('STRATUM_TECH'),
+      TechnologyType: technologyType,
+      LayerPurpose: layerPurpose
+    };
+  }
+  
   // TODO(构建器负责人): 2024-03-20 添加形状缓存机制 [P1-IMPORTANT]
   // FIXME(构建器负责人): 2024-03-15 处理大型曲线集时的内存问题 [P0-URGENT]
+  
+  // ============= 测试支持方法 =============
+  
+  /**
+   * 清除缓存（测试用）
+   * 
+   * @remarks
+   * 用于测试时清理缓存状态
+   */
+  protected clearCaches(): void {
+    this.shapeCache.clear();
+    this.itemCache.clear();
+    this.idCounters.clear();
+  }
+  
+  /**
+   * 获取缓存统计信息（测试用）
+   * 
+   * @returns 缓存统计信息
+   */
+  protected getCacheStats(): {
+    shapeCache: number;
+    itemCache: number;
+    idCounters: number;
+  } {
+    return {
+      shapeCache: this.shapeCache.size,
+      itemCache: this.itemCache.size,
+      idCounters: this.idCounters.size
+    };
+  }
+  
+  /**
+   * 设置ID计数器（测试用）
+   * 
+   * @param type - 类型
+   * @param count - 计数值
+   */
+  protected setIdCounter(type: string, count: number): void {
+    this.idCounters.set(type, count);
+  }
 }
 
-// ============= 自定义错误类型 =============
+// ============= 增强的错误类型 =============
+
 /**
  * 构建器验证错误
  * 
  * @remarks
- * 用于表示输入数据验证失败
+ * 用于表示输入数据验证失败，包含详细的上下文信息
  */
 export class ValidationError extends Error {
-  constructor(message: string, public validationErrors?: string[]) {
+  constructor(
+    message: string, 
+    public validationErrors?: string[],
+    public context?: {
+      stage?: 'input' | 'geometry' | 'constraints';
+      itemId?: string;
+      timestamp?: string;
+    }
+  ) {
     super(message);
     this.name = 'ValidationError';
+    
+    // 添加时间戳
+    if (this.context) {
+      this.context.timestamp = new Date().toISOString();
+    }
+  }
+  
+  /** 转换为JSON格式，便于日志记录 */
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      validationErrors: this.validationErrors,
+      context: this.context,
+      timestamp: new Date().toISOString()
+    };
   }
 }
 
@@ -443,15 +625,286 @@ export class ValidationError extends Error {
  * 构建器构建错误
  * 
  * @remarks
- * 用于表示构建过程中发生的错误
+ * 用于表示构建过程中发生的错误，包含丰富的上下文信息
  */
 export class BuildError extends Error {
   constructor(
     message: string, 
-    public context?: { originalError?: Error; input?: any }
+    public context?: { 
+      originalError?: Error; 
+      input?: any;
+      stage?: 'validation' | 'preprocess' | 'construct' | 'postprocess';
+      itemId?: string;
+      geometryType?: string;
+      timestamp?: string;
+    }
   ) {
     super(message);
     this.name = 'BuildError';
+    
+    // 添加时间戳
+    if (this.context) {
+      this.context.timestamp = new Date().toISOString();
+    }
+    
+    // 保留堆栈跟踪
+    if (this.context?.originalError?.stack) {
+      this.stack = `${this.stack}\nCaused by: ${this.context.originalError.stack}`;
+    }
+  }
+  
+  /** 转换为JSON格式，便于日志记录 */
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      stage: this.context?.stage,
+      itemId: this.context?.itemId,
+      geometryType: this.context?.geometryType,
+      timestamp: this.context?.timestamp || new Date().toISOString()
+    };
+  }
+}
+
+// ============= 单位转换工具类 =============
+
+/**
+ * 单位转换工具类
+ * 
+ * @remarks
+ * 支持IDX协议中的所有标准单位转换
+ * REF: IDXv4.5规范第40页，全局单位定义
+ */
+export class UnitConverter {
+  /** 单位转换因子（以毫米为基准） */
+  private static readonly CONVERSION_FACTORS: Record<GlobalUnit, number> = {
+    [GlobalUnit.UNIT_MM]: 1,
+    [GlobalUnit.UNIT_CM]: 10,
+    [GlobalUnit.UNIT_INCH]: 25.4,
+    [GlobalUnit.UNIT_MIL]: 0.0254
+  };
+  
+  /** 单位符号映射 */
+  private static readonly UNIT_SYMBOLS: Record<GlobalUnit, string> = {
+    [GlobalUnit.UNIT_MM]: 'mm',
+    [GlobalUnit.UNIT_CM]: 'cm',
+    [GlobalUnit.UNIT_INCH]: 'in',
+    [GlobalUnit.UNIT_MIL]: 'mil'
+  };
+  
+  /**
+   * 单位转换
+   * 
+   * @param value - 原始值
+   * @param fromUnit - 源单位
+   * @param toUnit - 目标单位
+   * @returns 转换后的值
+   * 
+   * @throws {Error} 不支持的单位转换
+   */
+  static convert(value: number, fromUnit: GlobalUnit, toUnit: GlobalUnit): number {
+    if (!this.CONVERSION_FACTORS[fromUnit] || !this.CONVERSION_FACTORS[toUnit]) {
+      throw new Error(`不支持的单位转换: ${fromUnit} -> ${toUnit}`);
+    }
+    
+    // 先转换为毫米，再转换为目标单位
+    const valueInMM = value * this.CONVERSION_FACTORS[fromUnit];
+    return valueInMM / this.CONVERSION_FACTORS[toUnit];
+  }
+  
+  /**
+   * 标准化为毫米
+   * 
+   * @param value - 原始值
+   * @param unit - 原始单位
+   * @returns 毫米值
+   */
+  static normalizeToMM(value: number, unit: GlobalUnit): number {
+    return this.convert(value, unit, GlobalUnit.UNIT_MM);
+  }
+  
+  /**
+   * 格式化带单位的字符串
+   * 
+   * @param value - 数值
+   * @param unit - 单位
+   * @returns 格式化字符串
+   */
+  static formatWithUnit(value: number, unit: GlobalUnit): string {
+    return `${value}${this.UNIT_SYMBOLS[unit]}`;
+  }
+}
+
+// ============= 几何验证工具类 =============
+
+/**
+ * 几何验证工具类
+ * 
+ * @remarks
+ * 提供几何有效性验证功能，确保生成的几何符合IDX规范
+ * DESIGN: 静态方法设计，便于测试和复用
+ */
+export class GeometryValidator {
+  /** 最小距离阈值（毫米） */
+  private static readonly MIN_DISTANCE = 0.001;
+  
+  /** 最小面积阈值（平方毫米） */
+  private static readonly MIN_AREA = 0.000001;
+  
+  /**
+   * 验证多边形有效性
+   * 
+   * @param points - 多边形顶点
+   * @returns 验证结果
+   */
+  static validatePolygon(points: CartesianPoint[]): ValidationResult<CartesianPoint[]> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    // # 基础验证
+    if (points.length < 3) {
+      errors.push(`多边形至少需要3个点，当前: ${points.length}`);
+      return { valid: false, errors, warnings, stage: 'geometry' };
+    }
+    
+    // # 检查点距（避免过近的点）
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const dist = this.distance(points[i], points[j]);
+        if (dist < this.MIN_DISTANCE) {
+          warnings.push(`点${i}和点${j}距离过近: ${dist.toFixed(6)}mm`);
+        }
+      }
+    }
+    
+    // # 检查自相交
+    if (this.hasSelfIntersection(points)) {
+      errors.push('多边形存在自相交');
+    }
+    
+    // # 检查方向和面积
+    const area = this.calculatePolygonArea(points);
+    if (Math.abs(area) < this.MIN_AREA) {
+      errors.push(`多边形面积过小: ${area.toFixed(9)}mm²`);
+    } else if (area < 0) {
+      warnings.push('多边形为顺时针方向，建议使用逆时针方向');
+    }
+    
+    return { 
+      valid: errors.length === 0, 
+      data: errors.length === 0 ? points : undefined,
+      errors, 
+      warnings, 
+      stage: 'geometry',
+      timestamp: new Date().toISOString()
+    };
+  }
+  
+  /**
+   * 验证Z轴范围
+   * 
+   * @param lowerBound - 下界
+   * @param upperBound - 上界
+   * @returns 验证结果
+   */
+  static validateZRange(lowerBound: number, upperBound: number): ValidationResult<{lowerBound: number, upperBound: number}> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    if (lowerBound > upperBound) {
+      errors.push(`Z轴下界(${lowerBound})大于上界(${upperBound})`);
+    }
+    
+    const thickness = upperBound - lowerBound;
+    if (thickness < 0.001) {
+      errors.push(`Z轴范围过小(${thickness}mm)，可能导致几何无效`);
+    }
+    
+    if (thickness > 100) {
+      warnings.push(`Z轴范围异常大(${thickness}mm)，请确认是否正确`);
+    }
+    
+    return { 
+      valid: errors.length === 0,
+      data: errors.length === 0 ? { lowerBound, upperBound } : undefined,
+      errors, 
+      warnings,
+      stage: 'geometry'
+    };
+  }
+  
+  /**
+   * 计算两点间距离
+   */
+  private static distance(p1: CartesianPoint, p2: CartesianPoint): number {
+    const dx = p2.X - p1.X;
+    const dy = p2.Y - p1.Y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  
+  /**
+   * 检查多边形自相交
+   * 
+   * @remarks
+   * 使用简化的线段相交检测算法
+   */
+  private static hasSelfIntersection(points: CartesianPoint[]): boolean {
+    // 简化实现：检查相邻边是否相交
+    for (let i = 0; i < points.length; i++) {
+      const p1 = points[i];
+      const p2 = points[(i + 1) % points.length];
+      
+      for (let j = i + 2; j < points.length; j++) {
+        if (j === points.length - 1 && i === 0) continue; // 跳过首尾相邻
+        
+        const p3 = points[j];
+        const p4 = points[(j + 1) % points.length];
+        
+        if (this.lineSegmentsIntersect(p1, p2, p3, p4)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * 检查两线段是否相交
+   */
+  private static lineSegmentsIntersect(
+    p1: CartesianPoint, p2: CartesianPoint,
+    p3: CartesianPoint, p4: CartesianPoint
+  ): boolean {
+    const d1 = this.direction(p3, p4, p1);
+    const d2 = this.direction(p3, p4, p2);
+    const d3 = this.direction(p1, p2, p3);
+    const d4 = this.direction(p1, p2, p4);
+    
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+        ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * 计算方向
+   */
+  private static direction(pi: CartesianPoint, pj: CartesianPoint, pk: CartesianPoint): number {
+    return (pk.X - pi.X) * (pj.Y - pi.Y) - (pj.X - pi.X) * (pk.Y - pi.Y);
+  }
+  
+  /**
+   * 计算多边形面积（有符号面积）
+   */
+  private static calculatePolygonArea(points: CartesianPoint[]): number {
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += points[i].X * points[j].Y - points[j].X * points[i].Y;
+    }
+    return area / 2;
   }
 }
 
@@ -462,9 +915,13 @@ export class BuildError extends Error {
  * @remarks
  * 提供2.5D几何相关的计算和转换功能
  * PERFORMANCE: 几何计算可能复杂，注意性能优化
+ * DESIGN: 集成缓存和验证机制，提升可靠性
  */
-class GeometryUtils {
-  constructor(private config: { defaultUnit: GlobalUnit; precision: number }) {}
+export class GeometryUtils {
+  constructor(
+    private config: { defaultUnit: GlobalUnit; precision: number },
+    private builder: BaseBuilder<any, any>
+  ) {}
   
   /**
    * 四舍五入数值到指定精度
@@ -478,10 +935,11 @@ class GeometryUtils {
   }
   
   /**
-   * 创建矩形边界框曲线集
+   * 创建矩形边界框曲线集（带缓存）
    * 
    * @remarks
    * 用于快速创建组件的2.5D几何表示
+   * PERFORMANCE: 使用缓存避免重复创建相同尺寸的矩形
    * 
    * @param width - 宽度
    * @param height - 高度
@@ -495,38 +953,51 @@ class GeometryUtils {
     thickness: number,
     zPosition: number = 0
   ): EDMDCurveSet2D {
-    // # 计算Z轴范围
-    const lowerBound = zPosition;
-    const upperBound = zPosition + thickness;
+    // # 生成缓存键
+    const cacheKey = (this.builder as any).generateCacheKey('BBOX', {
+      width: this.roundValue(width),
+      height: this.roundValue(height),
+      thickness: this.roundValue(thickness),
+      zPosition: this.roundValue(zPosition)
+    });
     
-    // # 创建矩形轮廓点
-    const points: CartesianPoint[] = [
-      { id: 'PT1', X: 0, Y: 0 },
-      { id: 'PT2', X: width, Y: 0 },
-      { id: 'PT3', X: width, Y: height },
-      { id: 'PT4', X: 0, Y: height }
-    ];
-    
-    // # 创建多边形曲线
-    const polyLine: EDMDPolyLine = {
-      id: this.generateId('POLYLINE'),
-      curveType: 'EDMDPolyLine',
-      Points: points,
-      Closed: true
-    };
-    
-    // # 创建曲线集
-    return {
-      id: this.generateId('CURVESET'),
-      ShapeDescriptionType: 'GeometricModel',
-      LowerBound: { Value: this.roundValue(lowerBound) },
-      UpperBound: { Value: this.roundValue(upperBound) },
-      DetailedGeometricModelElement: [polyLine]
-    };
+    // # 使用缓存
+    return (this.builder as any).getCachedShape(cacheKey, () => {
+      // ## 计算Z轴范围
+      const lowerBound = zPosition;
+      const upperBound = zPosition + thickness;
+      
+      // ## 创建矩形轮廓点
+      const points: CartesianPoint[] = [
+        { id: (this.builder as any).generateGeometryId('PT', 'BBOX_1'), X: 0, Y: 0 },
+        { id: (this.builder as any).generateGeometryId('PT', 'BBOX_2'), X: this.roundValue(width), Y: 0 },
+        { id: (this.builder as any).generateGeometryId('PT', 'BBOX_3'), X: this.roundValue(width), Y: this.roundValue(height) },
+        { id: (this.builder as any).generateGeometryId('PT', 'BBOX_4'), X: 0, Y: this.roundValue(height) }
+      ];
+      
+      // ## 验证多边形
+      const validation = GeometryValidator.validatePolygon(points);
+      if (!validation.valid) {
+        throw new ValidationError(`矩形边界框验证失败: ${validation.errors.join(', ')}`, validation.errors, {
+          stage: 'geometry'
+        });
+      }
+      
+      // ## 创建多边形曲线
+      const polyLine: EDMDPolyLine = {
+        id: (this.builder as any).generateGeometryId('POLYLINE', 'BBOX'),
+        curveType: 'EDMDPolyLine',
+        Points: points,
+        Closed: true
+      };
+      
+      // ## 创建曲线集
+      return (this.builder as any).createCurveSet2D(lowerBound, upperBound, [polyLine.id]);
+    });
   }
   
   /**
-   * 创建圆形曲线集
+   * 创建圆形曲线集（带缓存和验证）
    * 
    * @param centerX - 圆心X坐标
    * @param centerY - 圆心Y坐标
@@ -542,29 +1013,36 @@ class GeometryUtils {
     lowerBound: number,
     upperBound: number
   ): EDMDCurveSet2D {
-    const centerPoint: CartesianPoint = {
-      id: this.generateId('POINT'),
-      X: this.roundValue(centerX),
-      Y: this.roundValue(centerY)
-    };
+    // # 参数验证
+    if (diameter <= 0) {
+      throw new ValidationError(`圆形直径必须大于0: ${diameter}`);
+    }
     
-    const circle: EDMDCircleCenter = {
-      id: this.generateId('CIRCLE'),
-      curveType: 'EDMDCircleCenter',
-      CenterPoint: centerPoint,
-      Diameter: { Value: this.roundValue(diameter) }
-    };
+    // # 生成缓存键
+    const cacheKey = (this.builder as any).generateCacheKey('CIRCLE', {
+      centerX: this.roundValue(centerX),
+      centerY: this.roundValue(centerY),
+      diameter: this.roundValue(diameter),
+      lowerBound: this.roundValue(lowerBound),
+      upperBound: this.roundValue(upperBound)
+    });
     
-    return {
-      id: this.generateId('CURVESET'),
-      ShapeDescriptionType: 'GeometricModel',
-      LowerBound: { Value: this.roundValue(lowerBound) },
-      UpperBound: { Value: this.roundValue(upperBound) },
-      DetailedGeometricModelElement: [circle]
-    };
-  }
-  
-  private generateId(prefix: string): string {
-    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // # 使用缓存
+    return (this.builder as any).getCachedShape(cacheKey, () => {
+      const centerPoint: CartesianPoint = {
+        id: (this.builder as any).generateGeometryId('PT', 'CIRCLE_CENTER'),
+        X: this.roundValue(centerX),
+        Y: this.roundValue(centerY)
+      };
+      
+      const circle: EDMDCircleCenter = {
+        id: (this.builder as any).generateGeometryId('CIRCLE'),
+        curveType: 'EDMDCircleCenter',
+        CenterPoint: centerPoint,
+        Diameter: { Value: this.roundValue(diameter) }
+      };
+      
+      return (this.builder as any).createCurveSet2D(lowerBound, upperBound, [circle.id]);
+    });
   }
 }
