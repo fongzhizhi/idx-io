@@ -8,7 +8,7 @@ import {
   LayerData as NewLayerData, 
   LayerStackupData as NewLayerStackupData,
   ExtendedExportSourceData
-} from '../types/export/exporter';
+} from '../types/exporter/idx-exporter';
 import { BoardBuilder } from './builders/BoardBuilder';
 import { ComponentBuilder } from './builders/ComponentBuilder';
 import { ViaBuilder } from './builders/ViaBuilder';
@@ -713,4 +713,4 @@ export type {
   GeometryData,
   LayerType,
   LayerStackupEntry
-} from '../types/export/exporter';
+} from '../types/exporter/idx-exporter';

@@ -1,7 +1,7 @@
 // ============= 板子构建器类型定义 =============
 
 import { GeometricElement, EDMDCurveSet2DElement, ShapeElementData, StratumElementData, CartesianPoint, EDMDCurveSet2D, GeometryType } from '../../core';
-import { LayerStackupData } from '../exporter';
+import { LayerStackupData } from '../idx-exporter';
 
 // ============= 基础类型 =============
 

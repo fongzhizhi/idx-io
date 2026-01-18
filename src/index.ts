@@ -1,8 +1,8 @@
 // ============= IDX I/O 主入口 - 浏览器版本 =============
 
 // 导出主要类
-export { IDXExporter } from './exporter';
-export type { BrowserExportResult } from './exporter';
+export { IDXExporter } from './exporter/IDXExporter';
+export type { BrowserExportResult } from './exporter/IDXExporter';
 
 // 导出类型
 export * from './types/core';

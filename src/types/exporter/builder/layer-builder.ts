@@ -4,7 +4,7 @@
 // BUSINESS: 层是PCB的基础结构，需要准确的类型定义
 
 import { GeometryType, LayerPurpose } from "../../core";
-import { LayerStackupData } from "../exporter";
+import { LayerStackupData } from "../idx-exporter";
 
 
 // ============= 基础类型 =============

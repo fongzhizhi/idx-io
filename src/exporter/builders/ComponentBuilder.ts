@@ -19,7 +19,7 @@ import {
 import {
   ComponentData, ProcessedComponentData, ComponentGeometryData,
   ComponentGeometryType, ComponentLayer
-} from '../../types/export/builder';
+} from '../../types/exporter/builder';
 
 // ============= 组件构建器类 =============
 

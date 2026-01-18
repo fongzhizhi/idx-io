@@ -20,7 +20,7 @@ import {
   KeepoutGeometryType, ConstraintType, BuilderShapeType
 } from '../../types';
 // 使用重命名导入避免冲突
-import { KeepoutData as BuilderKeepoutData, ProcessedKeepoutData as BuilderProcessedKeepoutData } from '../../types/export/builder/keepout-builder';
+import { KeepoutData as BuilderKeepoutData, ProcessedKeepoutData as BuilderProcessedKeepoutData } from '../../types/exporter/builder/keepout-builder';
 
 // # 输入数据类型定义
 /**

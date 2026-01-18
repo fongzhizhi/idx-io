@@ -16,11 +16,11 @@ import {
 import { 
   LayerStackupData, LayerStackupEntry,
   calculateStackupThickness, getLayerZPosition 
-} from '../../types/export/exporter';
+} from '../../types/exporter/idx-exporter';
 import {
   LayerData, LayerStackupInput, ProcessedLayerData, ProcessedLayerStackupData,
   ProcessedLayerStackupEntry, LayerGeometryType, LayerType, LayerCategory
-} from '../../types/export/builder';
+} from '../../types/exporter/builder';
 import { LayerStackupBuilder, LayerStackupData as StackupBuilderData } from './LayerStackupBuilder';
 
 // ============= 层构建器类 =============
