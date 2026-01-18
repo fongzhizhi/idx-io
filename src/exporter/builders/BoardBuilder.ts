@@ -4,7 +4,7 @@
 
 import { 
   BaseBuilder, BuildError, ValidationResult 
-} from './base-builder';
+} from './BaseBuilder';
 import {
   EDMDItem, ItemType, StandardGeometryType, 
   CartesianPoint, EDMDCurveSet2D,

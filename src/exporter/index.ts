@@ -9,12 +9,12 @@ import {
   LayerStackupData as NewLayerStackupData,
   ExtendedExportSourceData
 } from '../types/data-models';
-import { BoardBuilder } from './builders/board-builder';
-import { ComponentBuilder } from './builders/component-builder';
-import { ViaBuilder } from './builders/via-builder';
-import { KeepoutBuilder } from './builders/keepout-builder';
-import { LayerBuilder } from './builders/layer-builder';
-import { BuilderConfig, BuilderContext } from './builders/base-builder';
+import { BoardBuilder } from './builders/BoardBuilder';
+import { ComponentBuilder } from './builders/ComponentBuilder';
+import { ViaBuilder } from './builders/ViaBuilder';
+import { KeepoutBuilder } from './builders/KeepoutBuilder';
+import { LayerBuilder } from './builders/LayerBuilder';
+import { BuilderConfig, BuilderContext } from './builders/BaseBuilder';
 import { XMLWriter } from './writers/xml-writer';
 import { XMLWriterWithComments, XMLWriterWithCommentsOptions } from './writers/xml-writer-with-comments';
 import { DatasetAssembler, BoardData, BuilderRegistry, AssemblerConfig } from './assemblers/dataset-assembler';

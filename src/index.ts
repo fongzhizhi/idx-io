@@ -8,7 +8,7 @@ export type { ExportSourceData, BrowserExportResult } from './exporter';
 export * from './types/core';
 
 // 导出构建器
-export { BoardBuilder } from './exporter/builders/board-builder';
+export { BoardBuilder } from './exporter/builders/BoardBuilder';
 export type { BoardData } from './types/builder';
 
 // 导出写入器（仅XML写入器，适用于浏览器环境）

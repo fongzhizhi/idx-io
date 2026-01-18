@@ -1,7 +1,7 @@
 import { create } from "xmlbuilder2";
 import { EDMDDataSet, EDMDHeader, EDMDDataSetBody, EDMDItem, ItemType, EDMDIdentifier, EDMDProcessInstruction } from "../../types/core";
-import { TransformationBuilder } from "../builders/transformation-builder";
-import { ComponentStructureBuilder, ComponentData } from "../builders/component-structure-builder";
+import { TransformationBuilder } from "../builders/TransformationBuilder";
+import { ComponentStructureBuilder, ComponentData } from "../builders/ComponentStructureBuilder";
 
 /**
  * XML写入器选项

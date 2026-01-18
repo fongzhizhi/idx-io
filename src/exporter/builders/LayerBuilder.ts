@@ -7,7 +7,7 @@
 
 import { 
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationResult 
-} from './base-builder';
+} from './BaseBuilder';
 import {
   EDMDItem, ItemType, GeometryType,
   EDMDShapeElement, ShapeElementType,
@@ -19,7 +19,7 @@ import {
   LayerData, LayerType, LayerStackupData, LayerStackupEntry,
   calculateStackupThickness, getLayerZPosition 
 } from '../../types/data-models';
-import { LayerStackupBuilder, LayerStackupData as StackupBuilderData } from './layer-stackup-builder';
+import { LayerStackupBuilder, LayerStackupData as StackupBuilderData } from './LayerStackupBuilder';
 
 // # 处理后的层数据类型定义
 /**

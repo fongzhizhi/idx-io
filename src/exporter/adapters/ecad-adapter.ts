@@ -1,5 +1,5 @@
-import { BoardData } from "../builders/board-builder";
-import { ComponentData } from "../builders/component-builder";
+import { BoardData } from "../builders/BoardBuilder";
+import { ComponentData } from "../builders/ComponentBuilder";
 
 // src/exporter/adapters/ecad-adapter.ts
 export class ECADAdapter {

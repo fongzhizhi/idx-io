@@ -7,7 +7,7 @@
 
 import { 
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationError, ValidationResult 
-} from './base-builder';
+} from './BaseBuilder';
 import {
   EDMDItem, ItemType, GeometryType, 
   EDMDShapeElement, ShapeElementType,
