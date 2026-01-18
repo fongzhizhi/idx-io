@@ -14,9 +14,11 @@ import {
   EDMDUserSimpleProperty, LayerPurpose
 } from '../../types/core';
 import { 
-  LayerStackupData, LayerStackupEntry,
-  calculateStackupThickness, getLayerZPosition 
+  LayerStackupData, LayerStackupEntry
 } from '../../types/exporter/idx-exporter';
+import {
+  calculateStackupThickness, getLayerZPosition 
+} from '../../utils/layer-utils';
 import {
   LayerData, LayerStackupInput, ProcessedLayerData, ProcessedLayerStackupData,
   ProcessedLayerStackupEntry, LayerGeometryType, LayerType, LayerCategory

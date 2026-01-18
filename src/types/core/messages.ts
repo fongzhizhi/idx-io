@@ -269,16 +269,5 @@ export type IDXMessage = SendInformationMessage | SendChangesMessage | RequestFo
  * 消息类型守卫函数
  * 
  * @remarks
- * 用于在运行时判断消息类型
+ * 注意：消息类型判断函数已移动到 src/utils/message-utils.ts
  */
-export function isSendInformationMessage(msg: IDXMessage): msg is SendInformationMessage {
-  return msg.ProcessInstruction.instructionType === 'SendInformation';
-}
-
-export function isSendChangesMessage(msg: IDXMessage): msg is SendChangesMessage {
-  return msg.ProcessInstruction.instructionType === 'SendChanges';
-}
-
-export function isRequestForInformationMessage(msg: IDXMessage): msg is RequestForInformationMessage {
-  return msg.ProcessInstruction.instructionType === 'RequestForInformation';
-}

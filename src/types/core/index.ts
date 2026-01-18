@@ -18,8 +18,4 @@ export * from './messages';
 export * from './layers';
 
 // 导出类型守卫函数
-export {
-  isSendInformationMessage,
-  isSendChangesMessage,
-  isRequestForInformationMessage
-} from './messages';
+// 注意：消息类型判断函数已移动到 src/utils/message-utils.ts

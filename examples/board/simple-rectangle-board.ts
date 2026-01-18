@@ -3,7 +3,8 @@
 // BUSINESS: 创建一个50x30mm的矩形板子，厚度1.6mm，无其他元素
 
 import { IDXExporter } from '../../src/exporter/IDXExporter';
-import { ExtendedExportSourceData, createRectangularBoardOutline } from '../../src/types/exporter/idx-exporter';
+import { ExtendedExportSourceData } from '../../src/types/exporter/idx-exporter';
+import { createRectangularBoardOutline } from '../../src/utils/geometry-factory';
 import { GlobalUnit } from '../../src/types/core';
 import * as fs from 'fs';
 import * as path from 'path';
