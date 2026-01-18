@@ -7,9 +7,9 @@
 //
 
 import { IDXExporter, GlobalUnit } from '../src';
-import { ExtendedExportSourceData } from '../src/types/export/exporter';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ExtendedExportSourceData } from '../src/types/exporter/idx-exporter';
 
 /**
  * 测试圆形板子

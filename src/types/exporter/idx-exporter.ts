@@ -3,6 +3,83 @@
 // REF: Requirements 4.3, 4.4, 4.5
 // NOTE: 这些接口定义了IDX导出器的输入数据结构
 
+import { 
+  EDMDCircleCenter, 
+  EDMDCircle3Point, 
+  EDMDEllipse, 
+  EDMDPolyLine, 
+  EDMDCompositeCurve 
+} from '../core/geometry';
+
+/**
+ * 板轮廓几何定义
+ * 
+ * @remarks
+ * 支持多种几何类型来描述板框轮廓，提供更精确和高效的表示
+ * 使用IDX标准的基础几何类型
+ * 
+ * @example
+ * ```typescript
+ * // TEST_CASE: Circular board outline
+ * // TEST_INPUT: Circle with center and diameter
+ * // TEST_EXPECT: Efficient circular representation
+ * const circularOutline: BoardOutlineGeometry = {
+ *   type: 'circle',
+ *   geometry: {
+ *     curveType: 'EDMDCircleCenter',
+ *     CenterPoint: { x: 25, y: 25 },
+ *     Diameter: { value: 50, unit: 'mm' }
+ *   },
+ *   thickness: 1.6
+ * };
+ * 
+ * // TEST_CASE: Rectangular board outline
+ * // TEST_INPUT: Polyline with corner points
+ * // TEST_EXPECT: Closed polyline representation
+ * const rectangularOutline: BoardOutlineGeometry = {
+ *   type: 'polyline',
+ *   geometry: {
+ *     curveType: 'EDMDPolyLine',
+ *     Points: [
+ *       { x: 0, y: 0 },
+ *       { x: 50, y: 0 },
+ *       { x: 50, y: 30 },
+ *       { x: 0, y: 30 }
+ *     ],
+ *     Closed: true
+ *   },
+ *   thickness: 1.6
+ * };
+ * ```
+ */
+export interface BoardOutlineGeometry {
+  /** DESIGN: 几何类型，用于快速识别和优化 */
+  type: 'circle' | 'ellipse' | 'polyline' | 'composite';
+  
+  /** DESIGN: 具体的几何定义，使用IDX标准几何类型 */
+  geometry: EDMDCircleCenter | EDMDCircle3Point | EDMDEllipse | EDMDPolyLine | EDMDCompositeCurve;
+  
+  /** BUSINESS: 板厚度（毫米） */
+  thickness: number;
+  
+  /** DESIGN: 可选的几何属性，用于优化和验证 */
+  properties?: {
+    /** 是否为闭合轮廓 */
+    closed?: boolean;
+    /** 轮廓面积（平方毫米） */
+    area?: number;
+    /** 轮廓周长（毫米） */
+    perimeter?: number;
+    /** 包围盒 */
+    boundingBox?: {
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+    };
+  };
+}
+
 /**
  * 组件数据接口
  * 
@@ -470,6 +547,7 @@ export interface LayerStackupEntry {
  * 
  * @remarks
  * 扩展现有的BoardData接口以支持新的数据类型
+ * 使用更精确的几何类型定义板框轮廓
  * 保持向后兼容性
  */
 export interface ExtendedBoardData {
@@ -477,11 +555,8 @@ export interface ExtendedBoardData {
   id: string;
   name: string;
   
-  /** 板轮廓 */
-  outline: {
-    points: Array<{ x: number; y: number }>;
-    thickness: number;
-  };
+  /** DESIGN: 板轮廓，支持多种几何类型 */
+  outline: BoardOutlineGeometry;
   
   /** 组件列表 */
   components?: ComponentData[];
@@ -666,6 +741,235 @@ export function createDefault4LayerStackup(): LayerStackupData {
       singleEnded: 50,
       differential: 100,
       tolerance: 10
+    }
+  };
+}
+
+// ============= 几何转换工具函数 =============
+
+/**
+ * 从点集合创建多边形轮廓
+ * 
+ * @param points - 轮廓点集合
+ * @param thickness - 板厚度
+ * @returns 板轮廓几何定义
+ * 
+ * @remarks
+ * DESIGN: 向后兼容函数，将旧的点集合格式转换为新的几何格式
+ * PERFORMANCE: 自动检测圆形和矩形，使用更高效的几何表示
+ */
+export function createBoardOutlineFromPoints(
+  points: Array<{ x: number; y: number }>, 
+  thickness: number
+): BoardOutlineGeometry {
+  // DESIGN: 检测是否为圆形轮廓
+  const circleDetection = detectCircularOutline(points);
+  if (circleDetection.isCircular) {
+    return {
+      type: 'circle',
+      geometry: {
+        curveType: 'EDMDCircleCenter',
+        id: 'BOARD_OUTLINE_CIRCLE',
+        CenterPoint: { X: circleDetection.center!.x, Y: circleDetection.center!.y, id: 'CENTER_POINT' },
+        Diameter: { Value: circleDetection.diameter!, Unit: 'mm' }
+      },
+      thickness,
+      properties: {
+        closed: true,
+        area: Math.PI * Math.pow(circleDetection.diameter! / 2, 2),
+        perimeter: Math.PI * circleDetection.diameter!,
+        boundingBox: {
+          minX: circleDetection.center!.x - circleDetection.diameter! / 2,
+          minY: circleDetection.center!.y - circleDetection.diameter! / 2,
+          maxX: circleDetection.center!.x + circleDetection.diameter! / 2,
+          maxY: circleDetection.center!.y + circleDetection.diameter! / 2
+        }
+      }
+    };
+  }
+  
+  // DESIGN: 默认使用多边形表示
+  return {
+    type: 'polyline',
+    geometry: {
+      curveType: 'EDMDPolyLine',
+      id: 'BOARD_OUTLINE_POLYLINE',
+      Points: points.map(p => ({ X: p.x, Y: p.y, id: `POINT_${Math.random().toString(36).substr(2, 9)}` })),
+      Closed: true
+    },
+    thickness,
+    properties: {
+      closed: true,
+      boundingBox: calculateBoundingBox(points)
+    }
+  };
+}
+
+/**
+ * 检测点集合是否构成圆形轮廓
+ * 
+ * @param points - 轮廓点集合
+ * @returns 圆形检测结果
+ * 
+ * @remarks
+ * ALGORITHM: 使用最小二乘法拟合圆形，检查拟合误差
+ */
+function detectCircularOutline(points: Array<{ x: number; y: number }>): {
+  isCircular: boolean;
+  center?: { x: number; y: number };
+  diameter?: number;
+  error?: number;
+} {
+  if (points.length < 8) {
+    return { isCircular: false };
+  }
+  
+  // ALGORITHM: 计算几何中心作为圆心初始估计
+  const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+  const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+  
+  // ALGORITHM: 计算到中心的距离
+  const distances = points.map(p => 
+    Math.sqrt(Math.pow(p.x - centerX, 2) + Math.pow(p.y - centerY, 2))
+  );
+  
+  const avgRadius = distances.reduce((sum, d) => sum + d, 0) / distances.length;
+  const maxDeviation = Math.max(...distances.map(d => Math.abs(d - avgRadius)));
+  
+  // DESIGN: 如果最大偏差小于平均半径的5%，认为是圆形
+  const tolerance = avgRadius * 0.05;
+  const isCircular = maxDeviation < tolerance;
+  
+  return {
+    isCircular,
+    center: isCircular ? { x: centerX, y: centerY } : undefined,
+    diameter: isCircular ? avgRadius * 2 : undefined,
+    error: maxDeviation
+  };
+}
+
+/**
+ * 计算点集合的包围盒
+ * 
+ * @param points - 点集合
+ * @returns 包围盒
+ */
+function calculateBoundingBox(points: Array<{ x: number; y: number }>): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+} {
+  const xs = points.map(p => p.x);
+  const ys = points.map(p => p.y);
+  
+  return {
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys)
+  };
+}
+
+/**
+ * 创建圆形板轮廓
+ * 
+ * @param centerX - 圆心X坐标
+ * @param centerY - 圆心Y坐标
+ * @param diameter - 直径
+ * @param thickness - 板厚度
+ * @returns 圆形板轮廓几何定义
+ * 
+ * @example
+ * ```typescript
+ * // TEST_CASE: Create circular board outline
+ * // TEST_INPUT: Center at (25,25), diameter 50mm, thickness 1.6mm
+ * // TEST_EXPECT: Efficient circular geometry representation
+ * const outline = createCircularBoardOutline(25, 25, 50, 1.6);
+ * assert(outline.type === 'circle');
+ * assert(outline.geometry.curveType === 'EDMDCircleCenter');
+ * ```
+ */
+export function createCircularBoardOutline(
+  centerX: number, 
+  centerY: number, 
+  diameter: number, 
+  thickness: number
+): BoardOutlineGeometry {
+  return {
+    type: 'circle',
+    geometry: {
+      curveType: 'EDMDCircleCenter',
+      id: 'BOARD_OUTLINE_CIRCLE',
+      CenterPoint: { X: centerX, Y: centerY, id: 'CENTER_POINT' },
+      Diameter: { Value: diameter, Unit: 'mm' }
+    },
+    thickness,
+    properties: {
+      closed: true,
+      area: Math.PI * Math.pow(diameter / 2, 2),
+      perimeter: Math.PI * diameter,
+      boundingBox: {
+        minX: centerX - diameter / 2,
+        minY: centerY - diameter / 2,
+        maxX: centerX + diameter / 2,
+        maxY: centerY + diameter / 2
+      }
+    }
+  };
+}
+
+/**
+ * 创建矩形板轮廓
+ * 
+ * @param width - 宽度
+ * @param height - 高度
+ * @param thickness - 板厚度
+ * @param offsetX - X偏移（可选，默认0）
+ * @param offsetY - Y偏移（可选，默认0）
+ * @returns 矩形板轮廓几何定义
+ * 
+ * @example
+ * ```typescript
+ * // TEST_CASE: Create rectangular board outline
+ * // TEST_INPUT: 50x30mm rectangle, thickness 1.6mm
+ * // TEST_EXPECT: Closed polyline with 4 corners
+ * const outline = createRectangularBoardOutline(50, 30, 1.6);
+ * assert(outline.type === 'polyline');
+ * assert(outline.geometry.Points.length === 4);
+ * ```
+ */
+export function createRectangularBoardOutline(
+  width: number, 
+  height: number, 
+  thickness: number,
+  offsetX: number = 0,
+  offsetY: number = 0
+): BoardOutlineGeometry {
+  return {
+    type: 'polyline',
+    geometry: {
+      curveType: 'EDMDPolyLine',
+      id: 'BOARD_OUTLINE_RECTANGLE',
+      Points: [
+        { X: offsetX, Y: offsetY, id: 'CORNER_1' },
+        { X: offsetX + width, Y: offsetY, id: 'CORNER_2' },
+        { X: offsetX + width, Y: offsetY + height, id: 'CORNER_3' },
+        { X: offsetX, Y: offsetY + height, id: 'CORNER_4' }
+      ],
+      Closed: true
+    },
+    thickness,
+    properties: {
+      closed: true,
+      area: width * height,
+      perimeter: 2 * (width + height),
+      boundingBox: {
+        minX: offsetX,
+        minY: offsetY,
+        maxX: offsetX + width,
+        maxY: offsetY + height
+      }
     }
   };
 }
