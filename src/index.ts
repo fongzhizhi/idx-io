@@ -9,7 +9,7 @@ export * from './types/core';
 
 // 导出构建器
 export { BoardBuilder } from './exporter/builders/board-builder';
-export type { BoardData } from './exporter/builders/board-builder';
+export type { BoardData } from './types/builder';
 
 // 导出写入器（仅XML写入器，适用于浏览器环境）
 export { XMLWriter } from './exporter/writers/xml-writer';

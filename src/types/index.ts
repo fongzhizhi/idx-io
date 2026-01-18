@@ -6,3 +6,6 @@ export * from './core';
 
 // 导出数据模型类型
 export * from './data-models';
+
+// 导出构建器类型
+export * from './builder';
