@@ -1,15 +1,13 @@
-// ============= src/exporter/builders/component-builder.ts =============
-
-// # 元件构建器
-// DESIGN: 支持电气和机械元件，支持2.5D几何和外部3D模型
-// REF: IDXv4.5规范第6.2节，表8所有元件类型
-// BUSINESS: 元件是PCB的核心部件，必须准确表示尺寸、位置和属性
+// ============= 组件构建器 =============
+// DESIGN: 支持电气和机械组件，支持2.5D几何和外部3D模型
+// REF: IDXv4.5规范第6.2节，表8所有组件类型
+// BUSINESS: 组件是PCB的核心部件，必须准确表示尺寸、位置和属性
 
 import { 
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, GeometryType,
+  EDMDItem, ItemType, StandardGeometryType,
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDPolyLine,
   EDMD3DModel, EDMDTransformation2D, EDMDTransformation3D,
@@ -18,179 +16,43 @@ import {
   EDMDCircleCenter,
   EDMDUserSimpleProperty
 } from '../../types/core';
+import {
+  ComponentData, ProcessedComponentData, ComponentGeometryData,
+  ComponentGeometryType, ComponentLayer
+} from '../../types/builder';
 
-// # 输入数据类型定义
+// ============= 组件构建器类 =============
+
 /**
- * 元件数据接口
+ * 组件构建器
  * 
  * @remarks
- * 描述PCB元件的几何、电气和位置信息
- * BUSINESS: 必须包含位号、封装名称和位置信息
+ * 负责构建PCB组件的EDMDItem表示，支持2.5D几何和外部3D模型
+ * DESIGN: 组件可以是电气或机械类型，使用不同的几何类型
+ * PERFORMANCE: PCB可能包含数百个组件，注意构建效率
  * 
  * @example
  * ```typescript
- * // TEST_CASE: 标准电容器件
- * const componentData: ComponentData = {
- *   refDes: 'C1',
- *   partNumber: 'CAP-0805-1uF',
- *   packageName: '0805',
- *   position: { x: 30, y: 30, z: 1.6, rotation: 0 },
- *   dimensions: { width: 2.0, height: 1.2, thickness: 0.8 },
- *   layer: 'TOP',
- *   electrical: {
- *     capacitance: 0.000001,
- *     tolerance: 10
- *   },
- *   thermal: {
- *     powerRating: 0.125
- *   }
- * };
- * ```
- */
-export interface ComponentData {
-  /** 元件位号（如C1、R1、U1等） */
-  refDes: string;
-  
-  /** 元件型号/料号 */
-  partNumber: string;
-  
-  /** 封装名称（如0805、SOIC-8等） */
-  packageName: string;
-  
-  /** 元件位置 */
-  position: {
-    x: number;
-    y: number;
-    z?: number; // Z轴位置，可选
-    rotation: number; // 旋转角度（度）
-  };
-  
-  /** 元件尺寸 */
-  dimensions: {
-    width: number;
-    height: number;
-    thickness: number;
-  };
-  
-  /** 所在层（TOP/BOTTOM/INNER） */
-  layer: string;
-  
-  /** 是否为机械元件 */
-  isMechanical?: boolean;
-  
-  /** 电气属性（可选） */
-  electrical?: {
-    /** 电容值（法拉） */
-    capacitance?: number;
-    /** 电阻值（欧姆） */
-    resistance?: number;
-    /** 电感值（亨利） */
-    inductance?: number;
-    /** 容差（百分比） */
-    tolerance?: number;
-  };
-  
-  /** 热属性（可选） */
-  thermal?: {
-    /** 工作功率（瓦特） */
-    powerRating?: number;
-    /** 最大功率（瓦特） */
-    maxPower?: number;
-    /** 热导率（W/m·K） */
-    thermalConductivity?: number;
-    /** 结到板热阻（°C/W） */
-    junctionToBoardResistance?: number;
-    /** 结到壳热阻（°C/W） */
-    junctionToCaseResistance?: number;
-  };
-  
-  /** 3D模型信息（可选） */
-  model3D?: {
-    /** 模型文件路径或标识符 */
-    path: string;
-    /** 模型格式（STEP、STL、SLDPRT等） */
-    format: string;
-    /** 模型版本（可选） */
-    version?: string;
-    /** 变换偏移（用于对齐） */
-    offset?: { x: number; y: number; z: number; rotation: number };
-  };
-  
-  /** 引脚定义（可选） */
-  pins?: Array<{
-    number: string;
-    isPrimary: boolean; // 是否为主要引脚（Pin 1）
-    position: { x: number; y: number };
-    shape?: any; // 引脚形状（可选）
-  }>;
-  
-  /** 附加属性 */
-  properties?: Record<string, any>;
-}
-
-/**
- * 处理后的元件数据
- * 
- * @remarks
- * 包含计算后的变换矩阵和几何类型
- */
-interface ProcessedComponentData {
-  refDes: string;
-  partNumber: string;
-  packageName: string;
-  position: {
-    x: number;
-    y: number;
-    z: number;
-    rotation: number;
-  };
-  dimensions: {
-    width: number;
-    height: number;
-    thickness: number;
-  };
-  layer: string;
-  isMechanical: boolean;
-  geometryType: GeometryType;
-  transformation: EDMDTransformation2D | EDMDTransformation3D;
-  electrical?: ComponentData['electrical'];
-  thermal?: ComponentData['thermal'];
-  model3D?: ComponentData['model3D'];
-  pins?: ComponentData['pins'];
-  properties?: Record<string, any>;
-}
-
-// ============= 元件构建器类 =============
-/**
- * 元件构建器
- * 
- * @remarks
- * 负责构建PCB元件的EDMDItem表示，支持2.5D几何和外部3D模型
- * DESIGN: 元件可以是电气或机械类型，使用不同的几何类型
- * PERFORMANCE: PCB可能包含数百个元件，注意构建效率
- * 
- * @example
- * ```typescript
- * // TEST_CASE: 构建电气元件
+ * // TEST_CASE: 构建电气组件
  * const builder = new ComponentBuilder(config, context);
  * const componentItem = await builder.build(componentData);
- * // 返回: 包含元件几何、属性和引脚的EDMDItem
+ * // 返回: 包含组件几何、属性和引脚的EDMDItem
  * ```
  */
 export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   
   // ============= 输入验证 =============
   /**
-   * 验证元件数据
+   * 验证组件数据
    * 
    * @remarks
-   * BUSINESS: 元件必须有有效的位号、封装和位置信息
-   * SECURITY: 防止无效元件破坏PCB装配
+   * BUSINESS: 组件必须有有效的位号、封装和位置信息
+   * SECURITY: 防止无效组件破坏PCB装配
    * 
-   * @param input - 元件数据
+   * @param input - 组件数据
    * @returns 验证结果
    * 
-   * @testCase 有效元件数据
+   * @testCase 有效组件数据
    * @testInput 包含位号、封装、有效位置和尺寸
    * @testExpect 验证通过
    * @testCase 无效位号
@@ -206,56 +68,56 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
     
     // ============= 基础验证 =============
     if (!input.refDes || input.refDes.trim().length === 0) {
-      errors.push('元件位号不能为空');
+      errors.push('组件位号不能为空');
     }
     
     if (!input.partNumber || input.partNumber.trim().length === 0) {
-      warnings.push('元件料号为空，将使用位号作为替代');
+      warnings.push('组件料号为空，将使用位号作为替代');
     }
     
     if (!input.packageName || input.packageName.trim().length === 0) {
-      errors.push('元件封装名称不能为空');
+      errors.push('组件封装名称不能为空');
     }
     
     // ============= 位置验证 =============
     if (!input.position) {
-      errors.push('元件位置不能为空');
+      errors.push('组件位置不能为空');
     } else {
       const { x, y, rotation } = input.position;
       
       if (isNaN(x) || isNaN(y)) {
-        errors.push(`元件位置坐标无效: x=${x}, y=${y}`);
+        errors.push(`组件位置坐标无效: x=${x}, y=${y}`);
       }
       
       if (isNaN(rotation)) {
-        errors.push(`元件旋转角度无效: ${rotation}`);
+        errors.push(`组件旋转角度无效: ${rotation}`);
       }
     }
     
     // ============= 尺寸验证 =============
     if (!input.dimensions) {
-      errors.push('元件尺寸不能为空');
+      errors.push('组件尺寸不能为空');
     } else {
       const { width, height, thickness } = input.dimensions;
       
       if (width <= 0) {
-        errors.push(`元件宽度必须大于0，当前: ${width}`);
+        errors.push(`组件宽度必须大于0，当前: ${width}`);
       }
       
       if (height <= 0) {
-        errors.push(`元件高度必须大于0，当前: ${height}`);
+        errors.push(`组件高度必须大于0，当前: ${height}`);
       }
       
       if (thickness <= 0) {
-        errors.push(`元件厚度必须大于0，当前: ${thickness}`);
+        errors.push(`组件厚度必须大于0，当前: ${thickness}`);
       }
     }
     
     // ============= 层验证 =============
     if (!input.layer) {
-      warnings.push('元件所在层未指定，将使用默认值TOP');
+      warnings.push('组件所在层未指定，将使用默认值TOP');
     } else if (!['TOP', 'BOTTOM', 'INNER'].includes(input.layer.toUpperCase())) {
-      warnings.push(`元件所在层${input.layer}不是标准值（TOP/BOTTOM/INNER）`);
+      warnings.push(`组件所在层${input.layer}不是标准值（TOP/BOTTOM/INNER）`);
     }
     
     // ============= 电气属性验证 =============
@@ -301,16 +163,16 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       // 检查是否有主要引脚
       const primaryPins = input.pins.filter(pin => pin.isPrimary);
       if (primaryPins.length === 0) {
-        warnings.push('元件引脚中未指定主要引脚（Pin 1）');
+        warnings.push('组件引脚中未指定主要引脚（Pin 1）');
       } else if (primaryPins.length > 1) {
-        warnings.push(`元件引脚中指定了${primaryPins.length}个主要引脚，通常应只有一个`);
+        warnings.push(`组件引脚中指定了${primaryPins.length}个主要引脚，通常应只有一个`);
       }
       
       // 检查引脚编号唯一性
       const pinNumbers = input.pins.map(pin => pin.number);
       const uniquePinNumbers = new Set(pinNumbers);
       if (pinNumbers.length !== uniquePinNumbers.size) {
-        errors.push('元件引脚编号必须唯一');
+        errors.push('组件引脚编号必须唯一');
       }
     }
     
@@ -324,20 +186,20 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   
   // ============= 数据预处理 =============
   /**
-   * 预处理元件数据
+   * 预处理组件数据
    * 
    * @remarks
    * 计算变换矩阵，确定几何类型，准备构建数据
-   * BUSINESS: 机械元件使用不同的几何类型
+   * BUSINESS: 机械组件使用不同的几何类型
    * 
-   * @param input - 验证后的元件数据
-   * @returns 处理后的元件数据
+   * @param input - 验证后的组件数据
+   * @returns 处理后的组件数据
    */
   protected async preProcess(input: ComponentData): Promise<ProcessedComponentData> {
     // # 确定几何类型
-    const geometryType = input.isMechanical 
-      ? GeometryType.COMPONENT_MECHANICAL 
-      : GeometryType.COMPONENT;
+    const geometryType: ComponentGeometryType = input.isMechanical 
+      ? StandardGeometryType.COMPONENT_MECHANICAL 
+      : StandardGeometryType.COMPONENT;
     
     // # 计算Z位置
     // NOTE: 实际实现中应根据层堆叠计算准确的Z位置
@@ -382,7 +244,7 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
         height: this.geometryUtils.roundValue(input.dimensions.height),
         thickness: this.geometryUtils.roundValue(input.dimensions.thickness)
       },
-      layer: input.layer,
+      layer: input.layer as ComponentLayer,
       isMechanical: input.isMechanical || false,
       geometryType,
       transformation,
@@ -396,17 +258,17 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   
   // ============= 核心构建逻辑 =============
   /**
-   * 构建元件EDMDItem
+   * 构建组件EDMDItem
    * 
    * @remarks
-   * DESIGN: 元件作为装配体项目，包含实例和定义
-   * BUSINESS: 根据元件类型和配置选择适当的表示法
+   * DESIGN: 组件作为装配体项目，包含实例和定义
+   * BUSINESS: 根据组件类型和配置选择适当的表示法
    * 
-   * @param processedData - 处理后的元件数据
-   * @returns 元件EDMDItem
+   * @param processedData - 处理后的组件数据
+   * @returns 组件EDMDItem
    */
   protected async construct(processedData: ProcessedComponentData): Promise<EDMDItem> {
-    // # 创建顶层元件项目（装配体）
+    // # 创建顶层组件项目（装配体）
     const baseItem = this.createBaseItem(
       ItemType.ASSEMBLY,
       processedData.geometryType,
@@ -421,10 +283,10 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       Identifier: this.createIdentifier('COMPONENT', processedData.refDes)
     };
     
-    // # 创建元件实例
+    // # 创建组件实例
     const instance = this.createComponentInstance(processedData, assemblyItem.id);
     
-    // # 创建元件定义项目
+    // # 创建组件定义项目
     const componentItem = await this.createComponentDefinition(processedData, assemblyItem.id);
     
     // # 组织项目结构
@@ -440,22 +302,22 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   
   // ============= 后处理 =============
   /**
-   * 后处理元件项目
+   * 后处理组件项目
    * 
-   * @param output - 构建的元件项目
-   * @returns 验证后的元件项目
+   * @param output - 构建的组件项目
+   * @returns 验证后的组件项目
    */
   protected async postProcess(output: EDMDItem): Promise<EDMDItem> {
     // # 验证基本结构
     if (!output.ItemInstances || output.ItemInstances.length === 0) {
-      throw new BuildError(`元件${output.id}缺少实例定义`);
+      throw new BuildError(`组件${output.id}缺少实例定义`);
     }
     
     // # 验证变换矩阵
     const instance = output.ItemInstances[0];
     if (!instance.Transformation) {
       this.context.addWarning('COMPONENT_MISSING_TRANSFORM',
-        `元件${output.id}实例缺少变换矩阵`);
+        `组件${output.id}实例缺少变换矩阵`);
     }
     
     // # 添加构建元数据
@@ -463,7 +325,7 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       output.UserProperties = [];
     }
     
-    // 添加元件类型标记
+    // 添加组件类型标记
     output.UserProperties.push({
       Key: {
         SystemScope: this.config.creatorSystem,
@@ -493,22 +355,22 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
     
     // # 记录构建统计
     this.context.addWarning('COMPONENT_BUILT',
-      `元件构建完成: ${output.Name} (位号: ${output.Name}, 封装: ${output.UserProperties.find(p => p.Key.ObjectName === 'PKGNAME')?.Value || '未知'})`);
+      `组件构建完成: ${output.Name} (位号: ${output.Name}, 封装: ${output.UserProperties.find(p => p.Key.ObjectName === 'PKGNAME')?.Value || '未知'})`);
     
     return output;
   }
   
   // ============= 私有辅助方法 =============
   /**
-   * 使用简化表示法构建元件
+   * 使用简化表示法构建组件
    * 
    * @remarks
    * IDXv4.5简化表示法：使用geometryType属性
    * 
    * @param assemblyItem - 装配体项目
-   * @param componentItem - 元件定义项目
-   * @param processedData - 处理后的元件数据
-   * @returns 完整的元件项目
+   * @param componentItem - 组件定义项目
+   * @param processedData - 处理后的组件数据
+   * @returns 完整的组件项目
    */
   private buildSimplifiedComponent(
     assemblyItem: EDMDItem,
@@ -546,35 +408,35 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   }
   
   /**
-   * 使用传统表示法构建元件
+   * 使用传统表示法构建组件
    * 
    * @remarks
    * IDXv4.0及之前版本的传统表示法
    * 
    * @param assemblyItem - 装配体项目
-   * @param componentItem - 元件定义项目
-   * @param processedData - 处理后的元件数据
-   * @returns 完整的元件项目
+   * @param componentItem - 组件定义项目
+   * @param processedData - 处理后的组件数据
+   * @returns 完整的组件项目
    */
   private buildTraditionalComponent(
     assemblyItem: EDMDItem,
     componentItem: EDMDItem,
     processedData: ProcessedComponentData
   ): EDMDItem {
-    // TODO(元件构建器): 2024-03-20 实现传统表示法 [P2-NICE_TO_HAVE]
+    // TODO(组件构建器): 2024-03-20 实现传统表示法 [P2-NICE_TO_HAVE]
     this.context.addWarning('TRADITIONAL_NOT_IMPLEMENTED',
-      '元件传统表示法暂未实现，使用简化表示法');
+      '组件传统表示法暂未实现，使用简化表示法');
     
     // 暂时使用简化表示法
     return this.buildSimplifiedComponent(assemblyItem, componentItem, processedData);
   }
   
   /**
-   * 创建元件实例
+   * 创建组件实例
    * 
-   * @param processedData - 处理后的元件数据
-   * @param componentItemId - 元件定义项目ID
-   * @returns 元件实例
+   * @param processedData - 处理后的组件数据
+   * @param componentItemId - 组件定义项目ID
+   * @returns 组件实例
    */
   private createComponentInstance(
     processedData: ProcessedComponentData,
@@ -622,11 +484,11 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   }
   
   /**
-   * 创建元件定义项目
+   * 创建组件定义项目
    * 
-   * @param processedData - 处理后的元件数据
+   * @param processedData - 处理后的组件数据
    * @param assemblyItemId - 装配体项目ID
-   * @returns 元件定义项目
+   * @returns 组件定义项目
    */
   private async createComponentDefinition(
     processedData: ProcessedComponentData,
@@ -636,7 +498,7 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
       ItemType.SINGLE,
       undefined, // 定义项目不需要geometryType
       processedData.partNumber,
-      `元件定义: ${processedData.partNumber} (${processedData.packageName})`
+      `组件定义: ${processedData.partNumber} (${processedData.packageName})`
     );
     
     const componentItem: EDMDItem = {
@@ -653,17 +515,12 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   }
   
   /**
-   * 创建元件独立几何元素
+   * 创建组件独立几何元素
    * 
-   * @param processedData - 处理后的元件数据
+   * @param processedData - 处理后的组件数据
    * @returns 独立几何元素集合
    */
-  private createIndependentGeometry(processedData: ProcessedComponentData): {
-    geometricElements: any[];
-    curveSet2Ds: any[];
-    shapeElements: any[];
-    shapeElementId: string;
-  } {
+  private createIndependentGeometry(processedData: ProcessedComponentData): ComponentGeometryData {
     const geometricElements: any[] = [];
     const curveSet2Ds: any[] = [];
     const shapeElements: any[] = [];
@@ -742,9 +599,9 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   }
 
   /**
-   * 创建元件2.5D形状（更新为使用独立几何元素）
+   * 创建组件2.5D形状（更新为使用独立几何元素）
    * 
-   * @param processedData - 处理后的元件数据
+   * @param processedData - 处理后的组件数据
    * @returns 形状元素ID引用
    */
   private createComponentShape(processedData: ProcessedComponentData): string {
@@ -875,7 +732,7 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
    * @returns 引脚形状元素
    */
   private createPinShape(shapeData: any, pinNumber: string): EDMDShapeElement | undefined {
-    // TODO(元件构建器): 2024-03-20 实现引脚形状创建 [P1-IMPORTANT]
+    // TODO(组件构建器): 2024-03-20 实现引脚形状创建 [P1-IMPORTANT]
     this.context.addWarning('PIN_SHAPE_NOT_IMPLEMENTED',
       `引脚${pinNumber}的自定义形状创建暂未实现，使用默认形状`);
     
@@ -883,9 +740,9 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   }
   
   /**
-   * 创建元件用户属性
+   * 创建组件用户属性
    * 
-   * @param processedData - 处理后的元件数据
+   * @param processedData - 处理后的组件数据
    * @returns 用户属性数组
    */
   private createComponentProperties(processedData: ProcessedComponentData): EDMDUserSimpleProperty[] {
@@ -1074,14 +931,14 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   }
   
   /**
-   * 获取元件描述
+   * 获取组件描述
    * 
-   * @param processedData - 处理后的元件数据
+   * @param processedData - 处理后的组件数据
    * @returns 描述字符串
    */
   private getComponentDescription(processedData: ProcessedComponentData): string {
     const type = processedData.isMechanical ? '机械' : '电气';
-    const baseDesc = `${type}元件 ${processedData.refDes} (${processedData.partNumber})`;
+    const baseDesc = `${type}组件 ${processedData.refDes} (${processedData.partNumber})`;
     
     if (processedData.electrical?.capacitance) {
       return `${baseDesc}, 电容: ${processedData.electrical.capacitance}F`;

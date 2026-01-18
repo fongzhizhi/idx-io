@@ -1,6 +1,4 @@
-// ============= src/exporter/builders/via-builder.ts =============
-
-// # 过孔构建器
+// ============= 过孔构建器 =============
 // DESIGN: 支持镀孔、非镀孔、填充孔等多种过孔类型
 // REF: IDXv4.5规范第6.3节，表5支持的孔类型
 // BUSINESS: 过孔是PCB的关键互连元素，必须准确表示层间连接
@@ -9,12 +7,16 @@ import {
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, GeometryType, 
+  EDMDItem, ItemType, StandardGeometryType, 
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDCircleCenter,
   InterStratumFeatureType, LayerPurpose,
   EDMDUserSimpleProperty
 } from '../../types/core';
+import {
+  ViaData, ProcessedViaData, ViaGeometryData,
+  ViaGeometryType, ViaType
+} from '../../types/builder';
 
 // # 输入数据类型定义
 /**

@@ -7,7 +7,7 @@
 
 import { 
   EDMDObject, EDMDLengthProperty, CartesianPoint, 
-  GeometryType, ItemType, GlobalUnit, EDMDItem,
+  StandardGeometryType, ItemType, GlobalUnit, EDMDItem,
   EDMDIdentifier, EDMDCurveSet2D, EDMDPolyLine,
   EDMDCircleCenter
 } from '../../types/core';
@@ -344,7 +344,7 @@ export abstract class BaseBuilder<TInput, TOutput> {
    */
   protected createBaseItem(
     itemType: ItemType,
-    geometryType?: GeometryType,
+    geometryType?: StandardGeometryType,
     name?: string,
     description?: string
   ): Partial<EDMDItem> {
@@ -361,7 +361,7 @@ export abstract class BaseBuilder<TInput, TOutput> {
     // ## 简化表示法
     // DESIGN: 当配置启用简化表示法时，添加geometryType属性
     if (this.config.useSimplified && geometryType) {
-      baseItem.geometryType = geometryType as any; // 临时类型转换，等待后续统一
+      baseItem.geometryType = geometryType;
     }
     
     return baseItem;

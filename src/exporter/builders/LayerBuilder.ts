@@ -1,6 +1,4 @@
-// ============= src/exporter/builders/layer-builder.ts =============
-
-// # 层构建器
+// ============= 层构建器 =============
 // DESIGN: 支持PCB层的2.5D几何表示，包括信号层、电源层、阻焊层等
 // REF: IDXv4.5规范第6.1节，层和地层定义
 // BUSINESS: 层是PCB的基础结构，必须准确表示厚度、材料和电气属性
@@ -9,87 +7,24 @@ import {
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, GeometryType,
+  EDMDItem, ItemType, StandardGeometryType,
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDPolyLine,
   EDMDTransformation2D, EDMDLengthProperty,
   EDMDUserSimpleProperty, LayerPurpose
 } from '../../types/core';
 import { 
-  LayerData, LayerType, LayerStackupData, LayerStackupEntry,
+  LayerStackupData, LayerStackupEntry,
   calculateStackupThickness, getLayerZPosition 
 } from '../../types/data-models';
+import {
+  LayerData, LayerStackupInput, ProcessedLayerData, ProcessedLayerStackupData,
+  ProcessedLayerStackupEntry, LayerGeometryType, LayerType, LayerCategory
+} from '../../types/builder';
 import { LayerStackupBuilder, LayerStackupData as StackupBuilderData } from './LayerStackupBuilder';
 
-// # 处理后的层数据类型定义
-/**
- * 处理后的层数据
- * 
- * @remarks
- * 包含计算后的几何类型和标准化属性
- */
-interface ProcessedLayerData {
-  id: string;
-  name: string;
-  type: LayerType;
-  thickness: number;
-  material?: string;
-  copperWeight?: number;
-  dielectricConstant?: number;
-  lossTangent?: number;
-  surfaceFinish?: string;
-  color?: string;
-  visible?: boolean;
-  properties?: Record<string, any>;
-  
-  // 处理后的属性
-  processedId: string;
-  normalizedType: GeometryType;
-  layerPurpose: LayerPurpose;
-}
-
-// # 层叠结构处理输入接口
-/**
- * 层叠结构处理输入
- * 
- * @remarks
- * 包含层数据和可选的层叠结构定义
- */
-export interface LayerStackupInput {
-  /** 层数据数组 */
-  layers: LayerData[];
-  /** 可选的层叠结构定义 */
-  layerStackup?: LayerStackupData;
-}
-
-/**
- * 处理后的层叠结构数据
- * 
- * @remarks
- * 包含验证后的层叠结构和计算的Z位置信息
- */
-interface ProcessedLayerStackupData {
-  id: string;
-  name: string;
-  totalThickness: number;
-  layers: ProcessedLayerStackupEntry[];
-  processedId: string;
-  layerZPositions: Map<string, number>;
-}
-
-/**
- * 处理后的层叠结构条目
- */
-interface ProcessedLayerStackupEntry {
-  layerId: string;
-  position: number;
-  thickness: number;
-  material?: string;
-  zPosition: number;
-  layerExists: boolean;
-}
-
 // ============= 层构建器类 =============
+
 /**
  * 层构建器
  * 
@@ -674,17 +609,17 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
    * @param layerType - 输入层类型
    * @returns IDX几何类型
    */
-  private normalizeLayerType(layerType: LayerType): GeometryType {
-    const typeMap: Record<LayerType, GeometryType> = {
-      [LayerType.SIGNAL]: GeometryType.LAYER_OTHERSIGNAL,
-      [LayerType.PLANE]: GeometryType.LAYER_POWERGROUND,
-      [LayerType.SOLDERMASK]: GeometryType.LAYER_SOLDERMASK,
-      [LayerType.SILKSCREEN]: GeometryType.LAYER_SILKSCREEN,
-      [LayerType.DIELECTRIC]: GeometryType.LAYER_DIELECTRIC,
-      [LayerType.OTHERSIGNAL]: GeometryType.LAYER_OTHERSIGNAL
+  private normalizeLayerType(layerType: LayerType): LayerGeometryType {
+    const typeMap: Record<LayerType, LayerGeometryType> = {
+      [LayerType.SIGNAL]: StandardGeometryType.LAYER_OTHERSIGNAL,
+      [LayerType.PLANE]: StandardGeometryType.LAYER_POWERGROUND,
+      [LayerType.SOLDERMASK]: StandardGeometryType.LAYER_SOLDERMASK,
+      [LayerType.SILKSCREEN]: StandardGeometryType.LAYER_SILKSCREEN,
+      [LayerType.DIELECTRIC]: StandardGeometryType.LAYER_DIELECTRIC,
+      [LayerType.OTHERSIGNAL]: StandardGeometryType.LAYER_OTHERSIGNAL
     };
     
-    return typeMap[layerType] || GeometryType.LAYER_GENERIC;
+    return typeMap[layerType] || StandardGeometryType.LAYER_GENERIC;
   }
   
   /**
@@ -906,8 +841,8 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
    * @param layerType - 层类型
    * @returns 层分类
    */
-  private getLayerCategory(layerType: LayerType): string {
-    const categories: Record<LayerType, string> = {
+  private getLayerCategory(layerType: LayerType): LayerCategory {
+    const categories: Record<LayerType, LayerCategory> = {
       [LayerType.SIGNAL]: 'CONDUCTIVE',
       [LayerType.PLANE]: 'CONDUCTIVE',
       [LayerType.OTHERSIGNAL]: 'CONDUCTIVE',

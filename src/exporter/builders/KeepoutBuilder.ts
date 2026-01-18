@@ -1,7 +1,5 @@
-// ============= src/exporter/builders/keepout-builder.ts =============
-
-// # 禁止区构建器
-// DESIGN: 支持多种禁止区域类型：布线、元件放置、过孔等
+// ============= 禁止区构建器 =============
+// DESIGN: 支持多种禁止区域类型：布线、组件放置、过孔等
 // REF: IDXv4.5规范第6.5节，表6-7支持的禁止区类型
 // BUSINESS: 禁止区用于定义设计约束，确保机械和电气兼容性
 
@@ -9,7 +7,7 @@ import {
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, GeometryType,
+  EDMDItem, ItemType, StandardGeometryType,
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDPolyLine,
   KeepConstraintPurpose,
@@ -17,6 +15,10 @@ import {
   EDMDCircleCenter,
   EDMDUserSimpleProperty
 } from '../../types/core';
+import {
+  KeepoutData, ProcessedKeepoutData, KeepoutGeometryData,
+  KeepoutGeometryType, ConstraintType, ShapeType
+} from '../../types/builder';
 
 // # 输入数据类型定义
 /**
