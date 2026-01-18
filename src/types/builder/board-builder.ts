@@ -103,10 +103,10 @@ export interface ProcessedBoardData {
 
 /** 几何数据返回类型 */
 export interface GeometryData {
-  geometricElements: any[];
-  curveSet2Ds: any[];
-  shapeElements: any[];
-  stratumElements: any[];
+  geometricElements: import('../core').GeometricElement[];
+  curveSet2Ds: import('../core').EDMDCurveSet2DElement[];
+  shapeElements: import('../core').ShapeElementData[];
+  stratumElements: import('../core').StratumElementData[];
   shapeElementId: string;
 }
 

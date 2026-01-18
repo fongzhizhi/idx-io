@@ -2,6 +2,10 @@
 // DESIGN: 支持两种板子建模类型：BOARD_OUTLINE 和 BOARD_AREA_RIGID
 // REF: IDXv4.5规范第46-61页，板子建模详细说明
 
+// ============= PCB板构建器 =============
+// DESIGN: 支持两种板子建模类型：BOARD_OUTLINE 和 BOARD_AREA_RIGID
+// REF: IDXv4.5规范第46-61页，板子建模详细说明
+
 import { 
   BaseBuilder, BuildError, ValidationResult 
 } from './BaseBuilder';
@@ -9,7 +13,8 @@ import {
   EDMDItem, ItemType, StandardGeometryType, 
   CartesianPoint, EDMDCurveSet2D,
   EDMDUserSimpleProperty, StratumType, StratumSurfaceDesignation,
-  ShapeElementType
+  ShapeElementType, GeometricElement, EDMDCurveSet2DElement, 
+  ShapeElementData, StratumElementData
 } from '../../types/core';
 import { LayerStackupData } from '../../types/data-models';
 import {
@@ -146,20 +151,40 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    * @returns PCB板EDMDItem
    */
   protected async construct(processedData: ProcessedBoardData): Promise<EDMDItem> {
-    // 根据是否有层叠结构决定板子类型
+    // 1. 验证几何有效性
+    const geometryValidation = this.validateGeometry(processedData);
+    if (!geometryValidation.valid) {
+      const errorMessage = `几何验证失败: ${geometryValidation.errors.join(', ')}`;
+      throw new BuildError(errorMessage, { 
+        stage: 'validation',
+        itemId: processedData.id
+      });
+    }
+    
+    // 记录警告
+    geometryValidation.warnings?.forEach(warning => {
+      this.context.addWarning('GEOMETRY_WARNING', warning);
+    });
+    
+    // 2. 根据是否有层叠结构决定板子类型
     const hasLayerStackup = processedData.layerStackup && processedData.layerStackup.layers.length > 0;
     const boardType: BoardGeometryType = 
       hasLayerStackup ? StandardGeometryType.BOARD_AREA_RIGID : StandardGeometryType.BOARD_OUTLINE;
     
-    // 验证层堆叠有效性（如果存在）
+    // 3. 验证层堆叠有效性（如果存在）
     if (hasLayerStackup) {
       this.validateLayerStackup(processedData.layerStackup!);
     }
     
-    // 生成独立的几何元素
-    const geometryData = this.createIndependentGeometry(processedData, boardType);
+    // 4. 修复：调整Stratum使用逻辑
+    // BOARD_AREA_RIGID 必须使用Stratum
+    // BOARD_OUTLINE 可选择性使用（取决于是否使用简化表示法）
+    const useStratum = this.shouldUseStratum(boardType);
     
-    // 创建single类型的Item（定义几何）
+    // 5. 生成独立的几何元素
+    const geometryData = this.createIndependentGeometry(processedData, boardType, useStratum);
+    
+    // 6. 创建single类型的Item（定义几何）
     const boardPrefix = this.generateValidId(`BOARD_${processedData.id}`);
     const boardDefinitionItem: EDMDItem = {
       id: `${boardPrefix}_DEF_001`,
@@ -171,7 +196,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       BaseLine: true
     };
     
-    // 创建assembly类型的Item（包含ItemInstance）
+    // 7. 创建assembly类型的Item（包含ItemInstance）
     const boardAssemblyItem: EDMDItem = {
       id: `${boardPrefix}_ASSY_001`,
       ItemType: ItemType.ASSEMBLY,
@@ -199,7 +224,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       }]
     };
     
-    // 根据板子类型设置 AssembleToName
+    // 8. 根据板子类型设置 AssembleToName
     if (boardType === StandardGeometryType.BOARD_AREA_RIGID) {
       if (hasLayerStackup) {
         boardAssemblyItem.AssembleToName = this.getLayerStackupReferenceName(processedData.layerStackup!);
@@ -208,10 +233,10 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       }
     }
     
-    // 添加用户属性
+    // 9. 添加用户属性
     boardAssemblyItem.UserProperties = this.createBoardProperties(processedData, boardType);
     
-    // 将几何元素附加到assembly项上
+    // 10. 将几何元素附加到assembly项上
     (boardAssemblyItem as any).geometricElements = geometryData.geometricElements;
     (boardAssemblyItem as any).curveSet2Ds = geometryData.curveSet2Ds;
     (boardAssemblyItem as any).shapeElements = geometryData.shapeElements;
@@ -340,18 +365,167 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    */
   private createIndependentGeometry(
     processedData: ProcessedBoardData, 
-    boardType: BoardGeometryType
+    boardType: BoardGeometryType,
+    useStratum: boolean
   ): GeometryData {
     const boardPrefix = this.generateValidId(`BOARD_${processedData.id}`);
     const orderedPoints = this.ensureCounterClockwiseOrder(processedData.outline.points);
     const circleInfo = this.detectCircularBoard(orderedPoints);
-    const useStratum = boardType === StandardGeometryType.BOARD_AREA_RIGID;
     
     if (circleInfo) {
       return this.createCircularGeometry(processedData, boardPrefix, circleInfo, useStratum);
     } else {
       return this.createPolygonGeometry(processedData, boardPrefix, orderedPoints, useStratum);
     }
+  }
+  
+  /**
+   * 确定是否应该使用Stratum
+   * 
+   * @param boardType - 板子类型
+   * @returns 是否使用Stratum
+   */
+  private shouldUseStratum(boardType: BoardGeometryType): boolean {
+    // BOARD_AREA_RIGID 必须使用Stratum
+    if (boardType === StandardGeometryType.BOARD_AREA_RIGID) {
+      return true;
+    }
+    
+    // BOARD_OUTLINE 可选择性使用简化表示法
+    // 如果配置为使用简化模式，则不创建Stratum
+    return !this.config.useSimplified;
+  }
+  
+  /**
+   * 验证几何有效性
+   * 
+   * @param processedData - 处理后的板子数据
+   * @returns 验证结果
+   */
+  private validateGeometry(processedData: ProcessedBoardData): ValidationResult<ProcessedBoardData> {
+    const points = processedData.outline.points;
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    // 验证多边形有效性
+    if (points.length < 3) {
+      errors.push('多边形至少需要3个顶点');
+    }
+    
+    // 检查自相交
+    if (this.hasSelfIntersection(points)) {
+      errors.push('多边形自相交');
+    }
+    
+    // 检查共线点
+    const collinearPoints = this.findCollinearPoints(points);
+    if (collinearPoints.length > 0) {
+      warnings.push(`多边形中有${collinearPoints.length}个共线点，可能影响几何质量`);
+    }
+    
+    // 检查最小边长
+    const minEdgeLength = this.calculateMinEdgeLength(points);
+    if (minEdgeLength < 0.01) {
+      warnings.push(`多边形最小边长过小：${minEdgeLength.toFixed(4)}mm，可能引起数值精度问题`);
+    }
+    
+    // 检查Z轴范围
+    const zBounds = this.getZBounds(processedData);
+    if (Math.abs(zBounds.upper - zBounds.lower) < 0.001) {
+      warnings.push('板子厚度过小，可能影响制造');
+    }
+    
+    return { 
+      valid: errors.length === 0, 
+      data: errors.length === 0 ? processedData : undefined,
+      errors, 
+      warnings 
+    };
+  }
+  
+  /**
+   * 检查多边形自相交
+   */
+  private hasSelfIntersection(points: CartesianPoint[]): boolean {
+    const n = points.length;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 2; j < n; j++) {
+        // 跳过相邻边
+        if (j === n - 1 && i === 0) continue;
+        
+        const nextI = (i + 1) % n;
+        const nextJ = (j + 1) % n;
+        
+        if (this.linesIntersect(points[i], points[nextI], points[j], points[nextJ])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * 检查两条线段是否相交
+   */
+  private linesIntersect(p1: CartesianPoint, p2: CartesianPoint, p3: CartesianPoint, p4: CartesianPoint): boolean {
+    const d1 = this.direction(p3, p4, p1);
+    const d2 = this.direction(p3, p4, p2);
+    const d3 = this.direction(p1, p2, p3);
+    const d4 = this.direction(p1, p2, p4);
+    
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+        ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * 计算方向
+   */
+  private direction(pi: CartesianPoint, pj: CartesianPoint, pk: CartesianPoint): number {
+    return (pk.X - pi.X) * (pj.Y - pi.Y) - (pj.X - pi.X) * (pk.Y - pi.Y);
+  }
+  
+  /**
+   * 查找共线点
+   */
+  private findCollinearPoints(points: CartesianPoint[]): number[] {
+    const collinearIndices: number[] = [];
+    const n = points.length;
+    
+    for (let i = 0; i < n; i++) {
+      const prev = points[(i - 1 + n) % n];
+      const curr = points[i];
+      const next = points[(i + 1) % n];
+      
+      // 计算叉积判断是否共线
+      const crossProduct = (next.X - curr.X) * (curr.Y - prev.Y) - (curr.X - prev.X) * (next.Y - curr.Y);
+      if (Math.abs(crossProduct) < 1e-10) {
+        collinearIndices.push(i);
+      }
+    }
+    
+    return collinearIndices;
+  }
+  
+  /**
+   * 计算最小边长
+   */
+  private calculateMinEdgeLength(points: CartesianPoint[]): number {
+    let minLength = Infinity;
+    const n = points.length;
+    
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      const dx = points[j].X - points[i].X;
+      const dy = points[j].Y - points[i].Y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      minLength = Math.min(minLength, length);
+    }
+    
+    return minLength;
   }
   
   /**
@@ -393,10 +567,10 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     circleInfo: CircleInfo,
     useStratum: boolean
   ): GeometryData {
-    const geometricElements: any[] = [];
-    const curveSet2Ds: any[] = [];
-    const shapeElements: any[] = [];
-    const stratumElements: any[] = [];
+    const geometricElements: GeometricElement[] = [];
+    const curveSet2Ds: EDMDCurveSet2DElement[] = [];
+    const shapeElements: ShapeElementData[] = [];
+    const stratumElements: StratumElementData[] = [];
     
     // 创建中心点
     const centerPointId = `${boardPrefix}_CENTER`;
@@ -416,7 +590,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'd2:Diameter': { 'property:Value': (circleInfo.radius * 2).toString() }
     });
     
-    // 创建曲线集
+    // 创建曲线集 - 修复协议问题：正确的DetailedGeometricModelElement结构
     const curveSetId = `${boardPrefix}_CURVESET`;
     const zBounds = this.getZBounds(processedData);
     curveSet2Ds.push({
@@ -425,7 +599,10 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:ShapeDescriptionType': 'GeometricModel',
       'd2:LowerBound': { 'property:Value': zBounds.lower.toString() },
       'd2:UpperBound': { 'property:Value': zBounds.upper.toString() },
-      'd2:DetailedGeometricModelElement': circleId
+      // 修复：使用正确的嵌套结构
+      'd2:DetailedGeometricModelElement': [{ 
+        'd2:DetailedGeometricModelElement': circleId 
+      }]
     });
     
     // 创建形状元素
@@ -439,7 +616,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     
     let finalShapeElementId = shapeElementId;
     
-    // 根据板子类型决定是否创建 Stratum 对象
+    // 修复：调整Stratum使用逻辑 - BOARD_AREA_RIGID必须使用，BOARD_OUTLINE可选
     if (useStratum) {
       const stratumId = `${boardPrefix}_STRATUM`;
       stratumElements.push({
@@ -470,10 +647,10 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     orderedPoints: CartesianPoint[],
     useStratum: boolean
   ): GeometryData {
-    const geometricElements: any[] = [];
-    const curveSet2Ds: any[] = [];
-    const shapeElements: any[] = [];
-    const stratumElements: any[] = [];
+    const geometricElements: GeometricElement[] = [];
+    const curveSet2Ds: EDMDCurveSet2DElement[] = [];
+    const shapeElements: ShapeElementData[] = [];
+    const stratumElements: StratumElementData[] = [];
     
     // 创建轮廓点
     orderedPoints.forEach(point => {
@@ -498,7 +675,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'Point': polyLinePoints.map(pointId => ({ 'd2:Point': pointId }))
     });
     
-    // 创建曲线集
+    // 创建曲线集 - 修复协议问题：正确的DetailedGeometricModelElement结构
     const curveSetId = `${boardPrefix}_CURVESET`;
     const zBounds = this.getZBounds(processedData);
     curveSet2Ds.push({
@@ -507,7 +684,10 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:ShapeDescriptionType': 'GeometricModel',
       'd2:LowerBound': { 'property:Value': zBounds.lower.toString() },
       'd2:UpperBound': { 'property:Value': zBounds.upper.toString() },
-      'd2:DetailedGeometricModelElement': polyLineId
+      // 修复：使用正确的嵌套结构
+      'd2:DetailedGeometricModelElement': [{ 
+        'd2:DetailedGeometricModelElement': polyLineId 
+      }]
     });
     
     // 创建形状元素
@@ -521,7 +701,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     
     let finalShapeElementId = shapeElementId;
     
-    // 根据板子类型决定是否创建 Stratum 对象
+    // 修复：调整Stratum使用逻辑 - BOARD_AREA_RIGID必须使用，BOARD_OUTLINE可选
     if (useStratum) {
       const stratumId = `${boardPrefix}_STRATUM`;
       stratumElements.push({

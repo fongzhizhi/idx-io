@@ -6,6 +6,142 @@
 import { EDMDObject, CartesianPoint, EDMDLengthProperty, EDMDUserSimpleProperty, EDMDTransformation } from "./common";
 import { ShapeElementType, KeepConstraintPurpose, InterStratumFeatureType, AssemblyComponentType, FunctionalItemShapeType, StratumType, StratumSurfaceDesignation, TechnologyType, LayerPurpose, BendTypeEnum, BendSide } from "./enums";
 
+// ============= 基础几何元素类型 =============
+// REF: IDXv4.5规范，用于XML序列化的具体几何元素
+
+/**
+ * 笛卡尔点元素
+ * 
+ * @remarks
+ * IDX中最基础的几何元素，表示2D平面上的一个点
+ * REF: geometry.d2.xsd - EDMDCartesianPoint
+ */
+export interface EDMDCartesianPointElement {
+  /** 元素唯一标识符 */
+  id: string;
+  /** XSI类型标识 */
+  'xsi:type': 'd2:EDMDCartesianPoint';
+  /** X坐标属性 */
+  X: { 'property:Value': string };
+  /** Y坐标属性 */
+  Y: { 'property:Value': string };
+}
+
+/**
+ * 圆心圆元素
+ * 
+ * @remarks
+ * 通过圆心点和直径定义的圆形几何元素
+ * REF: geometry.d2.xsd - EDMDCircleCenter
+ */
+export interface EDMDCircleCenterElement {
+  /** 元素唯一标识符 */
+  id: string;
+  /** XSI类型标识 */
+  'xsi:type': 'd2:EDMDCircleCenter';
+  /** 圆心点引用 */
+  'd2:CenterPoint': string;
+  /** 直径属性 */
+  'd2:Diameter': { 'property:Value': string };
+}
+
+/**
+ * 多边形线元素
+ * 
+ * @remarks
+ * 由一系列点连接形成的多边形或折线
+ * REF: geometry.d2.xsd - EDMDPolyLine
+ */
+export interface EDMDPolyLineElement {
+  /** 元素唯一标识符 */
+  id: string;
+  /** 元素类型 */
+  type: 'PolyLine';
+  /** 点引用数组 */
+  Point: Array<{ 'd2:Point': string }>;
+}
+
+/**
+ * 曲线集2D元素
+ * 
+ * @remarks
+ * 定义2.5D几何体的核心元素，包含2D轮廓和Z轴范围
+ * REF: geometry.d2.xsd - EDMDCurveSet2d
+ */
+export interface EDMDCurveSet2DElement {
+  /** 元素唯一标识符 */
+  id: string;
+  /** XSI类型标识 */
+  'xsi:type': 'd2:EDMDCurveSet2d';
+  /** 形状描述类型 */
+  'pdm:ShapeDescriptionType': 'GeometricModel';
+  /** Z轴下界 */
+  'd2:LowerBound': { 'property:Value': string };
+  /** Z轴上界 */
+  'd2:UpperBound': { 'property:Value': string };
+  /** 详细几何模型元素数组 - 修复：使用正确的嵌套结构 */
+  'd2:DetailedGeometricModelElement': Array<{ 'd2:DetailedGeometricModelElement': string }>;
+}
+
+/**
+ * 形状元素
+ * 
+ * @remarks
+ * 连接曲线集和具体项目的形状定义
+ * REF: pdm.xsd - ShapeElement
+ */
+export interface EDMDShapeElementData {
+  /** 元素唯一标识符 */
+  id: string;
+  /** 形状元素类型 */
+  'pdm:ShapeElementType': string;
+  /** 是否反转（减去材料） */
+  'pdm:Inverted': string;
+  /** 定义形状的曲线集引用 */
+  'pdm:DefiningShape': string;
+}
+
+/**
+ * 层元素
+ * 
+ * @remarks
+ * PCB层的几何表示，包含形状元素和层属性
+ * REF: pdm.xsd - EDMDStratum
+ */
+export interface EDMDStratumElement {
+  /** 元素唯一标识符 */
+  id: string;
+  /** XSI类型标识 */
+  'xsi:type': 'pdm:EDMDStratum';
+  /** 形状元素引用 */
+  'pdm:ShapeElement': string;
+  /** 层类型 */
+  'pdm:StratumType': string;
+  /** 层表面指定 */
+  'pdm:StratumSurfaceDesignation': string;
+}
+
+/**
+ * 基础几何元素联合类型
+ * 
+ * @remarks
+ * 用于类型安全的几何元素处理
+ */
+export type GeometricElement = 
+  | EDMDCartesianPointElement 
+  | EDMDCircleCenterElement 
+  | EDMDPolyLineElement;
+
+/**
+ * 形状相关元素联合类型
+ */
+export type ShapeElementData = EDMDShapeElementData;
+
+/**
+ * 层相关元素联合类型
+ */
+export type StratumElementData = EDMDStratumElement;
+
 // ------------ 基础曲线类型 ------------
 /**
  * 几何曲线的基接口
