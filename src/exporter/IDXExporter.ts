@@ -831,37 +831,3 @@ export class IDXExporter {
     };
   }
 }
-
-// ============= 导出类型和接口 =============
-
-// DESIGN: 导出核心类型，保持API的一致性
-export { GlobalUnit } from '../types/core';
-export type { IDXExportConfig, ExportResult } from '../types/core';
-
-// DESIGN: 导出新的数据模型类型
-export type { 
-  ComponentData,
-  HoleData,
-  KeepoutData,
-  LayerData,
-  LayerStackupData,
-  ExtendedExportSourceData,
-  ExtendedBoardData,
-  Position3D,
-  Dimensions3D,
-  PinData,
-  GeometryData,
-  LayerType,
-  LayerStackupEntry,
-  BrowserExportResult,
-  XMLCommentConfig,
-  BoardOutlineGeometry
-} from '../types/exporter/idx-exporter';
-
-// DESIGN: 导出几何工具函数
-export { 
-  createBoardOutlineFromPoints,
-  createCircularBoardOutline,
-  createRectangularBoardOutline,
-  createDefault4LayerStackup
-} from '../types/exporter/idx-exporter';
