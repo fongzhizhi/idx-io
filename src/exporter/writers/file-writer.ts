@@ -5,7 +5,7 @@
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { IDXExporter, XMLCommentConfig } from '../index';
-import { ExtendedExportSourceData } from '../../types/exporter/exporter';
+import { ExtendedExportSourceData } from '../../types/export/exporter';
 import { IDXExportConfig, ExportResult, IDXFileType } from '../../types/core';
 
 /**

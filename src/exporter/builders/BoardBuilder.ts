@@ -16,11 +16,11 @@ import {
   ShapeElementType, GeometricElement, EDMDCurveSet2DElement, 
   ShapeElementData, StratumElementData
 } from '../../types/core';
-import { LayerStackupData } from '../../types/exporter/exporter';
+import { LayerStackupData } from '../../types/export/exporter';
 import {
   BoardData, ProcessedBoardData, GeometryData, CircleInfo,
   BoardGeometryType, ZAxisReference
-} from '../../types/exporter/builder';
+} from '../../types/export/builder';
 
 // ============= PCB板构建器类 =============
 

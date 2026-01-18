@@ -5,10 +5,10 @@
 export * from './core';
 
 // 导出数据模型类型（作为主要定义）
-export * from './exporter/exporter';
+export * from './export/exporter';
 
 // 导出构建器类型，处理重名冲突
-export * from './exporter/builder/via-builder';
+export * from './export/builder/via-builder';
 
 // 从component-builder导出，排除重名的ComponentData（使用data-models版本）
 export {
@@ -20,7 +20,7 @@ export {
   ComponentPin,
   ProcessedComponentData,
   ComponentGeometryData
-} from './exporter/builder/component-builder';
+} from './export/builder/component-builder';
 
 // 从layer-builder导出，排除重名的LayerData和LayerType（使用data-models版本）
 export {
@@ -30,7 +30,7 @@ export {
   ProcessedLayerStackupData,
   ProcessedLayerStackupEntry,
   LayerCategory
-} from './exporter/builder/layer-builder';
+} from './export/builder/layer-builder';
 
 // 从keepout-builder导出，重命名ShapeType以避免与core/geometry.ts冲突
 export {
@@ -43,7 +43,7 @@ export {
   ProcessedKeepoutData,
   ProcessedKeepoutShape,
   KeepoutGeometryData
-} from './exporter/builder/keepout-builder';
+} from './export/builder/keepout-builder';
 
 // 从board-builder导出，重命名GeometryData以避免与data-models冲突
 export {
@@ -55,4 +55,4 @@ export {
   CircleInfo,
   BoardBuilderConfig,
   BoardBuilderContext
-} from './exporter/builder/board-builder';
+} from './export/builder/board-builder';

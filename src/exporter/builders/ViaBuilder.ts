@@ -13,7 +13,7 @@ import {
   InterStratumFeatureType, LayerPurpose,
   EDMDUserSimpleProperty
 } from '../../types/core';
-import { ViaData as BuilderViaData, ProcessedViaData as BuilderProcessedViaData } from '../../types/exporter/builder/via-builder';
+import { ViaData as BuilderViaData, ProcessedViaData as BuilderProcessedViaData } from '../../types/export/builder/via-builder';
 
 // # 输入数据类型定义
 /**

@@ -2,7 +2,7 @@
 
 // 导出主要类
 export { IDXExporter } from './exporter';
-export type { ExportSourceData, BrowserExportResult } from './exporter';
+export type { BrowserExportResult } from './exporter';
 
 // 导出类型
 export * from './types/core';

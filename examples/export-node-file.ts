@@ -3,7 +3,7 @@
 // NOTE: 此示例仅适用于Node.js环境，不能在浏览器中运行
 
 import { IDXFileWriter, exportToFile, exportBatch } from '../src/exporter/writers/file-writer';
-import { ExtendedExportSourceData, LayerType } from '../src/types/data-models';
+import { ExtendedExportSourceData, LayerType } from '../src/types/export/exporter';
 import { GlobalUnit } from '../src/types/core';
 
 /**

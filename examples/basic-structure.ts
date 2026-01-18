@@ -9,7 +9,7 @@
 //
 
 import { IDXExporter, GlobalUnit, BrowserExportResult } from '../src';
-import { ExtendedExportSourceData } from '../src/types/data-models';
+import { ExtendedExportSourceData } from '../src/types/export/exporter';
 import * as fs from 'fs';
 import * as path from 'path';
 

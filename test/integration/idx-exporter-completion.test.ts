@@ -11,7 +11,7 @@
  */
 
 import { IDXExporter } from '../../src/exporter';
-import { ExtendedExportSourceData, LayerType, ComponentData, HoleData, KeepoutData } from '../../src/types/data-models';
+import { ExtendedExportSourceData, LayerType, ComponentData, HoleData, KeepoutData } from '../../src/types/export/exporter';
 import { GlobalUnit } from '../../src/types/core';
 
 describe('IDX Exporter Completion - Integration Tests', () => {

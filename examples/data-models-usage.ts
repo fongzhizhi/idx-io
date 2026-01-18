@@ -12,7 +12,7 @@ import {
   createDefault4LayerStackup,
   calculateStackupThickness,
   getLayerZPosition
-} from '../src/types/data-models';
+} from '../src/types/export/exporter';
 
 /**
  * 创建示例组件数据
@@ -299,7 +299,7 @@ function demonstrateValidation() {
     isValidLayerData,
     isValidLayerStackupData,
     validateGeometry
-  } = require('../src/types/data-models');
+  } = require('../src/types/export/exporter');
   
   console.log("Component validation:", isValidComponentData(component));
   console.log("Via validation:", vias.every(via => isValidHoleData(via)));

@@ -7,7 +7,7 @@
 //
 
 import { IDXExporter, GlobalUnit } from '../src';
-import { ExtendedExportSourceData } from '../src/types/data-models';
+import { ExtendedExportSourceData } from '../src/types/export/exporter';
 import * as fs from 'fs';
 import * as path from 'path';
 
