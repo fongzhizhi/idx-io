@@ -683,3 +683,402 @@ export function createDefault4LayerStackup(): LayerStackupData {
     }
   };
 }
+
+// ============= IDX导出器专用接口 =============
+
+/**
+ * 浏览器导出结果接口
+ * 
+ * @remarks
+ * 扩展基础导出结果，添加浏览器环境特有的属性
+ * 支持直接下载和内容预览功能
+ * 
+ * @example
+ * ```typescript
+ * // TEST_CASE: Browser export result handling
+ * // TEST_INPUT: Valid board data
+ * // TEST_EXPECT: Returns BrowserExportResult with xmlContent and fileName
+ * const result = await exporter.export(boardData);
+ * assert(result.success === true);
+ * assert(typeof result.xmlContent === 'string');
+ * assert(result.fileName.endsWith('.idx'));
+ * ```
+ */
+export interface BrowserExportResult {
+  /** BUSINESS: 导出是否成功 */
+  success: boolean;
+  
+  /** DESIGN: XML内容字符串，用于浏览器下载或预览 */
+  xmlContent: string;
+  
+  /** DESIGN: 建议的文件名，包含时间戳和类型信息 */
+  fileName: string;
+  
+  /** DESIGN: 导出文件信息列表，保持与服务端接口一致 */
+  files: Array<{
+    type: string;
+    name: string;
+    path: string;
+    timestamp: string;
+    designName: string;
+    sequence: number;
+  }>;
+  
+  /** PERFORMANCE: 导出统计信息，用于性能监控 */
+  statistics: {
+    totalItems: number;
+    components: number;
+    holes: number;
+    keepouts: number;
+    layers: number;
+    fileSize: number;
+    exportDuration: number;
+  };
+  
+  /** BUSINESS: 导出过程中的问题和警告 */
+  issues: Array<{
+    type: 'error' | 'warning';
+    code: string;
+    message: string;
+    itemId?: string;
+  }>;
+}
+
+/**
+ * XML注释配置接口
+ * 
+ * @remarks
+ * 控制XML输出中注释的生成策略
+ * 支持细粒度的注释控制，平衡可读性和文件大小
+ * 
+ * @example
+ * ```typescript
+ * // TEST_CASE: XML comment configuration
+ * // TEST_INPUT: Full comment config
+ * // TEST_EXPECT: All comment types enabled
+ * const config: XMLCommentConfig = {
+ *   enabled: true,
+ *   includeFileHeader: true,
+ *   includeItemComments: true,
+ *   includeGeometryComments: true,
+ *   includeSectionComments: true
+ * };
+ * ```
+ */
+export interface XMLCommentConfig {
+  /** DESIGN: 是否启用注释生成，默认true */
+  enabled?: boolean;
+  
+  /** DESIGN: 是否在文件头部添加详细注释，包含导出信息 */
+  includeFileHeader?: boolean;
+  
+  /** DESIGN: 是否为每个项目添加注释，说明项目类型和属性 */
+  includeItemComments?: boolean;
+  
+  /** DESIGN: 是否为几何元素添加注释，说明几何参数 */
+  includeGeometryComments?: boolean;
+  
+  /** DESIGN: 是否为节区添加分隔注释，提高XML可读性 */
+  includeSectionComments?: boolean;
+}
+
+// ============= 向后兼容的遗留接口 =============
+// NOTE: 这些接口保持与IDXExporter.ts中原有接口的兼容性
+// DEPRECATED: 建议使用上面定义的新接口
+
+/**
+ * 遗留组件数据接口
+ * 
+ * @deprecated 使用 ComponentData 接口替代
+ * @remarks 保留此接口以维持向后兼容性，新代码应使用ComponentData
+ */
+export interface LegacyComponentData {
+  refDes: string;
+  partNumber: string;
+  packageName: string;
+  position: {
+    x: number;
+    y: number;
+    z?: number;
+    rotation: number;
+  };
+  dimensions: {
+    width: number;
+    height: number;
+    thickness: number;
+  };
+  layer: string;
+  isMechanical?: boolean;
+  electrical?: any;
+  thermal?: any;
+  model3D?: any;
+  pins?: any[];
+  properties?: Record<string, any>;
+}
+
+/**
+ * 遗留孔数据接口
+ * 
+ * @deprecated 使用 HoleData 接口替代
+ * @remarks 保留此接口以维持向后兼容性，新代码应使用HoleData
+ */
+export interface LegacyHoleData {
+  id: string;
+  name?: string;
+  position: { x: number; y: number };
+  diameter: number;
+  viaType: 'plated' | 'non-plated' | 'filled' | 'micro';
+  startLayer: string;
+  endLayer: string;
+  padDiameter?: number;
+  antiPadDiameter?: number;
+  netName?: string;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 遗留禁止区数据接口
+ * 
+ * @deprecated 使用 KeepoutData 接口替代
+ * @remarks 保留此接口以维持向后兼容性，新代码应使用KeepoutData
+ */
+export interface LegacyKeepoutData {
+  id: string;
+  name?: string;
+  constraintType: 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other';
+  purpose: any;
+  shape: {
+    type: 'rectangle' | 'circle' | 'polygon';
+    points: Array<{ x: number; y: number }>;
+    radius?: number;
+  };
+  height?: {
+    min: number;
+    max: number | 'infinity';
+  };
+  layer: string;
+  enabled?: boolean;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 遗留层数据接口
+ * 
+ * @deprecated 使用 LayerData 接口替代
+ * @remarks 保留此接口以维持向后兼容性，新代码应使用LayerData
+ */
+export interface LegacyLayerData {
+  id: string;
+  name: string;
+  type: 'SIGNAL' | 'PLANE' | 'SOLDERMASK' | 'SILKSCREEN' | 'DIELECTRIC' | 'OTHERSIGNAL';
+  thickness: number;
+  material?: string;
+  copperWeight?: number;
+  dielectricConstant?: number;
+  properties?: Record<string, any>;
+}
+
+/**
+ * 遗留层叠结构数据接口
+ * 
+ * @deprecated 使用 LayerStackupData 接口替代
+ * @remarks 保留此接口以维持向后兼容性，新代码应使用LayerStackupData
+ */
+export interface LegacyLayerStackupData {
+  id: string;
+  name: string;
+  totalThickness?: number;
+  layers: Array<{
+    layerId: string;
+    position: number;
+    thickness: number;
+  }>;
+}
+
+/**
+ * 遗留导出源数据接口
+ * 
+ * @deprecated 使用 ExtendedExportSourceData 接口替代
+ * @remarks 保留此接口以维持向后兼容性，新代码应使用ExtendedExportSourceData
+ */
+export interface LegacyExportSourceData {
+  board: {
+    id: string;
+    name: string;
+    outline: {
+      points: Array<{ x: number; y: number }>;
+      thickness: number;
+    };
+    components?: LegacyComponentData[];
+    holes?: LegacyHoleData[];
+    keepouts?: LegacyKeepoutData[];
+    layers?: LegacyLayerData[];
+    layerStackup?: LegacyLayerStackupData;
+    properties?: Record<string, any>;
+  };
+  components?: LegacyComponentData[];
+  holes?: LegacyHoleData[];
+  keepouts?: LegacyKeepoutData[];
+  layers?: LegacyLayerData[];
+  layerStackup?: LegacyLayerStackupData;
+}
+
+// ============= 类型转换工具函数 =============
+
+/**
+ * 将遗留组件数据转换为新格式
+ * 
+ * @param legacyComponent - 遗留格式的组件数据
+ * @returns 新格式的组件数据
+ */
+export function convertLegacyComponent(legacyComponent: LegacyComponentData): ComponentData {
+  return {
+    refDes: legacyComponent.refDes,
+    partNumber: legacyComponent.partNumber,
+    packageName: legacyComponent.packageName,
+    position: {
+      x: legacyComponent.position.x,
+      y: legacyComponent.position.y,
+      z: legacyComponent.position.z,
+      rotation: legacyComponent.position.rotation
+    },
+    dimensions: legacyComponent.dimensions,
+    layer: legacyComponent.layer,
+    isMechanical: legacyComponent.isMechanical,
+    electrical: legacyComponent.electrical,
+    thermal: legacyComponent.thermal,
+    model3D: legacyComponent.model3D,
+    pins: legacyComponent.pins,
+    properties: legacyComponent.properties
+  };
+}
+
+/**
+ * 将遗留孔数据转换为新格式
+ * 
+ * @param legacyHole - 遗留格式的孔数据
+ * @returns 新格式的孔数据
+ */
+export function convertLegacyHole(legacyHole: LegacyHoleData): HoleData {
+  return {
+    id: legacyHole.id,
+    type: legacyHole.viaType === 'non-plated' ? 'non-plated' : 'plated',
+    position: legacyHole.position,
+    diameter: legacyHole.diameter,
+    platingThickness: legacyHole.viaType === 'plated' ? 0.025 : undefined,
+    startLayer: legacyHole.startLayer,
+    endLayer: legacyHole.endLayer,
+    padDiameter: legacyHole.padDiameter,
+    antiPadDiameter: legacyHole.antiPadDiameter,
+    netName: legacyHole.netName,
+    viaType: mapLegacyViaType(legacyHole.viaType),
+    properties: legacyHole.properties
+  };
+}
+
+/**
+ * 映射遗留过孔类型到新格式
+ */
+function mapLegacyViaType(viaType: string): 'through' | 'blind' | 'buried' | 'micro' | undefined {
+  switch (viaType) {
+    case 'plated': return 'through';
+    case 'micro': return 'micro';
+    default: return undefined;
+  }
+}
+
+/**
+ * 将遗留禁止区数据转换为新格式
+ * 
+ * @param legacyKeepout - 遗留格式的禁止区数据
+ * @returns 新格式的禁止区数据
+ */
+export function convertLegacyKeepout(legacyKeepout: LegacyKeepoutData): KeepoutData {
+  return {
+    id: legacyKeepout.id,
+    type: mapLegacyConstraintType(legacyKeepout.constraintType),
+    geometry: {
+      type: legacyKeepout.shape.type,
+      points: legacyKeepout.shape.points,
+      radius: legacyKeepout.shape.radius
+    },
+    layers: [legacyKeepout.layer],
+    height: legacyKeepout.height,
+    purpose: legacyKeepout.purpose,
+    enabled: legacyKeepout.enabled,
+    properties: legacyKeepout.properties
+  };
+}
+
+/**
+ * 映射遗留约束类型到新格式
+ */
+function mapLegacyConstraintType(constraintType: string): 'component' | 'via' | 'trace' | 'testpoint' | 'thermal' | 'other' {
+  switch (constraintType) {
+    case 'route': return 'trace';
+    case 'component': return 'component';
+    case 'via': return 'via';
+    case 'testpoint': return 'testpoint';
+    case 'thermal': return 'thermal';
+    default: return 'other';
+  }
+}
+
+/**
+ * 将遗留导出源数据转换为新格式
+ * 
+ * @param legacyData - 遗留格式的导出源数据
+ * @returns 新格式的导出源数据
+ */
+export function convertLegacyExportSourceData(legacyData: LegacyExportSourceData): ExtendedExportSourceData {
+  return {
+    board: {
+      id: legacyData.board.id,
+      name: legacyData.board.name,
+      outline: legacyData.board.outline,
+      components: legacyData.board.components?.map(convertLegacyComponent),
+      holes: legacyData.board.holes?.map(convertLegacyHole),
+      keepouts: legacyData.board.keepouts?.map(convertLegacyKeepout),
+      layers: legacyData.board.layers?.map(convertLegacyLayer),
+      layerStackup: legacyData.board.layerStackup ? convertLegacyLayerStackup(legacyData.board.layerStackup) : undefined,
+      properties: legacyData.board.properties
+    },
+    components: legacyData.components?.map(convertLegacyComponent),
+    holes: legacyData.holes?.map(convertLegacyHole),
+    keepouts: legacyData.keepouts?.map(convertLegacyKeepout),
+    layers: legacyData.layers?.map(convertLegacyLayer),
+    layerStackup: legacyData.layerStackup ? convertLegacyLayerStackup(legacyData.layerStackup) : undefined
+  };
+}
+
+/**
+ * 将遗留层数据转换为新格式
+ */
+function convertLegacyLayer(legacyLayer: LegacyLayerData): LayerData {
+  return {
+    id: legacyLayer.id,
+    name: legacyLayer.name,
+    type: legacyLayer.type as LayerType,
+    thickness: legacyLayer.thickness,
+    material: legacyLayer.material,
+    copperWeight: legacyLayer.copperWeight,
+    dielectricConstant: legacyLayer.dielectricConstant,
+    properties: legacyLayer.properties
+  };
+}
+
+/**
+ * 将遗留层叠结构转换为新格式
+ */
+function convertLegacyLayerStackup(legacyStackup: LegacyLayerStackupData): LayerStackupData {
+  return {
+    id: legacyStackup.id,
+    name: legacyStackup.name,
+    totalThickness: legacyStackup.totalThickness,
+    layers: legacyStackup.layers.map(layer => ({
+      layerId: layer.layerId,
+      position: layer.position,
+      thickness: layer.thickness
+    }))
+  };
+}

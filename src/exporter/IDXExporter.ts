@@ -1,13 +1,24 @@
 // ============= IDX导出器主入口 =============
+// DESIGN: 集中管理IDX导出功能，支持浏览器和Node.js环境
+// BUSINESS: 将PCB设计数据转换为IDX格式，支持协作和制造流程
 
 import { IDXExportConfig, ExportResult, GlobalUnit, EDMDDataSet, EDMDHeader, IDXFileType } from '../types/core';
 import { 
-  ComponentData as NewComponentData, 
-  HoleData as NewHoleData, 
-  KeepoutData as NewKeepoutData, 
-  LayerData as NewLayerData, 
-  LayerStackupData as NewLayerStackupData,
-  ExtendedExportSourceData
+  ComponentData, 
+  HoleData, 
+  KeepoutData, 
+  LayerData, 
+  LayerStackupData,
+  ExtendedExportSourceData,
+  BrowserExportResult,
+  XMLCommentConfig,
+  LegacyComponentData,
+  LegacyHoleData,
+  LegacyKeepoutData,
+  LegacyLayerData,
+  LegacyLayerStackupData,
+  LegacyExportSourceData,
+  convertLegacyExportSourceData
 } from '../types/exporter/idx-exporter';
 import { BoardBuilder } from './builders/BoardBuilder';
 import { ComponentBuilder } from './builders/ComponentBuilder';
@@ -20,125 +31,11 @@ import { XMLWriterWithComments, XMLWriterWithCommentsOptions } from './writers/x
 import { DatasetAssembler, BoardData, BuilderRegistry, AssemblerConfig } from './assemblers/dataset-assembler';
 
 /**
- * 组件数据接口
- * @deprecated 使用 ../types/data-models.ts 中的 ComponentData 接口
- * @remarks 保留此接口以维持向后兼容性
- */
-export interface ComponentData {
-  refDes: string;
-  partNumber: string;
-  packageName: string;
-  position: {
-    x: number;
-    y: number;
-    z?: number;
-    rotation: number;
-  };
-  dimensions: {
-    width: number;
-    height: number;
-    thickness: number;
-  };
-  layer: string;
-  isMechanical?: boolean;
-  electrical?: any;
-  thermal?: any;
-  model3D?: any;
-  pins?: any[];
-  properties?: Record<string, any>;
-}
-
-/**
- * 孔数据接口
- * @deprecated 使用 ../types/data-models.ts 中的 HoleData 接口
- * @remarks 保留此接口以维持向后兼容性
- */
-export interface HoleData {
-  id: string;
-  name?: string;
-  position: { x: number; y: number };
-  diameter: number;
-  viaType: 'plated' | 'non-plated' | 'filled' | 'micro';
-  startLayer: string;
-  endLayer: string;
-  padDiameter?: number;
-  antiPadDiameter?: number;
-  netName?: string;
-  properties?: Record<string, any>;
-}
-
-/**
- * 禁止区数据接口
- * @deprecated 使用 ../types/data-models.ts 中的 KeepoutData 接口
- * @remarks 保留此接口以维持向后兼容性
- */
-export interface KeepoutData {
-  id: string;
-  name?: string;
-  constraintType: 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other';
-  purpose: any;
-  shape: {
-    type: 'rectangle' | 'circle' | 'polygon';
-    points: Array<{ x: number; y: number }>;
-    radius?: number;
-  };
-  height?: {
-    min: number;
-    max: number | 'infinity';
-  };
-  layer: string;
-  enabled?: boolean;
-  properties?: Record<string, any>;
-}
-
-/**
- * 层数据接口
- * @deprecated 使用 ../types/data-models.ts 中的 LayerData 接口
- * @remarks 保留此接口以维持向后兼容性
- */
-export interface LayerData {
-  id: string;
-  name: string;
-  type: 'SIGNAL' | 'PLANE' | 'SOLDERMASK' | 'SILKSCREEN' | 'DIELECTRIC' | 'OTHERSIGNAL';
-  thickness: number;
-  material?: string;
-  copperWeight?: number;
-  dielectricConstant?: number;
-  properties?: Record<string, any>;
-}
-
-/**
- * 层叠结构数据接口
- * @deprecated 使用 ../types/data-models.ts 中的 LayerStackupData 接口
- * @remarks 保留此接口以维持向后兼容性
- */
-export interface LayerStackupData {
-  id: string;
-  name: string;
-  totalThickness?: number;
-  layers: Array<{
-    layerId: string;
-    position: number;
-    thickness: number;
-  }>;
-}
-
-/**
- * 导出源数据接口
- * @deprecated 使用 ../types/data-models.ts 中的 ExtendedExportSourceData 接口
- * @remarks 保留此接口以维持向后兼容性
- */
-export interface ExportSourceData {
-  board: BoardData;
-  components?: ComponentData[];
-  holes?: HoleData[];
-  keepouts?: KeepoutData[];
-  layers?: LayerData[];
-  layerStackup?: LayerStackupData;
-}
-
-/**
  * 导出上下文实现
+ * 
+ * @remarks
+ * DESIGN: 实现BuilderContext接口，管理导出过程中的状态和错误
+ * PERFORMANCE: 使用Map优化序列号生成性能
  */
 class ExportContextImpl implements BuilderContext {
   private sequences: Map<string, number> = new Map();
@@ -179,12 +76,16 @@ class ExportContextImpl implements BuilderContext {
 
 /**
  * 构建器注册表实现
+ * 
+ * @remarks
+ * DESIGN: 实现BuilderRegistry接口，管理所有类型的构建器实例
+ * BUSINESS: 支持板、组件、过孔、禁止区、层等所有IDX元素类型
  */
 class BuilderRegistryImpl implements BuilderRegistry {
   private builders: Map<string, any> = new Map();
   
   constructor(private config: BuilderConfig, private context: BuilderContext) {
-    // 注册所有构建器
+    // DESIGN: 注册所有构建器，支持动态扩展
     this.builders.set('board', new BoardBuilder(config, context));
     this.builders.set('component', new ComponentBuilder(config, context));
     this.builders.set('plated-hole', new ViaBuilder(config, context));
@@ -199,33 +100,23 @@ class BuilderRegistryImpl implements BuilderRegistry {
 }
 
 /**
- * 浏览器导出结果接口
- */
-export interface BrowserExportResult extends ExportResult {
-  /** XML内容字符串 */
-  xmlContent: string;
-  /** 建议的文件名 */
-  fileName: string;
-}
-
-/**
- * XML注释配置接口
- */
-export interface XMLCommentConfig {
-  /** 是否启用注释生成 */
-  enabled?: boolean;
-  /** 是否在文件头部添加详细注释 */
-  includeFileHeader?: boolean;
-  /** 是否为每个项目添加注释 */
-  includeItemComments?: boolean;
-  /** 是否为几何元素添加注释 */
-  includeGeometryComments?: boolean;
-  /** 是否为节区添加分隔注释 */
-  includeSectionComments?: boolean;
-}
-
-/**
  * IDX导出器主类 - 浏览器版本
+ * 
+ * @remarks
+ * DESIGN: 专为浏览器环境设计的IDX导出器，返回XML内容而非写入文件
+ * BUSINESS: 支持PCB设计数据的IDX格式导出，满足协作和制造需求
+ * PERFORMANCE: 支持大型设计的高效导出，包含性能监控
+ * 
+ * @example
+ * ```typescript
+ * // TEST_CASE: Basic IDX export
+ * // TEST_INPUT: Valid board data with components
+ * // TEST_EXPECT: Returns successful BrowserExportResult with XML content
+ * const exporter = new IDXExporter();
+ * const result = await exporter.export(boardData);
+ * assert(result.success === true);
+ * assert(result.xmlContent.includes('<?xml'));
+ * ```
  */
 export class IDXExporter {
   private config: IDXExportConfig;
@@ -236,7 +127,7 @@ export class IDXExporter {
     this.config = this.mergeConfig(config);
     this.commentConfig = this.mergeCommentConfig(commentConfig);
     
-    // 根据注释配置选择XML写入器
+    // DESIGN: 根据注释配置选择XML写入器
     if (this.commentConfig.enabled) {
       const writerOptions: XMLWriterWithCommentsOptions = {
         prettyPrint: true,
@@ -258,19 +149,37 @@ export class IDXExporter {
   
   /**
    * 主要导出方法 - 返回XML内容而不是写入文件
+   * 
+   * @param data - 导出源数据，支持新旧两种格式
+   * @returns 浏览器导出结果，包含XML内容和统计信息
+   * 
+   * @remarks
+   * BUSINESS: 支持向后兼容，自动识别和转换旧格式数据
+   * PERFORMANCE: 包含详细的性能统计信息
+   * 
+   * @example
+   * ```typescript
+   * // TEST_CASE: Export with legacy data format
+   * // TEST_INPUT: LegacyExportSourceData format
+   * // TEST_EXPECT: Successfully converts and exports
+   * const legacyData: LegacyExportSourceData = { ... };
+   * const result = await exporter.export(legacyData);
+   * assert(result.success === true);
+   * ```
    */
-  async export(data: ExportSourceData | ExtendedExportSourceData): Promise<BrowserExportResult> {
+  async export(data: LegacyExportSourceData | ExtendedExportSourceData): Promise<BrowserExportResult> {
     const context = new ExportContextImpl();
     const startTime = Date.now();
     
     try {
-      // 1. 构建数据集
+      // ============= 数据集构建阶段 =============
       const dataset = await this.buildDataset(data, context);
       
-      // 2. 序列化为XML
+      // ============= XML序列化阶段 =============
+      // PERFORMANCE: 大型设计可能产生MB级XML，需要优化内存使用
       const xmlContent = this.xmlWriter.serialize(dataset);
       
-      // 3. 生成文件名
+      // ============= 结果生成阶段 =============
       const fileName = this.generateFileName(IDXFileType.BASELINE);
       
       const exportDuration = Date.now() - startTime;
@@ -283,7 +192,7 @@ export class IDXExporter {
         files: [{
           type: IDXFileType.BASELINE,
           name: fileName,
-          path: '', // 浏览器环境下无实际路径
+          path: '', // DESIGN: 浏览器环境下无实际路径
           timestamp: new Date().toISOString(),
           designName: this.config.output.designName,
           sequence: 1
@@ -291,7 +200,9 @@ export class IDXExporter {
         statistics: {
           totalItems: dataset.Body.Items.length,
           components: this.countItemsByGeometryType(dataset, 'COMPONENT'),
-          holes: this.countItemsByGeometryType(dataset, 'HOLE_PLATED') + this.countItemsByGeometryType(dataset, 'HOLE_NON_PLATED') + this.countItemsByGeometryType(dataset, 'FILLED_VIA'),
+          holes: this.countItemsByGeometryType(dataset, 'HOLE_PLATED') + 
+                 this.countItemsByGeometryType(dataset, 'HOLE_NON_PLATED') + 
+                 this.countItemsByGeometryType(dataset, 'FILLED_VIA'),
           keepouts: this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_ROUTE') + 
                    this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_COMPONENT') + 
                    this.countItemsByGeometryType(dataset, 'KEEPOUT_AREA_VIA') + 
@@ -335,6 +246,12 @@ export class IDXExporter {
   
   /**
    * 生成下载用的Blob对象
+   * 
+   * @param xmlContent - XML内容字符串
+   * @returns Blob对象，用于浏览器下载
+   * 
+   * @remarks
+   * DESIGN: 设置正确的MIME类型，确保浏览器正确处理
    */
   createDownloadBlob(xmlContent: string): Blob {
     return new Blob([xmlContent], { 
@@ -344,6 +261,12 @@ export class IDXExporter {
   
   /**
    * 生成下载链接
+   * 
+   * @param xmlContent - XML内容字符串
+   * @returns 下载URL，需要在使用后调用URL.revokeObjectURL释放
+   * 
+   * @remarks
+   * PERFORMANCE: 记得释放URL对象，避免内存泄漏
    */
   createDownloadUrl(xmlContent: string): string {
     const blob = this.createDownloadBlob(xmlContent);
@@ -352,11 +275,16 @@ export class IDXExporter {
   
   /**
    * 设置注释配置
+   * 
+   * @param commentConfig - 新的注释配置
+   * 
+   * @remarks
+   * DESIGN: 动态更新XML写入器，支持运行时配置变更
    */
   setCommentConfig(commentConfig: XMLCommentConfig): void {
     this.commentConfig = this.mergeCommentConfig(commentConfig);
     
-    // 重新创建XML写入器
+    // DESIGN: 重新创建XML写入器以应用新配置
     if (this.commentConfig.enabled) {
       const writerOptions: XMLWriterWithCommentsOptions = {
         prettyPrint: true,
@@ -378,6 +306,8 @@ export class IDXExporter {
   
   /**
    * 获取当前注释配置
+   * 
+   * @returns 当前注释配置的副本
    */
   getCommentConfig(): XMLCommentConfig {
     return { ...this.commentConfig };
@@ -385,6 +315,8 @@ export class IDXExporter {
   
   /**
    * 启用或禁用注释
+   * 
+   * @param enabled - 是否启用注释
    */
   setCommentsEnabled(enabled: boolean): void {
     this.setCommentConfig({ ...this.commentConfig, enabled });
@@ -392,6 +324,12 @@ export class IDXExporter {
   
   /**
    * 生成文件名
+   * 
+   * @param fileType - IDX文件类型
+   * @returns 包含时间戳的文件名
+   * 
+   * @remarks
+   * DESIGN: 使用ISO时间戳确保文件名唯一性
    */
   private generateFileName(fileType: IDXFileType): string {
     const timestamp = new Date().toISOString()
@@ -404,6 +342,10 @@ export class IDXExporter {
   
   /**
    * 按几何类型统计项目数量
+   * 
+   * @param dataset - IDX数据集
+   * @param geometryTypePrefix - 几何类型前缀
+   * @returns 匹配的项目数量
    */
   private countItemsByGeometryType(dataset: EDMDDataSet, geometryTypePrefix: string): number {
     return dataset.Body.Items.filter(item => 
@@ -411,8 +353,19 @@ export class IDXExporter {
     ).length;
   }
   
-  private async buildDataset(data: ExportSourceData | ExtendedExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
-    // Convert ExtendedExportSourceData to ExportSourceData if needed
+  /**
+   * 构建IDX数据集
+   * 
+   * @param data - 导出源数据
+   * @param context - 导出上下文
+   * @returns IDX数据集
+   * 
+   * @remarks
+   * BUSINESS: 支持新旧两种数据格式，自动转换确保向后兼容
+   * DESIGN: 使用组装器模式，支持不同类型的数据集构建
+   */
+  private async buildDataset(data: LegacyExportSourceData | ExtendedExportSourceData, context: ExportContextImpl): Promise<EDMDDataSet> {
+    // DESIGN: 标准化数据格式，统一后续处理流程
     const normalizedData = this.normalizeExportData(data);
     
     const builderConfig: BuilderConfig = {
@@ -422,19 +375,19 @@ export class IDXExporter {
       precision: this.config.geometry.precision
     };
     
-    // 创建构建器注册表
+    // DESIGN: 创建构建器注册表，支持所有IDX元素类型
     const builderRegistry = new BuilderRegistryImpl(builderConfig, context);
     
-    // 创建组装器配置
+    // DESIGN: 创建组装器配置
     const assemblerConfig: AssemblerConfig = {
       useSimplified: this.config.geometry.useSimplified,
       includeLayerStackup: this.config.collaboration.includeLayerStackup
     };
     
-    // 创建数据集组装器
+    // DESIGN: 创建数据集组装器
     const assembler = new DatasetAssembler(builderRegistry, assemblerConfig);
     
-    // 构建头部
+    // ============= 头部构建 =============
     const header: EDMDHeader = {
       CreatorSystem: this.config.collaboration.creatorSystem,
       CreatorCompany: this.config.collaboration.creatorCompany,
@@ -443,7 +396,8 @@ export class IDXExporter {
       ModifiedDateTime: new Date().toISOString()
     };
     
-    // 合并数据到BoardData结构中以保持向后兼容性
+    // ============= 数据合并 =============
+    // DESIGN: 合并数据到BoardData结构中以保持向后兼容性
     const enrichedBoardData: BoardData = {
       ...normalizedData.board,
       components: normalizedData.components || normalizedData.board.components,
@@ -453,10 +407,10 @@ export class IDXExporter {
       layerStackup: normalizedData.layerStackup || normalizedData.board.layerStackup
     };
     
-    // 使用组装器构建Body
+    // ============= 主体构建 =============
     const body = await assembler.assembleBaselineBody(enrichedBoardData);
     
-    // 构建数据集
+    // ============= 数据集构建 =============
     const dataset: EDMDDataSet = {
       Header: header,
       Body: body,
@@ -472,15 +426,22 @@ export class IDXExporter {
   }
   
   /**
-   * 标准化导出数据，将ExtendedExportSourceData转换为ExportSourceData
+   * 标准化导出数据，将ExtendedExportSourceData转换为LegacyExportSourceData
+   * 
+   * @param data - 输入数据，可能是新格式或旧格式
+   * @returns 标准化后的旧格式数据
+   * 
+   * @remarks
+   * BUSINESS: 确保向后兼容性，支持新旧两种数据格式
+   * DESIGN: 自动检测数据格式并进行相应转换
    */
-  private normalizeExportData(data: ExportSourceData | ExtendedExportSourceData): ExportSourceData {
-    // 如果已经是ExportSourceData格式，直接返回
+  private normalizeExportData(data: LegacyExportSourceData | ExtendedExportSourceData): LegacyExportSourceData {
+    // DESIGN: 如果已经是旧格式，直接返回
     if (this.isLegacyExportSourceData(data)) {
       return data;
     }
     
-    // 转换ExtendedExportSourceData到ExportSourceData
+    // DESIGN: 转换新格式到旧格式
     const extendedData = data as ExtendedExportSourceData;
     
     return {
@@ -505,21 +466,30 @@ export class IDXExporter {
   
   /**
    * 检查是否为旧版ExportSourceData接口
+   * 
+   * @param data - 待检查的数据
+   * @returns 是否为旧版接口
+   * 
+   * @remarks
+   * DESIGN: 通过特征检测判断数据格式版本
    */
-  private isLegacyExportSourceData(data: any): data is ExportSourceData {
-    // 简单的类型检查：新接口的组件有pins属性，旧接口没有
+  private isLegacyExportSourceData(data: any): data is LegacyExportSourceData {
+    // DESIGN: 简单的类型检查：新接口的组件有pins属性，旧接口没有
     if (data.components && data.components.length > 0) {
       const firstComponent = data.components[0];
-      // 如果有pins属性，说明是新接口
+      // DESIGN: 如果有pins属性，说明是新接口
       return !firstComponent.pins;
     }
-    return true; // 默认认为是旧接口
+    return true; // DESIGN: 默认认为是旧接口
   }
   
   /**
    * 转换组件数据
+   * 
+   * @param components - 新格式组件数据
+   * @returns 旧格式组件数据
    */
-  private convertComponents(components?: NewComponentData[]): ComponentData[] | undefined {
+  private convertComponents(components?: ComponentData[]): LegacyComponentData[] | undefined {
     if (!components) return undefined;
     
     return components.map(comp => ({
@@ -545,8 +515,11 @@ export class IDXExporter {
   
   /**
    * 转换孔数据
+   * 
+   * @param holes - 新格式孔数据
+   * @returns 旧格式孔数据
    */
-  private convertHoles(holes?: NewHoleData[]): HoleData[] | undefined {
+  private convertHoles(holes?: HoleData[]): LegacyHoleData[] | undefined {
     if (!holes) return undefined;
     
     return holes.map(hole => ({
@@ -566,6 +539,10 @@ export class IDXExporter {
   
   /**
    * 映射孔类型到过孔类型
+   * 
+   * @param type - 新格式孔类型
+   * @param viaType - 过孔子类型
+   * @returns 旧格式过孔类型
    */
   private mapHoleTypeToViaType(type: 'plated' | 'non-plated', viaType?: string): 'plated' | 'non-plated' | 'filled' | 'micro' {
     if (viaType) {
@@ -582,8 +559,11 @@ export class IDXExporter {
   
   /**
    * 转换禁止区数据
+   * 
+   * @param keepouts - 新格式禁止区数据
+   * @returns 旧格式禁止区数据
    */
-  private convertKeepouts(keepouts?: NewKeepoutData[]): KeepoutData[] | undefined {
+  private convertKeepouts(keepouts?: KeepoutData[]): LegacyKeepoutData[] | undefined {
     if (!keepouts) return undefined;
     
     return keepouts.map(keepout => ({
@@ -608,6 +588,9 @@ export class IDXExporter {
   
   /**
    * 映射禁止区类型
+   * 
+   * @param type - 新格式禁止区类型
+   * @returns 旧格式约束类型
    */
   private mapKeepoutType(type: string): 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other' {
     switch (type) {
@@ -622,8 +605,11 @@ export class IDXExporter {
   
   /**
    * 转换层数据
+   * 
+   * @param layers - 新格式层数据
+   * @returns 旧格式层数据
    */
-  private convertLayers(layers?: NewLayerData[]): LayerData[] | undefined {
+  private convertLayers(layers?: LayerData[]): LegacyLayerData[] | undefined {
     if (!layers) return undefined;
     
     return layers.map(layer => ({
@@ -640,8 +626,11 @@ export class IDXExporter {
   
   /**
    * 转换层叠结构数据
+   * 
+   * @param layerStackup - 新格式层叠结构数据
+   * @returns 旧格式层叠结构数据
    */
-  private convertLayerStackup(layerStackup?: NewLayerStackupData): LayerStackupData | undefined {
+  private convertLayerStackup(layerStackup?: LayerStackupData): LegacyLayerStackupData | undefined {
     if (!layerStackup) return undefined;
     
     return {
@@ -656,6 +645,15 @@ export class IDXExporter {
     };
   }
   
+  /**
+   * 合并配置选项
+   * 
+   * @param config - 部分配置选项
+   * @returns 完整的配置对象
+   * 
+   * @remarks
+   * DESIGN: 提供合理的默认值，确保配置的完整性
+   */
   private mergeConfig(config: Partial<IDXExportConfig>): IDXExportConfig {
     return {
       output: {
@@ -683,6 +681,15 @@ export class IDXExporter {
     };
   }
   
+  /**
+   * 合并注释配置选项
+   * 
+   * @param config - 部分注释配置选项
+   * @returns 完整的注释配置对象
+   * 
+   * @remarks
+   * DESIGN: 默认启用所有注释类型，提供最佳的可读性
+   */
   private mergeCommentConfig(config: XMLCommentConfig): XMLCommentConfig {
     return {
       enabled: config.enabled ?? true,
@@ -694,17 +701,19 @@ export class IDXExporter {
   }
 }
 
-// 导出类型和接口
+// ============= 导出类型和接口 =============
+
+// DESIGN: 导出核心类型，保持API的一致性
 export { GlobalUnit } from '../types/core';
 export type { IDXExportConfig, ExportResult } from '../types/core';
 
-// 导出新的数据模型类型（推荐使用）
+// DESIGN: 导出新的数据模型类型（推荐使用）
 export type { 
-  ComponentData as NewComponentData,
-  HoleData as NewHoleData,
-  KeepoutData as NewKeepoutData,
-  LayerData as NewLayerData,
-  LayerStackupData as NewLayerStackupData,
+  ComponentData,
+  HoleData,
+  KeepoutData,
+  LayerData,
+  LayerStackupData,
   ExtendedExportSourceData,
   ExtendedBoardData,
   Position3D,
@@ -712,5 +721,17 @@ export type {
   PinData,
   GeometryData,
   LayerType,
-  LayerStackupEntry
+  LayerStackupEntry,
+  BrowserExportResult,
+  XMLCommentConfig
+} from '../types/exporter/idx-exporter';
+
+// DESIGN: 导出遗留类型以保持向后兼容性
+export type {
+  LegacyComponentData,
+  LegacyHoleData,
+  LegacyKeepoutData,
+  LegacyLayerData,
+  LegacyLayerStackupData,
+  LegacyExportSourceData
 } from '../types/exporter/idx-exporter';

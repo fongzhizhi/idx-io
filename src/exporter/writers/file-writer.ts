@@ -6,7 +6,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { IDXExporter, XMLCommentConfig } from '../IDXExporter';
 import { ExtendedExportSourceData } from '../../types/exporter/idx-exporter';
-import { IDXExportConfig, ExportResult, IDXFileType } from '../../types/core';
+import { IDXExportConfig, ExportResult, IDXFileType, IDXFileMetadata } from '../../types/core';
 
 /**
  * Node.js文件导出结果接口
@@ -115,10 +115,13 @@ export class IDXFileWriter {
       
       if (!browserResult.success) {
         return {
-          ...browserResult,
+          success: false,
           filePath: '',
           xmlContent: '',
-          fileName: ''
+          fileName: '',
+          files: [],
+          statistics: browserResult.statistics,
+          issues: browserResult.issues
         };
       }
       
@@ -153,19 +156,21 @@ export class IDXFileWriter {
       writeFileSync(filePath, browserResult.xmlContent, mergedOptions.encoding);
       
       // 6. 返回结果
+      const fileMetadata: IDXFileMetadata = {
+        type: IDXFileType.BASELINE,
+        name: fileName,
+        path: filePath,
+        timestamp: new Date().toISOString(),
+        designName: this.getDesignName(),
+        sequence: 1
+      };
+      
       return {
         success: true,
         filePath,
         xmlContent: browserResult.xmlContent,
         fileName,
-        files: [{
-          type: IDXFileType.BASELINE,
-          name: fileName,
-          path: filePath,
-          timestamp: new Date().toISOString(),
-          designName: this.getDesignName(),
-          sequence: 1
-        }],
+        files: [fileMetadata],
         statistics: {
           ...browserResult.statistics,
           fileSize: Buffer.byteLength(browserResult.xmlContent, mergedOptions.encoding)
