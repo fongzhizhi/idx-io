@@ -506,27 +506,13 @@ export interface ExtendedBoardData {
  * 导出源数据接口扩展
  * 
  * @remarks
- * 扩展ExportSourceData接口以支持所有新的数据类型
+ * 扩展ExportSourceData接口，简化数据结构
+ * 所有组件、孔、禁止区等数据都集中在board中管理
  * 满足Requirements 1.1, 4.1的要求
  */
 export interface ExtendedExportSourceData {
-  /** 板数据 */
+  /** 板数据，包含所有设计元素 */
   board: ExtendedBoardData;
-  
-  /** 组件数据（可选，也可在board中定义） */
-  components?: ComponentData[];
-  
-  /** 孔数据（可选，也可在board中定义） */
-  holes?: HoleData[];
-  
-  /** 禁止区数据（可选，也可在board中定义） */
-  keepouts?: KeepoutData[];
-  
-  /** 层数据（可选，也可在board中定义） */
-  layers?: LayerData[];
-  
-  /** 层叠结构数据（可选，也可在board中定义） */
-  layerStackup?: LayerStackupData;
 }
 
 // ============= 类型守卫函数 =============

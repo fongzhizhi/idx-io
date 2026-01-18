@@ -550,14 +550,14 @@ export class IDXExporter {
     };
     
     // ============= 数据合并 =============
-    // DESIGN: 转换新格式数据为DatasetAssembler期望的格式
+    // DESIGN: 使用简化的数据结构，所有数据都在board中
     const enrichedBoardData: BoardData = {
       ...normalizedData.board,
-      components: this.convertToAssemblerComponents(normalizedData.components || normalizedData.board.components),
-      holes: this.convertToAssemblerHoles(normalizedData.holes || normalizedData.board.holes),
-      keepouts: this.convertToAssemblerKeepouts(normalizedData.keepouts || normalizedData.board.keepouts),
-      layers: this.convertToAssemblerLayers(normalizedData.layers || normalizedData.board.layers),
-      layerStackup: this.convertToAssemblerLayerStackup(normalizedData.layerStackup || normalizedData.board.layerStackup)
+      components: this.convertToAssemblerComponents(normalizedData.board.components),
+      holes: this.convertToAssemblerHoles(normalizedData.board.holes),
+      keepouts: this.convertToAssemblerKeepouts(normalizedData.board.keepouts),
+      layers: this.convertToAssemblerLayers(normalizedData.board.layers),
+      layerStackup: this.convertToAssemblerLayerStackup(normalizedData.board.layerStackup)
     };
     
     // ============= 主体构建 =============
