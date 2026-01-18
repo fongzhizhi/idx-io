@@ -7,16 +7,13 @@ import {
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, StandardGeometryType, 
+  EDMDItem, ItemType, GeometryType,
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDCircleCenter,
   InterStratumFeatureType, LayerPurpose,
   EDMDUserSimpleProperty
 } from '../../types/core';
-import {
-  ViaData, ProcessedViaData, ViaGeometryData,
-  ViaGeometryType, ViaType
-} from '../../types/builder';
+import { ViaData as BuilderViaData, ProcessedViaData as BuilderProcessedViaData } from '../../types/exporter/builder/via-builder';
 
 // # 输入数据类型定义
 /**
@@ -93,7 +90,7 @@ interface ProcessedViaData {
   name: string;
   position: { x: number; y: number };
   diameter: number;
-  viaType: ViaData['viaType'];
+  viaType: BuilderViaData['viaType'];
   geometryType: GeometryType;
   lowerBound: number;  // Z轴下界
   upperBound: number;  // Z轴上界
@@ -171,7 +168,7 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
    * @testInput viaType='unknown'
    * @testExpect 验证失败，返回错误信息
    */
-  protected validateInput(input: ViaData): ValidationResult<ViaData> {
+  protected validateInput(input: BuilderViaData): ValidationResult<BuilderViaData> {
     const warnings: string[] = [];
     const errors: string[] = [];
     
@@ -236,7 +233,7 @@ export class ViaBuilder extends BaseBuilder<ViaData, EDMDItem> {
    * @param input - 验证后的过孔数据
    * @returns 处理后的过孔数据
    */
-  protected async preProcess(input: ViaData): Promise<ProcessedViaData> {
+  protected async preProcess(input: BuilderViaData): Promise<ProcessedViaData> {
     // # 获取过孔类型配置
     const viaConfig = this.viaTypeMap[input.viaType];
     if (!viaConfig) {

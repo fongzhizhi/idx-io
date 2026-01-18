@@ -4,8 +4,55 @@
 // 导出核心IDX协议类型
 export * from './core';
 
-// 导出数据模型类型
-export * from './data-models';
+// 导出数据模型类型（作为主要定义）
+export * from './exporter/exporter';
 
-// 导出构建器类型
-export * from './builder';
+// 导出构建器类型，处理重名冲突
+export * from './exporter/builder/via-builder';
+
+// 从component-builder导出，排除重名的ComponentData（使用data-models版本）
+export {
+  ComponentGeometryType,
+  ComponentLayer,
+  ComponentElectricalProperties,
+  ComponentThermalProperties,
+  Component3DModel,
+  ComponentPin,
+  ProcessedComponentData,
+  ComponentGeometryData
+} from './exporter/builder/component-builder';
+
+// 从layer-builder导出，排除重名的LayerData和LayerType（使用data-models版本）
+export {
+  LayerGeometryType,
+  LayerStackupInput,
+  ProcessedLayerData,
+  ProcessedLayerStackupData,
+  ProcessedLayerStackupEntry,
+  LayerCategory
+} from './exporter/builder/layer-builder';
+
+// 从keepout-builder导出，重命名ShapeType以避免与core/geometry.ts冲突
+export {
+  KeepoutGeometryType,
+  KeeninGeometryType,
+  ConstraintType,
+  ShapeType as BuilderShapeType,
+  KeepoutData as BuilderKeepoutData,
+  KeepoutShape,
+  ProcessedKeepoutData,
+  ProcessedKeepoutShape,
+  KeepoutGeometryData
+} from './exporter/builder/keepout-builder';
+
+// 从board-builder导出，重命名GeometryData以避免与data-models冲突
+export {
+  ZAxisReference,
+  BoardGeometryType,
+  BoardData,
+  ProcessedBoardData,
+  GeometryData as BoardGeometryData,
+  CircleInfo,
+  BoardBuilderConfig,
+  BoardBuilderContext
+} from './exporter/builder/board-builder';

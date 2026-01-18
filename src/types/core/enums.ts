@@ -22,6 +22,13 @@ export enum ItemType {
  * IDXv4.0引入的简化项目分类方式
  * REF: Section 4.1.2.2, Table 8
  */
+/**
+ * 几何类型枚举（统一版本）
+ * 
+ * @remarks
+ * IDXv4.0引入的简化项目分类方式，合并了ge
+ * REF: Section 4.1.2.2, Table 8
+ */
 export enum GeometryType {
   // 板相关
   BOARD_OUTLINE = 'BOARD_OUTLINE',
@@ -76,6 +83,7 @@ export enum GeometryType {
   LAYER_EMBEDDED_RESISTOR = 'LAYER_EMBEDDED_RESISTOR',
   LAYER_DIELECTRIC = 'LAYER_DIELECTRIC',
   LAYER_STACKUP = 'LAYER_STACKUP',
+  LAYER = 'LAYER',
   
   // 弯曲区域
   BEND = 'BEND',
@@ -85,6 +93,7 @@ export enum GeometryType {
   COPPER_TRACE = 'COPPER_TRACE',
   COPPER_AREA = 'COPPER_AREA'
 }
+
 
 // ------------ 层和地层相关枚举 ------------
 /**

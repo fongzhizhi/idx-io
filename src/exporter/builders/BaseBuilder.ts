@@ -7,10 +7,11 @@
 
 import { 
   EDMDObject, EDMDLengthProperty, CartesianPoint, 
-  StandardGeometryType, ItemType, GlobalUnit, EDMDItem,
+   ItemType, GlobalUnit, EDMDItem,
   EDMDIdentifier, EDMDCurveSet2D, EDMDPolyLine,
   EDMDCircleCenter, EDMDStratumTechnology, TechnologyType, LayerPurpose,
-  EDMDCurve
+  EDMDCurve,
+  GeometryType
 } from '../../types/core';
 
 // # 基础构建器接口定义
@@ -434,7 +435,7 @@ export abstract class BaseBuilder<TInput, TOutput> {
    */
   protected createBaseItem(
     itemType: ItemType,
-    geometryType?: StandardGeometryType,
+    geometryType?: GeometryType,
     name?: string,
     description?: string
   ): Partial<EDMDItem> {

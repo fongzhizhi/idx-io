@@ -10,17 +10,17 @@ import {
   BaseBuilder, BuildError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, StandardGeometryType, 
+  EDMDItem, ItemType, GeometryType, 
   CartesianPoint, EDMDCurveSet2D,
   EDMDUserSimpleProperty, StratumType, StratumSurfaceDesignation,
   ShapeElementType, GeometricElement, EDMDCurveSet2DElement, 
   ShapeElementData, StratumElementData
 } from '../../types/core';
-import { LayerStackupData } from '../../types/data-models';
+import { LayerStackupData } from '../../types/exporter/exporter';
 import {
   BoardData, ProcessedBoardData, GeometryData, CircleInfo,
   BoardGeometryType, ZAxisReference
-} from '../../types/builder';
+} from '../../types/exporter/builder';
 
 // ============= PCB板构建器类 =============
 
@@ -169,7 +169,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     // 2. 根据是否有层叠结构决定板子类型
     const hasLayerStackup = processedData.layerStackup && processedData.layerStackup.layers.length > 0;
     const boardType: BoardGeometryType = 
-      hasLayerStackup ? StandardGeometryType.BOARD_AREA_RIGID : StandardGeometryType.BOARD_OUTLINE;
+      hasLayerStackup ? GeometryType.BOARD_AREA_RIGID : GeometryType.BOARD_OUTLINE;
     
     // 3. 验证层堆叠有效性（如果存在）
     if (hasLayerStackup) {
@@ -225,7 +225,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     };
     
     // 8. 根据板子类型设置 AssembleToName
-    if (boardType === StandardGeometryType.BOARD_AREA_RIGID) {
+    if (boardType === GeometryType.BOARD_AREA_RIGID) {
       if (hasLayerStackup) {
         boardAssemblyItem.AssembleToName = this.getLayerStackupReferenceName(processedData.layerStackup!);
       } else {
@@ -387,7 +387,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    */
   private shouldUseStratum(boardType: BoardGeometryType): boolean {
     // BOARD_AREA_RIGID 必须使用Stratum
-    if (boardType === StandardGeometryType.BOARD_AREA_RIGID) {
+    if (boardType === GeometryType.BOARD_AREA_RIGID) {
       return true;
     }
     

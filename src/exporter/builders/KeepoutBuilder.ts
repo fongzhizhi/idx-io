@@ -7,7 +7,7 @@ import {
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, StandardGeometryType,
+  EDMDItem, ItemType, GeometryType,
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDPolyLine,
   KeepConstraintPurpose,
@@ -16,9 +16,11 @@ import {
   EDMDUserSimpleProperty
 } from '../../types/core';
 import {
-  KeepoutData, ProcessedKeepoutData, KeepoutGeometryData,
-  KeepoutGeometryType, ConstraintType, ShapeType
-} from '../../types/builder';
+  KeepoutGeometryData,
+  KeepoutGeometryType, ConstraintType, BuilderShapeType
+} from '../../types';
+// 使用重命名导入避免冲突
+import { KeepoutData as BuilderKeepoutData, ProcessedKeepoutData as BuilderProcessedKeepoutData } from '../../types/exporter/builder/keepout-builder';
 
 // # 输入数据类型定义
 /**
@@ -104,12 +106,12 @@ export interface KeepoutData {
 interface ProcessedKeepoutData {
   id: string;
   name: string;
-  constraintType: KeepoutData['constraintType'];
+  constraintType: BuilderKeepoutData['constraintType'];
   purpose: KeepConstraintPurpose;
   geometryType: GeometryType;
   shape: {
     points: CartesianPoint[];
-    type: KeepoutData['shape']['type'];
+    type: BuilderKeepoutData['shape']['type'];
     radius?: number;
   };
   lowerBound: number;
@@ -139,7 +141,7 @@ interface ProcessedKeepoutData {
 export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
   
   // # 约束类型到几何类型映射
-  private readonly constraintTypeMap: Record<KeepoutData['constraintType'], GeometryType> = {
+  private readonly constraintTypeMap: Record<BuilderKeepoutData['constraintType'], GeometryType> = {
     'route': GeometryType.KEEPOUT_AREA_ROUTE,
     'component': GeometryType.KEEPOUT_AREA_COMPONENT,
     'via': GeometryType.KEEPOUT_AREA_VIA,
@@ -169,7 +171,7 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
    * @testInput 最小高度大于最大高度
    * @testExpect 验证失败，返回错误信息
    */
-  protected validateInput(input: KeepoutData): ValidationResult<KeepoutData> {
+  protected validateInput(input: BuilderKeepoutData): ValidationResult<BuilderKeepoutData> {
     const warnings: string[] = [];
     const errors: string[] = [];
     
@@ -272,7 +274,7 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
    * @param input - 验证后的禁止区数据
    * @returns 处理后的禁止区数据
    */
-  protected async preProcess(input: KeepoutData): Promise<ProcessedKeepoutData> {
+  protected async preProcess(input: BuilderKeepoutData): Promise<ProcessedKeepoutData> {
     // # 确定几何类型
     const geometryType = this.constraintTypeMap[input.constraintType];
     if (!geometryType) {
@@ -722,7 +724,7 @@ export class KeepoutBuilder extends BaseBuilder<KeepoutData, EDMDItem> {
    * @returns 描述字符串
    */
   private getKeepoutDescription(processedData: ProcessedKeepoutData): string {
-    const typeMap: Record<KeepoutData['constraintType'], string> = {
+    const typeMap: Record<BuilderKeepoutData['constraintType'], string> = {
       'route': '布线',
       'component': '元件放置',
       'via': '过孔',

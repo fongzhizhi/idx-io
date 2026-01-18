@@ -3,15 +3,12 @@
 // REF: IDXv4.5规范第6.2节，组件类型和属性
 // BUSINESS: 组件是PCB的核心元素，需要准确的类型定义
 
-import { 
-  CartesianPoint, EDMDTransformation2D, EDMDTransformation3D, 
-  StandardGeometryType, AssemblyComponentType 
-} from '../core';
+import { GeometryType, EDMDTransformation2D, EDMDTransformation3D } from "../../core";
 
 // ============= 基础类型 =============
 
 /** 组件类型联合类型 */
-export type ComponentGeometryType = StandardGeometryType.COMPONENT | StandardGeometryType.COMPONENT_MECHANICAL;
+export type ComponentGeometryType = GeometryType.COMPONENT | GeometryType.COMPONENT_MECHANICAL;
 
 /** 组件层位置类型 */
 export type ComponentLayer = 'TOP' | 'BOTTOM' | 'INNER';

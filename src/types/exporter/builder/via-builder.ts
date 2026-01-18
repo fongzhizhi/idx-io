@@ -3,20 +3,19 @@
 // REF: IDXv4.5规范第6.3节，表5支持的孔类型
 // BUSINESS: 过孔是PCB的关键互连元素，必须准确表示层间连接
 
-import { 
-  StandardGeometryType, InterStratumFeatureType, ShapeElementType 
-} from '../core';
+import { GeometryType, InterStratumFeatureType } from "../../core";
+
 
 // ============= 基础类型 =============
 
 /** 过孔几何类型联合类型 */
 export type ViaGeometryType = 
-  | StandardGeometryType.HOLE_PLATED
-  | StandardGeometryType.HOLE_NON_PLATED
-  | StandardGeometryType.HOLE_PLATED_MILLED
-  | StandardGeometryType.HOLE_NONPLATED_MILLED
-  | StandardGeometryType.VIA
-  | StandardGeometryType.FILLED_VIA;
+  | GeometryType.HOLE_PLATED
+  | GeometryType.HOLE_NON_PLATED
+  | GeometryType.HOLE_PLATED_MILLED
+  | GeometryType.HOLE_NONPLATED_MILLED
+  | GeometryType.VIA
+  | GeometryType.FILLED_VIA;
 
 /** 过孔类型枚举 */
 export type ViaType = 'plated' | 'non-plated' | 'filled' | 'micro';

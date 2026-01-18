@@ -4,87 +4,8 @@
 // NOTE: 项目可以是单个组件或装配体（包含多个子项目）
 
 import { EDMDObject, EDMName, EDMDTransformation, EDMDLengthProperty, EDMDUserSimpleProperty, EDMDIdentifier, CartesianPoint } from "./common";
-import { ItemType, GeometryType } from "./enums";
+import { GeometryType, ItemType } from "./enums";
 import { ShapeType, EDMD3DModel, EDMDShapeElement } from "./geometry";
-
-// ------------ 标准几何类型枚举 ------------
-/**
- * 标准几何类型枚举
- * 
- * @remarks
- * 基于 IDX V4.5 协议表 8 定义的标准几何类型
- * 用于 geometryType 属性的类型约束
- * REF: IDX V4.5 Protocol Table 8
- */
-export enum StandardGeometryType {
-  // 板相关
-  BOARD_OUTLINE = 'BOARD_OUTLINE',
-  BOARD_AREA_FLEXIBLE = 'BOARD_AREA_FLEXIBLE',
-  BOARD_AREA_RIGID = 'BOARD_AREA_RIGID',
-  BOARD_AREA_STIFFENER = 'BOARD_AREA_STIFFENER',
-  
-  // 组件相关
-  COMPONENT = 'COMPONENT',
-  COMPONENT_MECHANICAL = 'COMPONENT_MECHANICAL',
-  
-  // 孔相关
-  HOLE_PLATED = 'HOLE_PLATED',
-  HOLE_NON_PLATED = 'HOLE_NON_PLATED',
-  HOLE_PLATED_MILLED = 'HOLE_PLATED_MILLED',
-  HOLE_NONPLATED_MILLED = 'HOLE_NONPLATED_MILLED',
-  FILLED_VIA = 'FILLED_VIA',
-  
-  // 禁止区域相关
-  KEEPOUT_AREA_ROUTE = 'KEEPOUT_AREA_ROUTE',
-  KEEPOUT_AREA_COMPONENT = 'KEEPOUT_AREA_COMPONENT',
-  KEEPOUT_AREA_VIA = 'KEEPOUT_AREA_VIA',
-  KEEPOUT_AREA_TESTPOINT = 'KEEPOUT_AREA_TESTPOINT',
-  KEEPOUT_AREA_THERMAL = 'KEEPOUT_AREA_THERMAL',
-  KEEPOUT_AREA_OTHER = 'KEEPOUT_AREA_OTHER',
-  
-  // 保持区域相关
-  KEEPIN_AREA_ROUTE = 'KEEPIN_AREA_ROUTE',
-  KEEPIN_AREA_COMPONENT = 'KEEPIN_AREA_COMPONENT',
-  KEEPIN_AREA_VIA = 'KEEPIN_AREA_VIA',
-  KEEPIN_AREA_TESTPOINT = 'KEEPIN_AREA_TESTPOINT',
-  KEEPIN_AREA_THERMAL = 'KEEPIN_AREA_THERMAL',
-  KEEPIN_AREA_OTHER = 'KEEPIN_AREA_OTHER',
-  
-  // 布局区域
-  PLACEMENT_GROUP_AREA = 'PLACEMENT_GROUP_AREA',
-  OTHER_OUTLINE = 'OTHER_OUTLINE',
-  
-  // 层相关
-  LAYER_SOLDERMASK = 'LAYER_SOLDERMASK',
-  LAYER_SOLDERPASTE = 'LAYER_SOLDERPASTE',
-  LAYER_SILKSCREEN = 'LAYER_SILKSCREEN',
-  LAYER_GENERIC = 'LAYER_GENERIC',
-  LAYER_GLUE = 'LAYER_GLUE',
-  LAYER_GLUEMASK = 'LAYER_GLUEMASK',
-  LAYER_PASTEMASK = 'LAYER_PASTEMASK',
-  LAYER_OTHERSIGNAL = 'LAYER_OTHERSIGNAL',
-  LAYER_LANDSONLY = 'LAYER_LANDSONLY',
-  LAYER_POWERGROUND = 'LAYER_POWERGROUND',
-  LAYER_EMBEDDED_CAP_DIELECTRIC = 'LAYER_EMBEDDED_CAP_DIELECTRIC',
-  LAYER_EMBEDDED_RESISTOR = 'LAYER_EMBEDDED_RESISTOR',
-  LAYER_DIELECTRIC = 'LAYER_DIELECTRIC',
-  LAYER_STACKUP = 'LAYER_STACKUP',
-  LAYER = 'LAYER',
-  
-  // 弯曲区域
-  BEND = 'BEND',
-  
-  // 铜相关
-  COPPER_PAD = 'COPPER_PAD',
-  COPPER_TRACE = 'COPPER_TRACE',
-  COPPER_AREA = 'COPPER_AREA'
-}
-
-// 为了向后兼容，创建一个映射函数
-export function mapGeometryTypeToStandard(geometryType: GeometryType): StandardGeometryType {
-  // 直接映射，因为枚举值相同
-  return geometryType as unknown as StandardGeometryType;
-}
 
 // ------------ 项目实例 ------------
 /**
@@ -139,7 +60,7 @@ export interface EDMDItem extends EDMDObject {
   PackageName?: EDMName;
   
   /** 几何类型（IDX V4.5 标准几何类型，可选） */
-  geometryType?: StandardGeometryType;
+  geometryType?: GeometryType;
   
   /** 参考名称（用于相对定位和被引用）- 根据协议专家反馈，使用简洁的字符串值 */
   ReferenceName?: string;

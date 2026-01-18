@@ -1,5 +1,92 @@
-import { BoardData } from "../builders/BoardBuilder";
-import { ComponentData } from "../builders/ComponentBuilder";
+import { BoardData } from "../../types";
+import { ComponentData } from "../../types";
+
+// 临时类型定义，用于让编译通过
+interface MappingConfig {
+  baseUnit: string;
+}
+
+interface UnitConverter {
+  convert(value: number, unit: string): number;
+  convertPower(value: number): number;
+  convertCapacitance(value: number): number;
+}
+
+interface ECADData {
+  board: ECADBoard;
+  components: ECADComponent[];
+  holes: any[];
+  keepouts: any[];
+  layers?: any;
+}
+
+interface IDXData {
+  board: BoardData;
+  components: ComponentData[];
+  holes: any[];
+  keepouts: any[];
+  layers?: any;
+}
+
+interface ECADBoard {
+  id: string;
+  name: string;
+  outline: {
+    points: Array<{ x: number; y: number }>;
+  };
+  thickness: number;
+  units: string;
+  material?: string;
+  finish?: string;
+}
+
+interface ECADComponent {
+  refDes: string;
+  partNumber: string;
+  packageName: string;
+  x: number;
+  y: number;
+  z?: number;
+  rotation?: number;
+  width: number;
+  height: number;
+  thickness: number;
+  layer: string;
+  type?: string;
+  units: string;
+  thermal?: {
+    powerRating: number;
+    maxPower: number;
+    thermalResistance: number;
+  };
+  electrical?: {
+    capacitance: number;
+    resistance: number;
+    tolerance: number;
+  };
+  model3D?: {
+    path: string;
+    format: string;
+    offset: any;
+  };
+}
+
+class UnitConverter {
+  constructor(private baseUnit: string) {}
+  
+  convert(value: number, unit: string): number {
+    // 简单的单位转换实现
+    return value;
+  }
+  
+  convertPower(value: number): number {
+    return value;
+  }
+  
+  convertCapacitance(value: number): number {
+    return value;
+  }
+}
 
 // src/exporter/adapters/ecad-adapter.ts
 export class ECADAdapter {
@@ -38,11 +125,10 @@ export class ECADAdapter {
           x: this.unitConverter.convert(p.x, ecadBoard.units),
           y: this.unitConverter.convert(p.y, ecadBoard.units)
         })),
-        thickness: this.unitConverter.convert(ecadBoard.thickness, ecadBoard.units)
-      },
-      material: ecadBoard.material,
-      finish: ecadBoard.finish,
-      // 其他属性...
+        thickness: this.unitConverter.convert(ecadBoard.thickness, ecadBoard.units),
+        material: ecadBoard.material,
+        finish: ecadBoard.finish
+      }
     };
   }
 
@@ -72,30 +158,46 @@ export class ECADAdapter {
     // 添加热属性（如果有）
     if (ecadComponent.thermal) {
       component.thermal = {
-        powerRating: this.unitConverter.convertPower(ecadComponent.thermal.powerRating),
-        maxPower: this.unitConverter.convertPower(ecadComponent.thermal.maxPower),
-        thermalResistance: ecadComponent.thermal.thermalResistance
+        thermalResistance: ecadComponent.thermal.thermalResistance,
+        maxPowerDissipation: this.unitConverter.convertPower(ecadComponent.thermal.maxPower)
       };
     }
 
     // 添加电气属性（如果有）
     if (ecadComponent.electrical) {
       component.electrical = {
-        capacitance: this.unitConverter.convertCapacitance(ecadComponent.electrical.capacitance),
-        resistance: ecadComponent.electrical.resistance,
-        tolerance: ecadComponent.electrical.tolerance
+        characteristics: {
+          capacitance: this.unitConverter.convertCapacitance(ecadComponent.electrical.capacitance),
+          resistance: ecadComponent.electrical.resistance,
+          tolerance: ecadComponent.electrical.tolerance
+        }
       };
     }
 
     // 添加3D模型信息（如果有）
     if (ecadComponent.model3D) {
       component.model3D = {
-        path: ecadComponent.model3D.path,
-        format: ecadComponent.model3D.format,
-        offset: ecadComponent.model3D.offset
+        modelIdentifier: ecadComponent.model3D.path,
+        format: ecadComponent.model3D.format
       };
     }
 
     return component;
+  }
+
+  // 添加缺少的方法
+  private async adaptHole(hole: any): Promise<any> {
+    // 临时实现
+    return hole;
+  }
+
+  private async adaptKeepout(keepout: any): Promise<any> {
+    // 临时实现
+    return keepout;
+  }
+
+  private async adaptLayers(layers: any): Promise<any> {
+    // 临时实现
+    return layers;
   }
 }

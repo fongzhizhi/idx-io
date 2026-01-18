@@ -3,29 +3,28 @@
 // REF: IDXv4.5规范第6.1节，层和地层定义
 // BUSINESS: 层是PCB的基础结构，需要准确的类型定义
 
-import { 
-  StandardGeometryType, LayerPurpose, StratumType, StratumSurfaceDesignation 
-} from '../core';
-import { LayerStackupData } from '../data-models';
+import { GeometryType, LayerPurpose } from "../../core";
+import { LayerStackupData } from "../exporter";
+
 
 // ============= 基础类型 =============
 
 /** 层几何类型联合类型 */
 export type LayerGeometryType = 
-  | StandardGeometryType.LAYER_SOLDERMASK
-  | StandardGeometryType.LAYER_SOLDERPASTE
-  | StandardGeometryType.LAYER_SILKSCREEN
-  | StandardGeometryType.LAYER_GENERIC
-  | StandardGeometryType.LAYER_GLUE
-  | StandardGeometryType.LAYER_GLUEMASK
-  | StandardGeometryType.LAYER_PASTEMASK
-  | StandardGeometryType.LAYER_OTHERSIGNAL
-  | StandardGeometryType.LAYER_LANDSONLY
-  | StandardGeometryType.LAYER_POWERGROUND
-  | StandardGeometryType.LAYER_EMBEDDED_CAP_DIELECTRIC
-  | StandardGeometryType.LAYER_EMBEDDED_RESISTOR
-  | StandardGeometryType.LAYER_DIELECTRIC
-  | StandardGeometryType.LAYER_STACKUP;
+  | GeometryType.LAYER_SOLDERMASK
+  | GeometryType.LAYER_SOLDERPASTE
+  | GeometryType.LAYER_SILKSCREEN
+  | GeometryType.LAYER_GENERIC
+  | GeometryType.LAYER_GLUE
+  | GeometryType.LAYER_GLUEMASK
+  | GeometryType.LAYER_PASTEMASK
+  | GeometryType.LAYER_OTHERSIGNAL
+  | GeometryType.LAYER_LANDSONLY
+  | GeometryType.LAYER_POWERGROUND
+  | GeometryType.LAYER_EMBEDDED_CAP_DIELECTRIC
+  | GeometryType.LAYER_EMBEDDED_RESISTOR
+  | GeometryType.LAYER_DIELECTRIC
+  | GeometryType.LAYER_STACKUP;
 
 /** 层类型枚举 */
 export enum LayerType {
@@ -150,6 +149,7 @@ export interface ProcessedLayerStackupEntry {
 
 /** 层分类类型 */
 export type LayerCategory = 'CONDUCTIVE' | 'PROTECTIVE' | 'MARKING' | 'INSULATING' | 'OTHER';
+
 export interface LayerStackupInput {
   /** 层数据数组 */
   layers: LayerData[];
@@ -199,6 +199,3 @@ export interface ProcessedLayerStackupEntry {
   zPosition: number;
   layerExists: boolean;
 }
-
-/** 层分类类型 */
-export type LayerCategory = 'CONDUCTIVE' | 'PROTECTIVE' | 'MARKING' | 'INSULATING' | 'OTHER';

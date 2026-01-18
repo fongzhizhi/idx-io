@@ -7,7 +7,7 @@ import {
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, StandardGeometryType,
+  EDMDItem, ItemType, GeometryType,
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDPolyLine,
   EDMDTransformation2D, EDMDLengthProperty,
@@ -16,11 +16,11 @@ import {
 import { 
   LayerStackupData, LayerStackupEntry,
   calculateStackupThickness, getLayerZPosition 
-} from '../../types/data-models';
+} from '../../types/exporter/exporter';
 import {
   LayerData, LayerStackupInput, ProcessedLayerData, ProcessedLayerStackupData,
   ProcessedLayerStackupEntry, LayerGeometryType, LayerType, LayerCategory
-} from '../../types/builder';
+} from '../../types/exporter/builder';
 import { LayerStackupBuilder, LayerStackupData as StackupBuilderData } from './LayerStackupBuilder';
 
 // ============= 层构建器类 =============
@@ -611,15 +611,15 @@ export class LayerBuilder extends BaseBuilder<LayerData[], EDMDItem[]> {
    */
   private normalizeLayerType(layerType: LayerType): LayerGeometryType {
     const typeMap: Record<LayerType, LayerGeometryType> = {
-      [LayerType.SIGNAL]: StandardGeometryType.LAYER_OTHERSIGNAL,
-      [LayerType.PLANE]: StandardGeometryType.LAYER_POWERGROUND,
-      [LayerType.SOLDERMASK]: StandardGeometryType.LAYER_SOLDERMASK,
-      [LayerType.SILKSCREEN]: StandardGeometryType.LAYER_SILKSCREEN,
-      [LayerType.DIELECTRIC]: StandardGeometryType.LAYER_DIELECTRIC,
-      [LayerType.OTHERSIGNAL]: StandardGeometryType.LAYER_OTHERSIGNAL
+      [LayerType.SIGNAL]: GeometryType.LAYER_OTHERSIGNAL,
+      [LayerType.PLANE]: GeometryType.LAYER_POWERGROUND,
+      [LayerType.SOLDERMASK]: GeometryType.LAYER_SOLDERMASK,
+      [LayerType.SILKSCREEN]: GeometryType.LAYER_SILKSCREEN,
+      [LayerType.DIELECTRIC]: GeometryType.LAYER_DIELECTRIC,
+      [LayerType.OTHERSIGNAL]: GeometryType.LAYER_OTHERSIGNAL
     };
     
-    return typeMap[layerType] || StandardGeometryType.LAYER_GENERIC;
+    return typeMap[layerType] || GeometryType.LAYER_GENERIC;
   }
   
   /**

@@ -1,7 +1,7 @@
 // ============= 板子构建器类型定义 =============
 
-import { CartesianPoint, EDMDCurveSet2D, StandardGeometryType } from '../core';
-import { LayerStackupData } from '../data-models';
+import { GeometricElement, EDMDCurveSet2DElement, ShapeElementData, StratumElementData, CartesianPoint, EDMDCurveSet2D, GeometryType } from '../../core';
+import { LayerStackupData } from '../exporter';
 
 // ============= 基础类型 =============
 
@@ -9,7 +9,7 @@ import { LayerStackupData } from '../data-models';
 export type ZAxisReference = 'BOTTOM' | 'CENTER' | 'TOP';
 
 /** 板子类型联合类型 */
-export type BoardGeometryType = StandardGeometryType.BOARD_OUTLINE | StandardGeometryType.BOARD_AREA_RIGID;
+export type BoardGeometryType = GeometryType.BOARD_OUTLINE | GeometryType.BOARD_AREA_RIGID;
 
 // ============= 输入数据接口 =============
 
@@ -103,10 +103,10 @@ export interface ProcessedBoardData {
 
 /** 几何数据返回类型 */
 export interface GeometryData {
-  geometricElements: import('../core').GeometricElement[];
-  curveSet2Ds: import('../core').EDMDCurveSet2DElement[];
-  shapeElements: import('../core').ShapeElementData[];
-  stratumElements: import('../core').StratumElementData[];
+  geometricElements: GeometricElement[];
+  curveSet2Ds: EDMDCurveSet2DElement[];
+  shapeElements: ShapeElementData[];
+  stratumElements: StratumElementData[];
   shapeElementId: string;
 }
 

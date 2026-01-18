@@ -3,29 +3,27 @@
 // REF: IDXv4.5规范第6.5节，表6-7支持的禁止区类型
 // BUSINESS: 禁止区用于定义设计约束，确保机械和电气兼容性
 
-import { 
-  StandardGeometryType, KeepConstraintPurpose, ShapeElementType 
-} from '../core';
+import { GeometryType, KeepConstraintPurpose } from "../../core";
 
 // ============= 基础类型 =============
 
 /** 禁止区几何类型联合类型 */
 export type KeepoutGeometryType = 
-  | StandardGeometryType.KEEPOUT_AREA_ROUTE
-  | StandardGeometryType.KEEPOUT_AREA_COMPONENT
-  | StandardGeometryType.KEEPOUT_AREA_VIA
-  | StandardGeometryType.KEEPOUT_AREA_TESTPOINT
-  | StandardGeometryType.KEEPOUT_AREA_THERMAL
-  | StandardGeometryType.KEEPOUT_AREA_OTHER;
+  | GeometryType.KEEPOUT_AREA_ROUTE
+  | GeometryType.KEEPOUT_AREA_COMPONENT
+  | GeometryType.KEEPOUT_AREA_VIA
+  | GeometryType.KEEPOUT_AREA_TESTPOINT
+  | GeometryType.KEEPOUT_AREA_THERMAL
+  | GeometryType.KEEPOUT_AREA_OTHER;
 
 /** 保持内部区域几何类型联合类型 */
 export type KeeninGeometryType = 
-  | StandardGeometryType.KEEPIN_AREA_ROUTE
-  | StandardGeometryType.KEEPIN_AREA_COMPONENT
-  | StandardGeometryType.KEEPIN_AREA_VIA
-  | StandardGeometryType.KEEPIN_AREA_TESTPOINT
-  | StandardGeometryType.KEEPIN_AREA_THERMAL
-  | StandardGeometryType.KEEPIN_AREA_OTHER;
+  | GeometryType.KEEPIN_AREA_ROUTE
+  | GeometryType.KEEPIN_AREA_COMPONENT
+  | GeometryType.KEEPIN_AREA_VIA
+  | GeometryType.KEEPIN_AREA_TESTPOINT
+  | GeometryType.KEEPIN_AREA_THERMAL
+  | GeometryType.KEEPIN_AREA_OTHER;
 
 /** 约束类型枚举 */
 export type ConstraintType = 'route' | 'component' | 'via' | 'testpoint' | 'thermal' | 'other';

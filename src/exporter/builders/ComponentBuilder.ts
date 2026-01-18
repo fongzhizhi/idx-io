@@ -7,7 +7,7 @@ import {
   BaseBuilder, BuilderConfig, BuilderContext, BuildError, ValidationResult 
 } from './BaseBuilder';
 import {
-  EDMDItem, ItemType, StandardGeometryType,
+  EDMDItem, ItemType, GeometryType,
   EDMDShapeElement, ShapeElementType,
   EDMDCurveSet2D, CartesianPoint, EDMDPolyLine,
   EDMD3DModel, EDMDTransformation2D, EDMDTransformation3D,
@@ -19,7 +19,7 @@ import {
 import {
   ComponentData, ProcessedComponentData, ComponentGeometryData,
   ComponentGeometryType, ComponentLayer
-} from '../../types/builder';
+} from '../../types/exporter/builder';
 
 // ============= 组件构建器类 =============
 
@@ -198,8 +198,8 @@ export class ComponentBuilder extends BaseBuilder<ComponentData, EDMDItem> {
   protected async preProcess(input: ComponentData): Promise<ProcessedComponentData> {
     // # 确定几何类型
     const geometryType: ComponentGeometryType = input.isMechanical 
-      ? StandardGeometryType.COMPONENT_MECHANICAL 
-      : StandardGeometryType.COMPONENT;
+      ? GeometryType.COMPONENT_MECHANICAL 
+      : GeometryType.COMPONENT;
     
     // # 计算Z位置
     // NOTE: 实际实现中应根据层堆叠计算准确的Z位置
