@@ -725,3 +725,147 @@
 如果需要了解某个具体 `geometryType` 的XML示例或使用场景，请随时提问，我可以从文档中提取对应片段进行解释。
 
 **使用建议**：始终优先使用IDXv4.5的简化表示法（`geometryType`），它更简洁且向前兼容。对于复杂形状，可使用复合曲线或外部3D模型引用。
+
+## 七、对于板子的建模
+
+板子有四种定义类型：
+
+| geometryType           | 描述                       | 对应传统对象（可省略）                      |
+| ---------------------- | -------------------------- | ------------------------------------------- |
+| `BOARD_OUTLINE`        | 板框轮廓（简单板）         | `EDMDStratum`                               |
+| `BOARD_AREA_FLEXIBLE`  | 柔性区域（在层区域中定义） | `EDMDFunctionalItemShape`（`FlexibleArea`） |
+| `BOARD_AREA_STIFFENER` | 加强区域                   | `EDMDFunctionalItemShape`（`Stiffener`）    |
+| `BOARD_AREA_RIGID`     | 刚性区域（默认）           | `EDMDFunctionalItemShape`（`RigidArea`）    |
+
+本项目只专注让`BOARD_OUTLINE`和`BOARD_AREA_RIGID`两种类型，我根据文档第46-61页详细解释这两种类型的区别和应用场景：
+
+## 📊 **核心区别总结**
+
+| 特性           | `BOARD_OUTLINE` | `BOARD_AREA_RIGID` |
+| -------------- | --------------- | ------------------ |
+| **定义对象**   | 简单板子整体    | 板子内的特定区域   |
+| **层次级别**   | 板子顶级定义    | 板子内部区域定义   |
+| **层堆叠关联** | 无（直接厚度）  | 必须关联层堆叠     |
+| **Z轴参考**    | 绝对Z坐标       | 相对层堆叠         |
+| **典型应用**   | 单层/简单板     | 多层板、刚柔结合板 |
+| **几何形状**   | 整个板子轮廓    | 板子内部某区域轮廓 |
+
+## 📖 **详细解释**
+
+### **1. BOARD_OUTLINE（简单板子）**
+- **文档参考**：第46-48页
+- **定义**：描述整个PCB板的**外部轮廓和整体厚度**
+- **特点**：
+  - 使用`LowerBound`/`UpperBound`定义绝对Z范围
+  - 通常`LowerBound=0`, `UpperBound=厚度`
+  - **没有**`AssembleToName`属性
+  - 适用于单层板或不需要分层详细信息的板子
+
+**示例结构**：
+```xml
+<foundation:Item geometryType="BOARD_OUTLINE">
+  <!-- 直接定义厚度：0-1.6mm -->
+  <pdm:ItemInstance>
+    <pdm:Item>板子定义</pdm:Item>
+    <!-- 2D变换定义位置 -->
+  </pdm:ItemInstance>
+  <!-- 没有AssembleToName！ -->
+</foundation:Item>
+```
+
+### **2. BOARD_AREA_RIGID（刚性区域）**
+- **文档参考**：第58-60页
+- **定义**：描述**板子内部的一个区域**，该区域使用特定的层堆叠
+- **特点**：
+  - **必须**通过`AssembleToName`关联到一个层堆叠（Layer Stackup）
+  - 几何形状定义该区域的XY范围
+  - Z范围由关联的层堆叠决定
+  - 用于多层板、刚柔结合板的不同区域
+
+**示例结构**：
+```xml
+<foundation:Item geometryType="BOARD_AREA_RIGID">
+  <pdm:ItemInstance>
+    <pdm:Item>区域定义</pdm:Item>
+  </pdm:ItemInstance>
+  <!-- 关键：关联到层堆叠 -->
+  <pdm:AssembleToName>PRIMARY_STACKUP</pdm:AssembleToName>
+</foundation:Item>
+```
+
+## 🔄 **实际应用场景**
+
+### **场景1：简单单层板**
+```xml
+<!-- 整个板子就是一个BOARD_OUTLINE -->
+<foundation:Item geometryType="BOARD_OUTLINE">
+  <foundation:Name>SimpleBoard</foundation:Name>
+  <!-- 厚度1.6mm -->
+</foundation:Item>
+```
+
+### **场景2：多层板（全部刚性）**
+```xml
+<!-- 定义层堆叠 -->
+<foundation:Item geometryType="LAYER_STACKUP" id="MAIN_STACKUP">
+  <pdm:ReferenceName>MAIN_STACKUP</pdm:ReferenceName>
+  <!-- 包含多个层定义 -->
+</foundation:Item>
+
+<!-- 整个板子区域（使用该层堆叠） -->
+<foundation:Item geometryType="BOARD_AREA_RIGID">
+  <foundation:Name>MainBoardArea</foundation:Name>
+  <pdm:AssembleToName>MAIN_STACKUP</pdm:AssembleToName>
+</foundation:Item>
+```
+
+### **场景3：刚柔结合板**（图25，第50页）
+```xml
+<!-- 刚性区域1 -->
+<foundation:Item geometryType="BOARD_AREA_RIGID">
+  <foundation:Name>RigidArea1</foundation:Name>
+  <pdm:AssembleToName>RIGID_STACKUP</pdm:AssembleToName>
+</foundation:Item>
+
+<!-- 柔性区域 -->
+<foundation:Item geometryType="BOARD_AREA_FLEXIBLE">
+  <foundation:Name>FlexArea</foundation:Name>
+  <pdm:AssembleToName>FLEX_STACKUP</pdm:AssembleToName>
+</foundation:Item>
+
+<!-- 刚性区域2 -->
+<foundation:Item geometryType="BOARD_AREA_RIGID">
+  <foundation:Name>RigidArea2</foundation:Name>
+  <pdm:AssembleToName>RIGID_STACKUP</pdm:AssembleToName>
+</foundation:Item>
+```
+
+## ❓ **常见问题澄清**
+
+### **Q：有层堆叠信息时，还能用BOARD_OUTLINE吗？**
+**A：可以，但不推荐**。`BOARD_OUTLINE`是旧式简单表示。如果板子有分层，建议使用`BOARD_AREA_RIGID`和相关层定义。
+
+### **Q：一个板子可以同时有BOARD_OUTLINE和BOARD_AREA_RIGID吗？**
+**A：不可以**。它们是互斥的板子表示方式：
+- `BOARD_OUTLINE`：完整板子的简单表示
+- `BOARD_AREA_RIGID`：板子内部区域的详细表示
+
+### **Q：如何选择？**
+| 条件                   | 选择                                       |
+| ---------------------- | ------------------------------------------ |
+| 单层板，无详细层信息   | `BOARD_OUTLINE`                            |
+| 多层板，需要详细层信息 | `BOARD_AREA_RIGID` + `LAYER_STACKUP`       |
+| 刚柔结合板             | `BOARD_AREA_RIGID` + `BOARD_AREA_FLEXIBLE` |
+| 有不同厚度区域         | 多个`BOARD_AREA_*`区域                     |
+
+## 📝 **总结**
+
+你的理解**方向正确但需微调**：
+- ✅ `BOARD_OUTLINE`：简单板，无层堆叠
+- ✅ `BOARD_AREA_RIGID`：复杂板的一部分，关联层堆叠
+- ❌ 不是"有`AssembleToName`就是`BOARD_AREA_RIGID`"，而是**需要关联层堆叠时才用`BOARD_AREA_RIGID`**
+
+**简单记忆**：
+
+- **简单板** → `BOARD_OUTLINE`（就像你的demo）
+- **复杂板（有层）** → `BOARD_AREA_RIGID` + `LAYER_STACKUP`
