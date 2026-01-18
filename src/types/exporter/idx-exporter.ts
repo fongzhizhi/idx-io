@@ -12,41 +12,119 @@ import {
 } from '../core/geometry';
 
 /**
+ * 简化的点坐标接口
+ * 
+ * @remarks
+ * 调用者友好的点坐标定义，不包含IDX内部属性
+ */
+export interface SimplePoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * 简化的圆心圆几何定义
+ * 
+ * @remarks
+ * 通过圆心和直径定义圆形，调用者友好的接口
+ */
+export interface SimpleCircleCenter {
+  center: SimplePoint;
+  diameter: number;
+}
+
+/**
+ * 简化的三点圆几何定义
+ * 
+ * @remarks
+ * 通过三个点定义圆形
+ */
+export interface SimpleCircle3Point {
+  point1: SimplePoint;
+  point2: SimplePoint;
+  point3: SimplePoint;
+}
+
+/**
+ * 简化的椭圆几何定义
+ * 
+ * @remarks
+ * 通过中心点和半轴定义椭圆
+ */
+export interface SimpleEllipse {
+  center: SimplePoint;
+  semiMajorAxis: number;
+  semiMinorAxis: number;
+  rotation?: number; // 旋转角度（度）
+}
+
+/**
+ * 简化的多边形几何定义
+ * 
+ * @remarks
+ * 通过点序列定义多边形或折线
+ */
+export interface SimplePolyline {
+  points: SimplePoint[];
+  closed?: boolean;
+}
+
+/**
+ * 简化的复合曲线段定义
+ * 
+ * @remarks
+ * 复合曲线中的单个段
+ */
+export interface SimpleCompositeSegment {
+  type: 'line' | 'arc' | 'circle';
+  points: SimplePoint[];
+  sameSense?: boolean; // 方向是否一致，默认true
+}
+
+/**
+ * 简化的复合曲线几何定义
+ * 
+ * @remarks
+ * 由多个曲线段组成的复合曲线
+ */
+export interface SimpleCompositeCurve {
+  segments: SimpleCompositeSegment[];
+}
+
+/**
  * 板轮廓几何定义
  * 
  * @remarks
- * 支持多种几何类型来描述板框轮廓，提供更精确和高效的表示
- * 使用IDX标准的基础几何类型
+ * 支持多种几何类型来描述板框轮廓，使用简化的调用者友好接口
+ * 内部会自动转换为IDX标准几何类型
  * 
  * @example
  * ```typescript
  * // TEST_CASE: Circular board outline
  * // TEST_INPUT: Circle with center and diameter
- * // TEST_EXPECT: Efficient circular representation
+ * // TEST_EXPECT: Simple and clean interface
  * const circularOutline: BoardOutlineGeometry = {
- *   type: 'circle',
+ *   type: 'circle-center',
  *   geometry: {
- *     curveType: 'EDMDCircleCenter',
- *     CenterPoint: { x: 25, y: 25 },
- *     Diameter: { value: 50, unit: 'mm' }
+ *     center: { x: 25, y: 25 },
+ *     diameter: 50
  *   },
  *   thickness: 1.6
  * };
  * 
  * // TEST_CASE: Rectangular board outline
  * // TEST_INPUT: Polyline with corner points
- * // TEST_EXPECT: Closed polyline representation
+ * // TEST_EXPECT: Simple points array
  * const rectangularOutline: BoardOutlineGeometry = {
  *   type: 'polyline',
  *   geometry: {
- *     curveType: 'EDMDPolyLine',
- *     Points: [
+ *     points: [
  *       { x: 0, y: 0 },
  *       { x: 50, y: 0 },
  *       { x: 50, y: 30 },
  *       { x: 0, y: 30 }
  *     ],
- *     Closed: true
+ *     closed: true
  *   },
  *   thickness: 1.6
  * };
@@ -54,10 +132,10 @@ import {
  */
 export interface BoardOutlineGeometry {
   /** DESIGN: 几何类型，用于快速识别和优化 */
-  type: 'circle' | 'ellipse' | 'polyline' | 'composite';
+  type: 'circle-center' | 'circle-3point' | 'ellipse' | 'polyline' | 'composite';
   
-  /** DESIGN: 具体的几何定义，使用IDX标准几何类型 */
-  geometry: EDMDCircleCenter | EDMDCircle3Point | EDMDEllipse | EDMDPolyLine | EDMDCompositeCurve;
+  /** DESIGN: 具体的几何定义，使用简化的调用者友好接口 */
+  geometry: SimpleCircleCenter | SimpleCircle3Point | SimpleEllipse | SimplePolyline | SimpleCompositeCurve;
   
   /** BUSINESS: 板厚度（毫米） */
   thickness: number;
@@ -766,12 +844,10 @@ export function createBoardOutlineFromPoints(
   const circleDetection = detectCircularOutline(points);
   if (circleDetection.isCircular) {
     return {
-      type: 'circle',
+      type: 'circle-center',
       geometry: {
-        curveType: 'EDMDCircleCenter',
-        id: 'BOARD_OUTLINE_CIRCLE',
-        CenterPoint: { X: circleDetection.center!.x, Y: circleDetection.center!.y, id: 'CENTER_POINT' },
-        Diameter: { Value: circleDetection.diameter!, Unit: 'mm' }
+        center: circleDetection.center!,
+        diameter: circleDetection.diameter!
       },
       thickness,
       properties: {
@@ -792,10 +868,8 @@ export function createBoardOutlineFromPoints(
   return {
     type: 'polyline',
     geometry: {
-      curveType: 'EDMDPolyLine',
-      id: 'BOARD_OUTLINE_POLYLINE',
-      Points: points.map(p => ({ X: p.x, Y: p.y, id: `POINT_${Math.random().toString(36).substr(2, 9)}` })),
-      Closed: true
+      points: points.map(p => ({ x: p.x, y: p.y })),
+      closed: true
     },
     thickness,
     properties: {
@@ -884,10 +958,10 @@ function calculateBoundingBox(points: Array<{ x: number; y: number }>): {
  * ```typescript
  * // TEST_CASE: Create circular board outline
  * // TEST_INPUT: Center at (25,25), diameter 50mm, thickness 1.6mm
- * // TEST_EXPECT: Efficient circular geometry representation
+ * // TEST_EXPECT: Simple circular geometry representation
  * const outline = createCircularBoardOutline(25, 25, 50, 1.6);
- * assert(outline.type === 'circle');
- * assert(outline.geometry.curveType === 'EDMDCircleCenter');
+ * assert(outline.type === 'circle-center');
+ * assert(outline.geometry.center.x === 25);
  * ```
  */
 export function createCircularBoardOutline(
@@ -897,12 +971,10 @@ export function createCircularBoardOutline(
   thickness: number
 ): BoardOutlineGeometry {
   return {
-    type: 'circle',
+    type: 'circle-center',
     geometry: {
-      curveType: 'EDMDCircleCenter',
-      id: 'BOARD_OUTLINE_CIRCLE',
-      CenterPoint: { X: centerX, Y: centerY, id: 'CENTER_POINT' },
-      Diameter: { Value: diameter, Unit: 'mm' }
+      center: { x: centerX, y: centerY },
+      diameter: diameter
     },
     thickness,
     properties: {
@@ -933,10 +1005,10 @@ export function createCircularBoardOutline(
  * ```typescript
  * // TEST_CASE: Create rectangular board outline
  * // TEST_INPUT: 50x30mm rectangle, thickness 1.6mm
- * // TEST_EXPECT: Closed polyline with 4 corners
+ * // TEST_EXPECT: Simple polyline with 4 corners
  * const outline = createRectangularBoardOutline(50, 30, 1.6);
  * assert(outline.type === 'polyline');
- * assert(outline.geometry.Points.length === 4);
+ * assert(outline.geometry.points.length === 4);
  * ```
  */
 export function createRectangularBoardOutline(
@@ -949,15 +1021,13 @@ export function createRectangularBoardOutline(
   return {
     type: 'polyline',
     geometry: {
-      curveType: 'EDMDPolyLine',
-      id: 'BOARD_OUTLINE_RECTANGLE',
-      Points: [
-        { X: offsetX, Y: offsetY, id: 'CORNER_1' },
-        { X: offsetX + width, Y: offsetY, id: 'CORNER_2' },
-        { X: offsetX + width, Y: offsetY + height, id: 'CORNER_3' },
-        { X: offsetX, Y: offsetY + height, id: 'CORNER_4' }
+      points: [
+        { x: offsetX, y: offsetY },
+        { x: offsetX + width, y: offsetY },
+        { x: offsetX + width, y: offsetY + height },
+        { x: offsetX, y: offsetY + height }
       ],
-      Closed: true
+      closed: true
     },
     thickness,
     properties: {

@@ -12,7 +12,12 @@ import {
   ExtendedExportSourceData,
   BrowserExportResult,
   XMLCommentConfig,
-  BoardOutlineGeometry
+  BoardOutlineGeometry,
+  SimpleCircleCenter,
+  SimpleCircle3Point,
+  SimpleEllipse,
+  SimplePolyline,
+  SimpleCompositeCurve
 } from '../types/exporter/idx-exporter';
 import { 
   EDMDCircleCenter, 
@@ -521,7 +526,7 @@ export class IDXExporter {
    * @returns DatasetAssembler格式的轮廓
    * 
    * @remarks
-   * DESIGN: 将新的几何类型转换为DatasetAssembler期望的点集合格式
+   * DESIGN: 将简化的几何类型转换为DatasetAssembler期望的点集合格式
    * PERFORMANCE: 对圆形进行采样，生成合适数量的点
    */
   private convertBoardOutlineToLegacyFormat(outline: BoardOutlineGeometry): {
@@ -531,69 +536,77 @@ export class IDXExporter {
     let points: Array<{ x: number; y: number }> = [];
     
     switch (outline.type) {
-      case 'circle':
+      case 'circle-center':
         // DESIGN: 将圆形转换为点集合
-        const circleGeometry = outline.geometry as EDMDCircleCenter | EDMDCircle3Point;
-        if (circleGeometry.curveType === 'EDMDCircleCenter') {
-          const centerGeometry = circleGeometry as EDMDCircleCenter;
-          const center = centerGeometry.CenterPoint;
-          const radius = centerGeometry.Diameter.Value / 2;
-          const numPoints = Math.max(32, Math.ceil(radius * 4)); // 根据半径调整点数
-          
-          for (let i = 0; i < numPoints; i++) {
-            const angle = (i * 2 * Math.PI) / numPoints;
-            points.push({
-              x: center.X + radius * Math.cos(angle),
-              y: center.Y + radius * Math.sin(angle)
-            });
-          }
-        } else if (circleGeometry.curveType === 'EDMDCircle3Point') {
-          // ALGORITHM: 从三点计算圆心和半径，然后生成点集合
-          const threePointGeometry = circleGeometry as EDMDCircle3Point;
-          const { center, radius } = this.calculateCircleFromThreePoints(
-            { x: threePointGeometry.Point1.X, y: threePointGeometry.Point1.Y },
-            { x: threePointGeometry.Point2.X, y: threePointGeometry.Point2.Y },
-            { x: threePointGeometry.Point3.X, y: threePointGeometry.Point3.Y }
-          );
-          
-          const numPoints = Math.max(32, Math.ceil(radius * 4));
-          for (let i = 0; i < numPoints; i++) {
-            const angle = (i * 2 * Math.PI) / numPoints;
-            points.push({
-              x: center.x + radius * Math.cos(angle),
-              y: center.y + radius * Math.sin(angle)
-            });
-          }
+        const circleGeometry = outline.geometry as SimpleCircleCenter;
+        const center = circleGeometry.center;
+        const radius = circleGeometry.diameter / 2;
+        const numPoints = Math.max(32, Math.ceil(radius * 4)); // 根据半径调整点数
+        
+        for (let i = 0; i < numPoints; i++) {
+          const angle = (i * 2 * Math.PI) / numPoints;
+          points.push({
+            x: center.x + radius * Math.cos(angle),
+            y: center.y + radius * Math.sin(angle)
+          });
+        }
+        break;
+        
+      case 'circle-3point':
+        // ALGORITHM: 从三点计算圆心和半径，然后生成点集合
+        const threePointGeometry = outline.geometry as SimpleCircle3Point;
+        const { center: calcCenter, radius: calcRadius } = this.calculateCircleFromThreePoints(
+          threePointGeometry.point1,
+          threePointGeometry.point2,
+          threePointGeometry.point3
+        );
+        
+        const numPoints3 = Math.max(32, Math.ceil(calcRadius * 4));
+        for (let i = 0; i < numPoints3; i++) {
+          const angle = (i * 2 * Math.PI) / numPoints3;
+          points.push({
+            x: calcCenter.x + calcRadius * Math.cos(angle),
+            y: calcCenter.y + calcRadius * Math.sin(angle)
+          });
         }
         break;
         
       case 'ellipse':
         // DESIGN: 将椭圆转换为点集合
-        const ellipseGeometry = outline.geometry as EDMDEllipse;
-        const ellipseCenter = ellipseGeometry.CenterPoint;
-        const semiMajor = ellipseGeometry.SemiMajorAxis.Value;
-        const semiMinor = ellipseGeometry.SemiMinorAxis.Value;
+        const ellipseGeometry = outline.geometry as SimpleEllipse;
+        const ellipseCenter = ellipseGeometry.center;
+        const semiMajor = ellipseGeometry.semiMajorAxis;
+        const semiMinor = ellipseGeometry.semiMinorAxis;
+        const rotation = ellipseGeometry.rotation || 0;
         const ellipsePoints = Math.max(48, Math.ceil((semiMajor + semiMinor) * 2));
         
         for (let i = 0; i < ellipsePoints; i++) {
           const angle = (i * 2 * Math.PI) / ellipsePoints;
+          const x = semiMajor * Math.cos(angle);
+          const y = semiMinor * Math.sin(angle);
+          
+          // 应用旋转
+          const rotRad = (rotation * Math.PI) / 180;
+          const rotatedX = x * Math.cos(rotRad) - y * Math.sin(rotRad);
+          const rotatedY = x * Math.sin(rotRad) + y * Math.cos(rotRad);
+          
           points.push({
-            x: ellipseCenter.X + semiMajor * Math.cos(angle),
-            y: ellipseCenter.Y + semiMinor * Math.sin(angle)
+            x: ellipseCenter.x + rotatedX,
+            y: ellipseCenter.y + rotatedY
           });
         }
         break;
         
       case 'polyline':
         // DESIGN: 直接使用多边形的点
-        const polylineGeometry = outline.geometry as EDMDPolyLine;
-        points = polylineGeometry.Points.map(p => ({ x: p.X, y: p.Y }));
+        const polylineGeometry = outline.geometry as SimplePolyline;
+        points = polylineGeometry.points.map(p => ({ x: p.x, y: p.y }));
         break;
         
       case 'composite':
         // DESIGN: 复合曲线需要展开为点集合
-        const compositeGeometry = outline.geometry as EDMDCompositeCurve;
-        points = this.expandCompositeCurveToPoints(compositeGeometry);
+        const compositeGeometry = outline.geometry as SimpleCompositeCurve;
+        points = this.expandSimpleCompositeCurveToPoints(compositeGeometry);
         break;
         
       default:
@@ -645,6 +658,89 @@ export class IDXExporter {
     const radius = Math.sqrt((ux - ax) * (ux - ax) + (uy - ay) * (uy - ay));
     
     return { center: { x: ux, y: uy }, radius };
+  }
+  
+  /**
+   * 将简化复合曲线展开为点集合
+   * 
+   * @param composite - 简化复合曲线几何
+   * @returns 点集合
+   * 
+   * @remarks
+   * DESIGN: 处理简化的复合曲线格式
+   */
+  private expandSimpleCompositeCurveToPoints(composite: SimpleCompositeCurve): Array<{ x: number; y: number }> {
+    const allPoints: Array<{ x: number; y: number }> = [];
+    
+    for (const segment of composite.segments) {
+      let segmentPoints: Array<{ x: number; y: number }> = [];
+      
+      // DESIGN: 根据段类型生成点
+      switch (segment.type) {
+        case 'line':
+          // 直线段，直接使用点
+          segmentPoints = segment.points.map(p => ({ x: p.x, y: p.y }));
+          break;
+          
+        case 'arc':
+          // 圆弧段，需要从点生成弧线
+          if (segment.points.length >= 3) {
+            const { center, radius } = this.calculateCircleFromThreePoints(
+              segment.points[0],
+              segment.points[1],
+              segment.points[2]
+            );
+            
+            const arcPoints = 16; // 圆弧使用较少的点
+            for (let i = 0; i <= arcPoints; i++) {
+              const angle = (i * Math.PI) / arcPoints; // 半圆弧示例
+              segmentPoints.push({
+                x: center.x + radius * Math.cos(angle),
+                y: center.y + radius * Math.sin(angle)
+              });
+            }
+          } else {
+            // 不足三点，当作直线处理
+            segmentPoints = segment.points.map(p => ({ x: p.x, y: p.y }));
+          }
+          break;
+          
+        case 'circle':
+          // 完整圆形段
+          if (segment.points.length >= 3) {
+            const { center, radius } = this.calculateCircleFromThreePoints(
+              segment.points[0],
+              segment.points[1],
+              segment.points[2]
+            );
+            
+            const circlePoints = 32;
+            for (let i = 0; i < circlePoints; i++) {
+              const angle = (i * 2 * Math.PI) / circlePoints;
+              segmentPoints.push({
+                x: center.x + radius * Math.cos(angle),
+                y: center.y + radius * Math.sin(angle)
+              });
+            }
+          } else {
+            segmentPoints = segment.points.map(p => ({ x: p.x, y: p.y }));
+          }
+          break;
+          
+        default:
+          // 其他类型的默认处理
+          segmentPoints = segment.points.map(p => ({ x: p.x, y: p.y }));
+      }
+      
+      // DESIGN: 根据方向添加点
+      if (segment.sameSense !== false) {
+        allPoints.push(...segmentPoints);
+      } else {
+        allPoints.push(...segmentPoints.reverse());
+      }
+    }
+    
+    return allPoints;
   }
   
   /**
@@ -764,11 +860,10 @@ export class IDXExporter {
     const dataset: EDMDDataSet = {
       Header: header,
       Body: body,
+      // 修复：简化ProcessInstruction，移除不必要的Actor和Description
       ProcessInstruction: {
         id: 'INSTRUCTION_001',
-        instructionType: 'SendInformation',
-        Actor: this.config.collaboration.creatorSystem,
-        Description: 'Initial board baseline'
+        instructionType: 'SendInformation'
       } as any
     };
     

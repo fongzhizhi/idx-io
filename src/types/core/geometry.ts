@@ -79,8 +79,8 @@ export interface EDMDCurveSet2DElement {
   'd2:LowerBound': { 'property:Value': string };
   /** Z轴上界 */
   'd2:UpperBound': { 'property:Value': string };
-  /** 详细几何模型元素数组 - 修复：使用正确的嵌套结构 */
-  'd2:DetailedGeometricModelElement': Array<{ 'd2:DetailedGeometricModelElement': string }>;
+  /** 详细几何模型元素数组 - 修复：支持字符串引用和嵌套结构 */
+  'd2:DetailedGeometricModelElement': string | Array<{ 'd2:DetailedGeometricModelElement': string }>;
 }
 
 /**

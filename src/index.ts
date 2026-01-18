@@ -2,10 +2,10 @@
 
 // 导出主要类
 export { IDXExporter } from './exporter/IDXExporter';
-export type { BrowserExportResult } from './exporter/IDXExporter';
 
 // 导出类型
 export * from './types/core';
+export * from './types/exporter/idx-exporter';
 
 // 导出构建器
 export { BoardBuilder } from './exporter/builders/BoardBuilder';

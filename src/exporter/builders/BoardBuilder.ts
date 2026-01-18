@@ -204,6 +204,8 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       Description: `PCB板 (${boardType}): ${processedData.name}, 厚度: ${processedData.outline.thickness}mm`,
       geometryType: boardType,
       Identifier: this.createIdentifier('BOARD_ASSY', processedData.id),
+      // 添加ReferenceName，便于后续引用
+      ReferenceName: this.generateReferenceName(processedData.name),
       
       ItemInstances: [{
         id: `${boardPrefix}_INST_001`,
@@ -314,6 +316,48 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   }
   
   /**
+   * 生成引用名称
+   * 
+   * @param name - 原始名称
+   * @returns 符合IDX规范的引用名称
+   * 
+   * @remarks
+   * 生成简洁的引用名称，用于相对定位和被引用
+   */
+  private generateReferenceName(name: string): string {
+    // 移除特殊字符，保留字母数字和下划线
+    let referenceName = name
+      .replace(/[^A-Za-z0-9\s]/g, '')  // 移除特殊字符
+      .replace(/\s+/g, '')             // 移除空格
+      .replace(/([a-z])([A-Z])/g, '$1$2'); // 保持驼峰命名
+    
+    // 如果名称过长，截取并保持可读性
+    if (referenceName.length > 20) {
+      // 尝试保留有意义的部分
+      const words = name.split(/[\s\-_]+/);
+      if (words.length > 1) {
+        referenceName = words.map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join('').substring(0, 20);
+      } else {
+        referenceName = referenceName.substring(0, 20);
+      }
+    }
+    
+    // 确保以字母开头
+    if (/^\d/.test(referenceName)) {
+      referenceName = 'Board' + referenceName;
+    }
+    
+    // 如果为空，使用默认名称
+    if (!referenceName) {
+      referenceName = 'SimpleBoard';
+    }
+    
+    return referenceName;
+  }
+  
+  /**
    * 生成有效的XML ID
    */
   private generateValidId(base: string, suffix?: string): string {
@@ -384,16 +428,14 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
    * 
    * @param boardType - 板子类型
    * @returns 是否使用Stratum
+   * 
+   * @remarks
+   * 修复：根据IDX v4.5协议，当板轮廓有厚度时应包含Stratum对象
    */
   private shouldUseStratum(boardType: BoardGeometryType): boolean {
-    // BOARD_AREA_RIGID 必须使用Stratum
-    if (boardType === GeometryType.BOARD_AREA_RIGID) {
-      return true;
-    }
-    
-    // BOARD_OUTLINE 可选择性使用简化表示法
-    // 如果配置为使用简化模式，则不创建Stratum
-    return !this.config.useSimplified;
+    // 修复：BOARD_OUTLINE类型当有厚度时也应该使用Stratum
+    // 这符合IDX v4.5协议第4.1节的要求
+    return true;
   }
   
   /**
@@ -590,7 +632,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'd2:Diameter': { 'property:Value': (circleInfo.radius * 2).toString() }
     });
     
-    // 创建曲线集 - 修复协议问题：正确的DetailedGeometricModelElement结构
+    // 创建曲线集 - 修复协议问题：使用正确的引用格式
     const curveSetId = `${boardPrefix}_CURVESET`;
     const zBounds = this.getZBounds(processedData);
     curveSet2Ds.push({
@@ -599,10 +641,8 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:ShapeDescriptionType': 'GeometricModel',
       'd2:LowerBound': { 'property:Value': zBounds.lower.toString() },
       'd2:UpperBound': { 'property:Value': zBounds.upper.toString() },
-      // 修复：使用正确的嵌套结构
-      'd2:DetailedGeometricModelElement': [{ 
-        'd2:DetailedGeometricModelElement': circleId 
-      }]
+      // 修复：直接使用字符串引用，而不是嵌套对象
+      'd2:DetailedGeometricModelElement': circleId
     });
     
     // 创建形状元素
@@ -675,7 +715,7 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'Point': polyLinePoints.map(pointId => ({ 'd2:Point': pointId }))
     });
     
-    // 创建曲线集 - 修复协议问题：正确的DetailedGeometricModelElement结构
+    // 创建曲线集 - 修复协议问题：使用正确的引用格式
     const curveSetId = `${boardPrefix}_CURVESET`;
     const zBounds = this.getZBounds(processedData);
     curveSet2Ds.push({
@@ -684,10 +724,8 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
       'pdm:ShapeDescriptionType': 'GeometricModel',
       'd2:LowerBound': { 'property:Value': zBounds.lower.toString() },
       'd2:UpperBound': { 'property:Value': zBounds.upper.toString() },
-      // 修复：使用正确的嵌套结构
-      'd2:DetailedGeometricModelElement': [{ 
-        'd2:DetailedGeometricModelElement': polyLineId 
-      }]
+      // 修复：直接使用字符串引用，而不是嵌套对象
+      'd2:DetailedGeometricModelElement': polyLineId
     });
     
     // 创建形状元素
@@ -725,17 +763,22 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   
   /**
    * 确保轮廓点为逆时针方向
+   * 
+   * @remarks
+   * 修复：调整为PCB行业标准的逆时针顺序
    */
   private ensureCounterClockwiseOrder(points: CartesianPoint[]): CartesianPoint[] {
     if (points.length < 3) return points;
     
+    // 计算多边形的有向面积
     let area = 0;
     for (let i = 0; i < points.length; i++) {
       const j = (i + 1) % points.length;
       area += (points[j].X - points[i].X) * (points[j].Y + points[i].Y);
     }
     
-    if (area < 0) {
+    // 如果面积为正，说明是顺时针，需要反转为逆时针
+    if (area > 0) {
       return [...points].reverse();
     }
     
@@ -744,12 +787,16 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
   
   /**
    * 创建板子用户属性
+   * 
+   * @remarks
+   * 修复：简化属性，移除冗余项目
    */
   private createBoardProperties(
     processedData: ProcessedBoardData, 
     boardType: BoardGeometryType
   ): EDMDUserSimpleProperty[] {
     const standardProperties: EDMDUserSimpleProperty[] = [
+      // 基本厚度属性
       {
         Key: {
           SystemScope: this.config.creatorSystem,
@@ -761,53 +808,17 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     
     // 材质属性
     const material = processedData.outline.material || 'FR4';
-    const standardMaterials = ['FR4', 'FR408', 'ISOLA', 'LCP', 'ROGERS', 'POLYIMIDE'];
-    if (standardMaterials.includes(material.toUpperCase())) {
-      standardProperties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'MATERIAL'
-        },
-        Value: material
-      });
-    }
-    
-    // 板子类型
     standardProperties.push({
       Key: {
         SystemScope: this.config.creatorSystem,
-        ObjectName: 'MODELING_TYPE'
+        ObjectName: 'MATERIAL'
       },
-      Value: boardType
+      Value: material
     });
     
-    // 几何特征
+    // 板子面积（对于多边形）
     const circleInfo = this.detectCircularBoard(processedData.outline.points);
-    if (circleInfo) {
-      standardProperties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'GEOMETRY_TYPE'
-        },
-        Value: 'CIRCULAR'
-      });
-      
-      standardProperties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'DIAMETER'
-        },
-        Value: (circleInfo.radius * 2).toString()
-      });
-    } else {
-      standardProperties.push({
-        Key: {
-          SystemScope: this.config.creatorSystem,
-          ObjectName: 'GEOMETRY_TYPE'
-        },
-        Value: 'POLYGON'
-      });
-      
+    if (!circleInfo) {
       const area = this.calculatePolygonArea(processedData.outline.points);
       standardProperties.push({
         Key: {
@@ -821,27 +832,21 @@ export class BoardBuilder extends BaseBuilder<BoardData, EDMDItem> {
     // 处理自定义属性
     const customProperties: EDMDUserSimpleProperty[] = [];
     if (processedData.customProperties) {
-      const criticalProperties = ['SURFACE_FINISH', 'COPPER_LAYERS', 'BOARD_CLASS', 'IPC_CLASS'];
-      
       Object.entries(processedData.customProperties).forEach(([key, value]) => {
-        if (criticalProperties.includes(key)) {
-          customProperties.push({
-            Key: {
-              SystemScope: this.config.creatorSystem,
-              ObjectName: key
-            },
-            Value: String(value)
-          });
-        } else {
-          const prefixedKey = key.startsWith('CUSTOM_') ? key : `CUSTOM_${key}`;
-          customProperties.push({
-            Key: {
-              SystemScope: this.config.creatorSystem,
-              ObjectName: prefixedKey
-            },
-            Value: String(value)
-          });
+        // 跳过与标准属性重复的自定义属性
+        if (key === 'material' && material) {
+          // 跳过重复的material属性
+          return;
         }
+        
+        const prefixedKey = key.startsWith('CUSTOM_') ? key : `CUSTOM_${key}`;
+        customProperties.push({
+          Key: {
+            SystemScope: this.config.creatorSystem,
+            ObjectName: prefixedKey
+          },
+          Value: String(value)
+        });
       });
     }
     

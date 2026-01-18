@@ -203,33 +203,16 @@ export class XMLWriter {
   /**
    * 构建ProcessInstruction
    * 
-   * 根据 IDX V4.5 协议第 31 页，ProcessInstruction 应该使用 computational 命名空间
-   * 不应包含 InstructionType 子元素，类型通过 xsi:type 属性定义
+   * 根据 IDX V4.5 协议规范，简化ProcessInstruction结构
+   * 修复：移除不必要的Actor和Description子元素
    */
   private buildProcessInstruction(root: any, instruction: EDMDProcessInstruction): void {
-    const instructionElement = root.ele('foundation:ProcessInstruction', { 
+    // 修复：简化ProcessInstruction结构，只保留必要的类型声明
+    root.ele('foundation:ProcessInstruction', { 
       'xsi:type': `computational:EDMDProcessInstruction${instruction.instructionType}`,
       id: instruction.id
     });
-    
-    // 根据协议专家反馈，移除 InstructionType 子元素
-    // 指令类型已通过 xsi:type 属性定义，不需要重复的子元素
-    
-    // 添加Actor属性（如果有）
-    if ((instruction as any).Actor) {
-      instructionElement.ele('computational:Actor').txt((instruction as any).Actor);
-    }
-    
-    // 添加Description属性（如果有）
-    if ((instruction as any).Description) {
-      instructionElement.ele('computational:Description').txt((instruction as any).Description);
-    }
-    
-    // 根据指令类型添加特定内容
-    if (instruction.instructionType === 'SendChanges') {
-      // 添加变更相关内容
-      // TODO: 实现变更指令的具体内容
-    }
+    // 注意：不再添加Actor和Description子元素
   }
 
   /**
@@ -298,8 +281,27 @@ export class XMLWriter {
     
     const upperBoundElement = curveSetElement.ele('d2:UpperBound');
     upperBoundElement.ele('property:Value').txt(this.formatCoordinate(curveSet['d2:UpperBound']['property:Value']));
-    
-    curveSetElement.ele('d2:DetailedGeometricModelElement').txt(curveSet['d2:DetailedGeometricModelElement']);
+    // 修复：正确处理DetailedGeometricModelElement
+    if (curveSet['d2:DetailedGeometricModelElement']) {
+      const elements = curveSet['d2:DetailedGeometricModelElement'];
+      if (typeof elements === 'string') {
+        // 处理字符串格式（直接引用）
+        curveSetElement.ele('d2:DetailedGeometricModelElement').txt(elements);
+      } else if (Array.isArray(elements)) {
+        // 处理数组格式（多个元素）
+        elements.forEach((element: any) => {
+          if (typeof element === 'string') {
+            curveSetElement.ele('d2:DetailedGeometricModelElement').txt(element);
+          } else if (element['d2:DetailedGeometricModelElement']) {
+            curveSetElement.ele('d2:DetailedGeometricModelElement').txt(element['d2:DetailedGeometricModelElement']);
+          }
+        });
+      } else {
+        // 处理对象格式，提取ID
+        console.warn('Unexpected DetailedGeometricModelElement format:', elements);
+        curveSetElement.ele('d2:DetailedGeometricModelElement').txt('UNKNOWN_ELEMENT');
+      }
+    }
   }
 
   /**
@@ -710,10 +712,10 @@ export class XMLWriter {
       }
     }
     
-    // 构建基线标记 - 根据需求 10.1-10.4 使用正确格式
+    // 构建基线标记 - 修复：使用正确的property:Value格式
     if (item.BaseLine !== undefined) {
-      // 使用 <pdm:BaseLine>true</pdm:BaseLine> 格式，注意大小写
-      itemElement.ele('pdm:BaseLine').txt(item.BaseLine.toString());
+      const baseLineElement = itemElement.ele('pdm:BaseLine');
+      baseLineElement.ele('property:Value').txt(item.BaseLine.toString());
     }
     
     // 构建装配到名称
