@@ -1,0 +1,483 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema
+  elementFormDefault="qualified"
+  targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/computational" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/computational" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+  <xs:annotation>
+    <xs:documentation>
+		Author: Working Group ECAD-MCAD Collaboration
+		Purpose: EDMD-Schema 4.0
+		Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+		
+		prostep ivip Association
+		Dolivostr. 11
+		D-64293 Darmstadt, Germany
+	</xs:documentation>
+  </xs:annotation>
+  <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+  <xs:element name="EDMDProcessInstructionSendChanges" nillable="true" type="tns:EDMDProcessInstructionSendChanges" />
+  <xs:complexType name="EDMDProcessInstructionSendChanges" mixed="true">
+		<xs:annotation>
+		  <xs:documentation>
+				EDMDProcessInstructionSendChanges is an EDMDProcessInstruction, which allows to dump the content of a
+				SendChanges-Message to a XML Document including an EDMDDataSet as root element. The EDMDDataSet including 
+				a ProcessInstruction of this type has to be used as parameter DataSet of the SendChanges-Operation.
+		   </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+		  <xs:extension base="foundation:EDMDProcessInstruction">
+			<xs:sequence>
+			  <xs:element minOccurs="1" maxOccurs="1" name="Actor" type="xs:IDREF">
+				<xs:annotation>
+				  <xs:documentation>
+						Actor of the changes (refers to an EDMDPerson). This Element is analog to parameter Actor of the SendChanges-Operation. 
+				  </xs:documentation>
+				</xs:annotation>
+			  </xs:element>
+			  <xs:element minOccurs="1" maxOccurs="unbounded" name="Changes" type="tns:EDMDAbstractChange">
+				<xs:annotation>
+				  <xs:documentation>
+					Array of ChangeInformation Change information. This Element is analog to parameter Changes of the SendChanges-Operation.
+				  </xs:documentation>
+				</xs:annotation>
+			  </xs:element>
+			</xs:sequence>
+		  </xs:extension>
+		</xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="EDMDAbstractChange" abstract="true" mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+        Abstract super type for Changes
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent mixed="true">
+      <xs:extension base="foundation:EDMDExtensibleObject">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="1" name="Actor" nillable="true" type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+				Optional Element to identify the actor, who has made the change.
+				Has to refer to an EDMDPerson.
+               </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element name="EDMDErrorCategory" type="tns:EDMDErrorCategory" />
+  <xs:simpleType name="EDMDErrorCategory">
+    <xs:annotation>
+      <xs:documentation>
+            Predefined error categories
+            </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Ok">
+        <xs:annotation>
+          <xs:documentation>
+            Call was OK, 
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="NotAuthorized">
+        <xs:annotation>
+          <xs:documentation>
+            Access denied because of missing access rights
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="NotAuthenticated">
+        <xs:annotation>
+          <xs:documentation>
+            Access denied because of missing authentication
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="InvalidMessage">
+        <xs:annotation>
+          <xs:documentation>
+            This kind of message is not allowed
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="InvalidFormatXML">
+        <xs:annotation>
+          <xs:documentation>
+            The message is not valid against the schema
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="InvalidFormatConstraints">
+        <xs:annotation>
+          <xs:documentation>
+            The message is not valid because of inner constraints, 
+            e.g. an IDREF refer to an entity of wrong type
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="SystemError">
+        <xs:annotation>
+          <xs:documentation>
+            System could not process the message,
+            e. g. a software problem
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="Other">
+        <xs:annotation>
+          <xs:documentation>
+            Any other error
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element
+    name="EDMDInformationType"
+    type="tns:EDMDInformationType" />
+  <xs:simpleType
+    name="EDMDInformationType">
+    <xs:annotation>
+      <xs:documentation>
+            Type of information, which is requested by a RequestForInformation message
+            RequestForInformation message includes items, an the other system should
+            add all information, which belong to this items in the given information type
+            category. Information types can be combined in the RequestForInformation message.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:restriction
+      base="xs:string">
+      <xs:enumeration
+        value="Idenfication">
+        <xs:annotation>
+          <xs:documentation>
+            Identification of Elements in the other system, returns the ItemIdentification
+            under the scope of the other system.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Structure">
+        <xs:annotation>
+          <xs:documentation>
+            Structure, returns the product structure, including the (Sub-)ItemInstances
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Classification">
+        <xs:annotation>
+          <xs:documentation>
+            Returns classification of the items
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Geometry">
+        <xs:annotation>
+          <xs:documentation>
+            Returns the item shape
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="External">
+        <xs:annotation>
+          <xs:documentation>
+            Returns external sources which are assigned to the items
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="Ownership">
+        <xs:annotation>
+          <xs:documentation>
+            Returns owner and listener to the items.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="All">
+        <xs:annotation>
+          <xs:documentation>
+            Returns all available information.
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element
+    name="EDMDServiceResult"
+    nillable="true"
+    type="tns:EDMDServiceResult" />
+  <xs:complexType
+    name="EDMDServiceResult"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Simple service result sent from a web service binding of the 
+            SOAP messages.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDExtensibleObject">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="Ok"
+            type="xs:boolean">
+            <xs:annotation>
+              <xs:documentation>
+            Request was successfully
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="ErrorCategory"
+            type="tns:EDMDErrorCategory">
+            <xs:annotation>
+              <xs:documentation>
+            category of an error
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="ErrorMessageId"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Message ID
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="ErrorMessageText"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Message Text
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="DeveloperDetails"
+            type="xs:string">
+            <xs:annotation>
+              <xs:documentation>
+            Additional Developer information, like trace dump etc.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element
+    name="EDMDProcessInstructionRequestForInformation"
+    nillable="true"
+    type="tns:EDMDProcessInstructionRequestForInformation" />
+  <xs:complexType
+    name="EDMDProcessInstructionRequestForInformation"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            EDMDProcessInstructionRequestForInformation is an EDMDProcessInstruction, which allows to dump the content of a
+            RequestForInformation-Message to a XML Document including an EDMDDataSet as root element. The EDMDDataSet including 
+            a ProcessInstruction of this type has to be used as parameter DataSet of the RequestForInformation-Operation.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDProcessInstruction">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="Actor"
+            type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+            Actor of the changes (refers to an EDMDPerson). This Element is analog to parameter Actor of the RequestForInformation-Operation. 
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="InformationType"
+            type="tns:ArrayOfEDMDInformationType">
+            <xs:annotation>
+              <xs:documentation>
+            Type of requested information. This Element is analog to parameter InformationType of the RequestForInformation-Operation.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType
+    name="ArrayOfEDMDInformationType"
+    mixed="true">
+    <xs:sequence>
+      <xs:element
+        minOccurs="1"
+        maxOccurs="unbounded"
+        name="EDMDInformationType"
+        type="tns:EDMDInformationType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element
+    name="EDMDAbstractChange"
+    nillable="true"
+    type="tns:EDMDAbstractChange" />
+  <xs:element
+    name="EDMDTransaction"
+    nillable="true"
+    type="tns:EDMDTransaction" />
+  <xs:complexType
+    name="EDMDTransaction"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            EDMDTransaction is a container for EDMDChanges, which has to be accepted or rejected 
+            by the receiver as one.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="tns:EDMDAbstractChange">
+        <xs:sequence>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="unbounded"
+            name="Change"
+            nillable="true"
+            type="tns:EDMDChange">
+            <xs:annotation>
+              <xs:documentation>
+            Changes ...
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType
+    name="EDMDChange"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Representation of the change submitted in a 
+            SendChanges-Message. The main data is included
+            in the EDMDDataSet, which is posted in the message.
+            NewItem (in the EDMDDataSet) may include only the 
+            difference between the predecessor and the new item. 
+            Depending on the implementation (synchrony or asynchrony) it
+            is recommended to send the data of the predecessor or let
+            the receiver request it by an RequestForInformation-Message.
+            In a synchrony scenario it makes sense to send smaller message
+            including only the differences and let the receiver ask for
+            the old values. While 'ping pong' takes a long time in asynchrony 
+            scenarios it makes sense to send the full data (including 
+            the full PredecessorItem) in this kind of use.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="tns:EDMDAbstractChange">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="NewItem"
+            type="foundation:EDMDIdentifier">
+            <xs:annotation>
+              <xs:documentation>
+            Identifier of the new item. The new item has to be included
+            in the EDMDDataSet
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="PredecessorItem"
+            nillable="true"
+            type="foundation:EDMDIdentifier">
+            <xs:annotation>
+              <xs:documentation>
+            Identifier of predecessor of the new item.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="unbounded"
+            name="DeletedInstanceName"
+            nillable="true"
+            type="foundation:EDMDName">
+            <xs:annotation>
+              <xs:documentation>
+            InstanceName of the instances which are deleted on transition
+            from PredecessorItem to NewItem. A replacement of a 
+            EDMDItemInstance is done by placing an new ItemInstance with 
+            the same InstanceName in the NewItem.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element
+    name="EDMDChange"
+    nillable="true"
+    type="tns:EDMDChange" />
+  <xs:element
+    name="EDMDProcessInstructionSendInformation"
+    nillable="true"
+    type="tns:EDMDProcessInstructionSendInformation" />
+  <xs:complexType
+    name="EDMDProcessInstructionSendInformation"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            EDMDProcessInstructionSendInformation is an EDMDProcessInstruction, which allows to dump the content of a
+            SendInformation-Message to a XML Document including an EDMDDataSet as root element. The EDMDDataSet including 
+            a ProcessInstruction of this type has to be used as parameter DataSet of the SendInformation-Operation.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDProcessInstruction" />
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+	
+	
+	
+-->
+<xs:schema elementFormDefault="qualified" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/external" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/external" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:pdm="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+    <xs:annotation>
+        <xs:documentation>
+			Author: Working Group ECAD-MCAD Collaboration
+			Purpose: EDMD-Schema 4.0
+			Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+			
+			prostep ivip Association
+			Dolivostr. 11
+			D-64293 Darmstadt, Germany
+		</xs:documentation>
+    </xs:annotation>
+    <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" schemaLocation="pdm.xsd" />
+    <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+    <xs:complexType name="EDMDExternalGeometricModel" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            EDMDExternalGeometricModel represents a geometric model,
+            which has to be loaded via an external source.
+            NOTE: The Model parameters are stored in the local 
+            EDMDUserProperties.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="pdm:EDMDShapeDescription">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="ExternalSource" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Reference to an EDMDExternalSource, where this external geometric
+            model can be retrieved.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDExternalSource" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            EDMDExternalSource describes an external source
+            Which means a single file or a mechanism to access multiple files.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="foundation:EDMDCollaborationObject">
+                <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="1" name="MimeType" nillable="true" type="xs:string">
+                        <xs:annotation>
+                            <xs:documentation>
+            The mime type of the resulting file
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Location" type="xs:anyURI">
+                        <xs:annotation>
+                            <xs:documentation>
+            The full qualified URI of the location to access the external
+            file.
+            e.g. 
+            file://~/example/sample.file 
+            http://www.domain.tld/service
+            
+            If the access mechanism need additional parameters, EDMDSource
+            could be the source of multiple files. 
+            local EDMDUserProperties and the EDMDUserProperties of the 
+            referencing EDMDExtensibleObject are passed.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDExternalGeometricModel" nillable="true" type="tns:EDMDExternalGeometricModel" />
+    <xs:element name="EDMDExternalSource" nillable="true" type="tns:EDMDExternalSource" />
+</xs:schema>

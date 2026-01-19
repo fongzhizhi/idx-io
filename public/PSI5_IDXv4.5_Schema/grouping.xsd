@@ -1,0 +1,182 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema
+  elementFormDefault="qualified"
+  targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/grouping" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/grouping" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+  <xs:annotation>
+    <xs:documentation>
+		Author: Working Group ECAD-MCAD Collaboration
+		Purpose: EDMD-Schema 4.0
+		Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+		
+		prostep ivip Association
+		Dolivostr. 11
+		D-64293 Darmstadt, Germany
+	</xs:documentation>
+  </xs:annotation>
+  <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+  <xs:element
+    name="EDMDGroup"
+    nillable="true"
+    type="tns:EDMDGroup" />
+  <xs:complexType
+    name="EDMDGroup"
+    abstract="true"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Abstract super type for grouping elements
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="foundation:EDMDCollaborationObject">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="unbounded"
+            name="Related"
+            type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+            References to related EDMDCollaborationObjects.
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element
+            minOccurs="0"
+            maxOccurs="1"
+            name="Owner"
+            nillable="true"
+            type="xs:IDREF">
+            <xs:annotation>
+              <xs:documentation>
+            Has to refer to an EDMDPerson, EDMDSystem or EDMDOrganisation,
+            which is responsible for this EMDMGroup
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element
+    name="EDMDItemConstraint"
+    nillable="true"
+    type="tns:EDMDItemConstraint" />
+  <xs:complexType
+    name="EDMDItemConstraint"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            An EDMDItemConstraint is used to constrain the relation between two 
+            or more items. The type of EDMDItemConstraint 
+            needs to be specified with the ItemConstraintType attribute.
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="tns:EDMDGroup">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="1"
+            name="ItemConstraintType"
+            type="tns:EDMDItemConstraintType">
+            <xs:annotation>
+              <xs:documentation>
+            The type of EDMDItemConstraint
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType
+    name="EDMDItemConstraintType">
+    <xs:annotation>
+      <xs:documentation>
+            Type of an EDMDItemConstraint
+            The following values are recommended to use for the constraint_type: 
+            relating (e.g. to move parts together), 
+            placement (e.g. for clearance), 
+            or rotation (for rotation of elements).
+            </xs:documentation>
+    </xs:annotation>
+    <xs:restriction
+      base="xs:string">
+      <xs:enumeration
+        value="relating">
+        <xs:annotation>
+          <xs:documentation>
+            indicates, that these parts can only be moved together
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="placement">
+        <xs:annotation>
+          <xs:documentation>
+            indicates, that placement of these parts is fixed 
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration
+        value="rotation">
+        <xs:annotation>
+          <xs:documentation>
+            indicates, that these parts can only be rotated together
+            </xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element
+    name="EDMDGeneralClassification"
+    nillable="true"
+    type="tns:EDMDGeneralClassification" />
+  <xs:complexType
+    name="EDMDGeneralClassification"
+    mixed="true">
+    <xs:annotation>
+      <xs:documentation>
+            Element classify CollaborationsObjects
+            </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent
+      mixed="true">
+      <xs:extension
+        base="tns:EDMDGroup">
+        <xs:sequence>
+          <xs:element
+            minOccurs="1"
+            maxOccurs="unbounded"
+            name="Identifier"
+            type="foundation:EDMDIdentifier">
+            <xs:annotation>
+              <xs:documentation>
+            Identifier to identify this GeneralClassification in 
+            several systems
+            </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:element
+    name="EDMDItemConstraintType"
+    type="tns:EDMDItemConstraintType" />
+</xs:schema>

@@ -1,0 +1,341 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema elementFormDefault="qualified" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/text" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/text" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation">
+    <xs:annotation>
+        <xs:documentation>
+			Author: Working Group ECAD-MCAD Collaboration
+			Purpose: EDMD-Schema 4.0
+			Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+			
+			prostep ivip Association
+			Dolivostr. 11
+			D-64293 Darmstadt, Germany
+		</xs:documentation>
+    </xs:annotation>
+    <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+    <xs:element name="EDMDSimpleText" nillable="true" type="tns:EDMDSimpleText" />
+    <xs:complexType name="EDMDSimpleText" abstract="true" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A simple text describes the geometry of a text.
+            NOTE: this text is not defined in a precise way, different
+            systems may show it in different ways.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="foundation:EDMDCollaborationObject">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="TextValue" type="xs:string">
+                        <xs:annotation>
+                            <xs:documentation>
+            Text value
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="UpperLeft" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Upper left corner. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="LowerRight" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Lower right corner. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="FontFace" nillable="true" type="xs:string">
+                        <xs:annotation>
+                            <xs:documentation>
+            Optional name of the font face
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="FontFamily" type="tns:EDMDFontFamily">
+                        <xs:annotation>
+                            <xs:documentation>
+            The font family
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="TextDecoration" nillable="true" type="tns:EDMDTextDecoration">
+                        <xs:annotation>
+                            <xs:documentation>
+            The text decoration
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="FontStyle" nillable="true" type="tns:EDMDFontStyle">
+                        <xs:annotation>
+                            <xs:documentation>
+            The text font style
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="FontWeight" nillable="true" type="tns:EDMDFontWeight">
+                        <xs:annotation>
+                            <xs:documentation>
+            Font weight
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="VerticalAlignment" nillable="true" type="tns:EDMDVerticalAlignment">
+                        <xs:annotation>
+                            <xs:documentation>
+            Vertical alignment
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="HorizontalAlignment" nillable="true" type="tns:EDMDHorizontalAlignment">
+                        <xs:annotation>
+                            <xs:documentation>
+            Horizontal alignment
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:simpleType name="EDMDFontFamily">
+        <xs:annotation>
+            <xs:documentation>
+            Generic font families
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Serif">
+                <xs:annotation>
+                    <xs:documentation>
+            Glyphs of serif fonts have finishing strokes, flared or 
+            tapering ends, or have actual serifed endings (including slab 
+            serifs). Serif fonts are typically proportionately-spaced. 
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="SansSerif">
+                <xs:annotation>
+                    <xs:documentation>
+            Glyphs in sans-serif fonts have stroke endings that are plain 
+            -- without any flaring, cross stroke, or other ornamentation. 
+            Sans-serif fonts are typically proportionately-spaced.
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Cursive">
+                <xs:annotation>
+                    <xs:documentation>
+            Glyphs in cursive fonts generally have either joining strokes 
+            or other cursive characteristics beyond those of italic 
+            typefaces. The glyphs are partially or completely connected, 
+            and the result looks more like handwritten pen or brush 
+            writing than printed letterwork
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Monospace">
+                <xs:annotation>
+                    <xs:documentation>
+            The sole criterion of a monospace font is that all glyphs have 
+            the same fixed width. 
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="EDMDTextDecoration">
+        <xs:annotation>
+            <xs:documentation>
+            text decorations
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="None">
+                <xs:annotation>
+                    <xs:documentation>
+             none  	Default. Defines a normal text
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Underline">
+                <xs:annotation>
+                    <xs:documentation>
+            underline 	Defines a line under the text
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Overline">
+                <xs:annotation>
+                    <xs:documentation>
+            overline 	Defines a line over the text
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="LineThrough">
+                <xs:annotation>
+                    <xs:documentation>
+            line-through 	Defines a line through the text
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="EDMDFontStyle">
+        <xs:annotation>
+            <xs:documentation>
+            font style
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Normal">
+                <xs:annotation>
+                    <xs:documentation>
+            Default. The browser displays a normal font
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Italic">
+                <xs:annotation>
+                    <xs:documentation>
+            italic font
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Oblique">
+                <xs:annotation>
+                    <xs:documentation>
+            oblique font
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="EDMDFontWeight">
+        <xs:annotation>
+            <xs:documentation>
+            Font weight
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Normal">
+                <xs:annotation>
+                    <xs:documentation>
+            normal characters
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Bold">
+                <xs:annotation>
+                    <xs:documentation>
+            thick characters
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Bolder">
+                <xs:annotation>
+                    <xs:documentation>
+            thicker characters
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Lighter">
+                <xs:annotation>
+                    <xs:documentation>
+            lighter characters
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="EDMDVerticalAlignment">
+        <xs:annotation>
+            <xs:documentation>
+            vertical alignment
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="top">
+                <xs:annotation>
+                    <xs:documentation>
+            Aligns the text to the top of the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="bottom">
+                <xs:annotation>
+                    <xs:documentation>
+            Aligns the text to the bottom of the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="middle">
+                <xs:annotation>
+                    <xs:documentation>
+            Aligns the text to the middle of the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="stretch">
+                <xs:annotation>
+                    <xs:documentation>
+            Stretch the text to the height of the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="EDMDHorizontalAlignment">
+        <xs:annotation>
+            <xs:documentation>
+            horizontal alignment
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="left">
+                <xs:annotation>
+                    <xs:documentation>
+            Aligns the text to the left of the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="right">
+                <xs:annotation>
+                    <xs:documentation>
+            Aligns the text to the right of the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="center">
+                <xs:annotation>
+                    <xs:documentation>
+            Centers the text in the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="stretch">
+                <xs:annotation>
+                    <xs:documentation>
+            Stretch text to the width of the rectangle
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:element name="EDMDFontFamily" type="tns:EDMDFontFamily" />
+    <xs:element name="EDMDTextDecoration" type="tns:EDMDTextDecoration" />
+    <xs:element name="EDMDFontStyle" type="tns:EDMDFontStyle" />
+    <xs:element name="EDMDFontWeight" type="tns:EDMDFontWeight" />
+    <xs:element name="EDMDVerticalAlignment" type="tns:EDMDVerticalAlignment" />
+    <xs:element name="EDMDHorizontalAlignment" type="tns:EDMDHorizontalAlignment" />
+</xs:schema>

@@ -1,0 +1,692 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:property="http://www.prostep.org/ecad-mcad/edmd/4.0/property" xmlns:geometry.d2="http://www.prostep.org/ecad-mcad/edmd/4.0/geometry.d2" xmlns:pdm="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" xmlns:administration="http://www.prostep.org/ecad-mcad/edmd/4.0/administration" xmlns:text="http://www.prostep.org/ecad-mcad/edmd/4.0/text" xmlns:external="http://www.prostep.org/ecad-mcad/edmd/4.0/external" xmlns:grouping="http://www.prostep.org/ecad-mcad/edmd/4.0/grouping" xmlns:annotation="http://www.prostep.org/ecad-mcad/edmd/4.0/annotation" xmlns:material="http://www.prostep.org/ecad-mcad/edmd/4.0/material" xmlns:masterpart3d="http://www.prostep.org/ecad-mcad/edmd/4.0/3dpart" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" elementFormDefault="qualified">
+	<xs:annotation>
+		<xs:documentation>
+		  Author: Working Group ECAD-MCAD Collaboration
+		  Purpose: EDMD-Schema 4.0
+		  Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+
+		  prostep ivip Association
+		  Dolivostr. 11
+		  D-64293 Darmstadt, Germany
+		</xs:documentation>
+	</xs:annotation>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/property" schemaLocation="property.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/geometry.d2" schemaLocation="geometry.d2.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" schemaLocation="pdm.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/administration" schemaLocation="administration.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/text" schemaLocation="text.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/external" schemaLocation="external.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/grouping" schemaLocation="grouping.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/annotation" schemaLocation="annotation.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/material" schemaLocation="material.xsd"/>
+	<xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/3dpart" schemaLocation="masterpart3d.xsd"/>
+	<xs:element name="EDMDObject" type="tns:EDMDObject" nillable="true"/>
+	<xs:complexType name="EDMDObject" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+				Supertype for all types in EDMDSchema
+			  </xs:documentation>
+		</xs:annotation>
+		<xs:attribute name="id" type="xs:ID">
+			<xs:annotation>
+				<xs:documentation>
+				  Unique identifier of an entity in a xml document.
+				</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="IsAttributeChanged" type="xs:boolean" use="optional">
+			<xs:annotation>
+				<xs:documentation>
+				  Optional attribute to indicate that some attributes are
+				  changed in this object.
+				  NOTE: If this attribute is not set the message interpreting
+				  system has to recognize if attributes are changed by caculation
+				  differences to predecessor.
+				</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="EDMDName" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+        Identifies one object in a list in the context of an IT-System
+        IT-Systems can be data creating system (e.g. CAD) or data
+        management system (e.g. PDM or Library).
+      </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDDesignator">
+				<xs:sequence>
+					<xs:element name="ObjectName" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+                The Name in scope of this system
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EDMDDesignator" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+        Abstract super type for designation of an object in the scope
+        of an EDMDSystem.
+      </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDExtensibleObject">
+				<xs:sequence>
+					<xs:element name="SystemScope" type="xs:IDREF">
+						<xs:annotation>
+							<xs:documentation>
+                Reference to the system, which is the context for this identifier.
+                Has to refer to an EDMDSystem
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+				<xs:attribute name="Persistant" type="xs:boolean" use="optional">
+					<xs:annotation>
+						<xs:documentation>
+              Indicates whenever the identifier is persistent, e. g. it is
+              stored in a pdm system, default is 'false'.
+            </xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="OriginatorId" type="xs:string" use="optional">
+					<xs:annotation>
+						<xs:documentation>
+              Indicates the ID was assigned by the orginating system.
+              So during communication at least this ID hat to be included in all messages.
+            </xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="IsOriginator" type="xs:boolean"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EDMDExtensibleObject" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+				Super type for several EDMDCollaborationObjects, which can be
+				extended by user properties.
+			  </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDObject">
+				<xs:sequence>
+					<xs:element name="Name" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+								Displayable name of the Object
+							  </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Description" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Displayable description
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="DisplayName" type="tns:EDMDName" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+                Displayable name of the Object for different systems
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="DisplayDescription" type="tns:EDMDName" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+                Displayable description of the Object for different systems
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="UserProperty" type="property:EDMDUserProperty" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+                User properties
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDExtensibleObject" type="tns:EDMDExtensibleObject" nillable="true"/>
+	<xs:element name="EDMDCollaborationObject" type="tns:EDMDCollaborationObject" nillable="true"/>
+	<xs:complexType name="EDMDCollaborationObject" abstract="true" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+        Abstract super type of all Types, which are allowed in the body
+        of an EDMDDataSet.
+      </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDExtensibleObject"/>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDProcessInstruction" type="tns:EDMDProcessInstruction" nillable="true"/>
+	<xs:complexType name="EDMDProcessInstruction" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+			 Represents instructions for further processing
+		    </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDExtensibleObject">
+				<xs:sequence>
+					<xs:element name="Subject" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							Indicates if the Instruction is for a special entity,
+							if Subject is missing, the instruction is for the whole
+							document. Has to refer to an EDMDObject.
+						    </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Object" type="xs:IDREF" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+							Additional objects for processing the instruction.
+							Has to refer to an EDMDObject.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="TargetSystem" type="xs:IDREF" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+							Indicate if the Instruction is for a special target system.
+							Has to refer to an EDMDSystem.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EDMDIdentifier" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+        Identifies a Object in the context of an IT-System
+        IT-Systems can be data creating system (e.g. CAD) or data
+        management system (e.g. PDM or Library).
+      </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDDesignator">
+				<xs:sequence>
+					<xs:element name="Number" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+                Number of the Object in scope of this system
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Version" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Version of the identified object in scope of this system
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Revision" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Revision of the identified object in scope of this system
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Sequence" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Sequence of the identified object, in a real time session,
+                sequence should be used to create inpersistent identifiers.
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDDesignator" type="tns:EDMDDesignator" nillable="true"/>
+	<xs:element name="EDMDSystem" type="tns:EDMDSystem" nillable="true"/>
+	<xs:complexType name="EDMDSystem" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+        Specifies an instance of an IT-System
+      </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDCollaborationObject">
+				<xs:sequence>
+					<xs:element name="SystemType" type="tns:EDMDSystemType" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                type of the EDMDSystem
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalName" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+                Displayable global unique Name of the System
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="WebServiceURI" type="xs:anyURI" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Webservice URI to access this system instance
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Revision" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Webservice URI to access this system instance
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="SystemName" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Name of the IT-System, e.g. 'Mentor PADS'
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="InstanceName" type="xs:string" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Name of the system instance,
+                e.g.
+                'pads@workstation0815.oem.com'
+                'pdm-system.site.oem.com'
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="SystemOwner" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Reference to an EDMDPerson or EDMDOrganisation
+                who/which owns this system instance.
+                Has to refer to an EDMDPerson or EDMDOrganisation.
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="NeedsSelfContainedMessages" type="xs:boolean" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+                Indicates if System can process selfcontained messages only. Default value is false.
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="EDMDSystemType">
+		<xs:annotation>
+			<xs:documentation>
+        Predefined type of an EDMDSystem
+      </xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Manufacturer">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem describes the product range of an manufacturer
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="PLM">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem is a product lifecycle management system
+            (e.g. engineering data management or enterprise ressource planning)
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="ECAD">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem is a computer aided design system for electrical design
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="MCAD">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem is a computer aided design system for mechanical design
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Proxy">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem is a proxy, that maps it's own numbers to internal numbers
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="Library">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem is a library, where components can be found.
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="CommonStandard">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem is a common standard (e.g. DIN 41429)
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="FactoryStandard">
+				<xs:annotation>
+					<xs:documentation>
+            The EDMDSystem is a factory standard
+          </xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:element name="EDMDHeader" type="tns:EDMDHeader" nillable="true"/>
+	<xs:complexType name="EDMDHeader" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+			Header of EDMD data file, may include redundant data, which can
+			interpreted, without interpreting the rest of the document.
+		    </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDExtensibleObject">
+				<xs:sequence>
+					<xs:element name="CreatorName" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+							Displayable name of the creator
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="CreatorCompany" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+							Displayable name of the company
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="CreatorSystem" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+							Displayable name of the ECAD or MCAD system that generated the file
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="PostProcessor" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+							Displayable Name of the PostProcessor that generated the file (if applicable)
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="PostProcessorVersion" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>
+							Version of the PostProcessor
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="System" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							Optional Reference to an EDMDSystem, which has created this data file. Has to refer to an EDMDSystem.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Creator" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							Reference to an EDMDPerson, who is the creator. Has to refer to an EDMDPerson.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					
+					<xs:element name="CreationDateTime" type="xs:dateTime">
+						<xs:annotation>
+							<xs:documentation>
+							  Timestamp indicating when this dataset was initially created. This timestamp should remain unchanged in all subsequent files relating to this design.
+							  Using a combination of this CreationDateTime field and the Description field can identify the same board design through multiple iterations of Changes and Responses.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					
+					<xs:element name="ModifiedDateTime" type="xs:dateTime" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							  Timestamp indicating when this dataset was last modified. In the case of a Response file, this timestamp should be the same as the Change file the system is responding to.
+							  This ensures that the Response File can be reliably matched with the Change File it is a response to.
+							</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+
+					<xs:element name="GlobalUnitLength" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for length properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitAmperage" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for amperage properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitAngle" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for angle properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitCapacitance" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for capacitance properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitPower" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for power properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitResistance" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for resistance properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitVoltage" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for voltage properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitWeight" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for weight properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="GlobalUnitWork" type="xs:IDREF" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							The global unit used for work properties, using a global unit is optional, if no global
+							unit is defined for a type of measurement the properties has to have a unit. The global unit
+							is used only if a property has no unit set.
+						   </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="IsSelfContained" type="xs:boolean" nillable="true" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>
+							Indicates that the message includes all informations about included items. This means, there is no
+							external link to other document and most of the 'optional' information on an item is recommended
+							(take look to the recommendation for further information. If message includes changes, it has to
+							include all changes from the base line.
+						  </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDDataSet" type="tns:EDMDDataSet" nillable="true"/>
+	<xs:complexType name="EDMDDataSet" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+        EDMDDataset is the main Object in an EDMD message.
+      </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDObject">
+				<xs:sequence>
+					<xs:element name="Header" type="tns:EDMDHeader">
+						<xs:annotation>
+							<xs:documentation>
+                The header includes meta information of the dataset
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="Body" type="tns:EDMDDataSetBody">
+						<xs:annotation>
+							<xs:documentation>
+                The body includes the item description data
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ProcessInstruction" type="tns:EDMDProcessInstruction" nillable="true" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>
+                instructions for further processing (future use)
+              </xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EDMDDataSetBody" mixed="true">
+		<xs:annotation>
+			<xs:documentation>
+        EDMDDataSetBody is a container for data (EDMDCollaborationObjects)
+        in an EDMDDataSet
+      </xs:documentation>
+		</xs:annotation>
+		<xs:complexContent mixed="true">
+			<xs:extension base="tns:EDMDObject">
+				<xs:sequence>
+					<xs:choice minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="Ellipse" type="geometry.d2:EDMDEllipse" nillable="true" minOccurs="0"/>
+						<xs:element name="StratumTechnology" type="pdm:EDMDStratumTechnology" nillable="true" minOccurs="0"/>
+						<xs:element name="KeepOut" type="pdm:EDMDKeepOut" nillable="true" minOccurs="0"/>
+						<xs:element name="KeepIn" type="pdm:EDMDKeepIn" nillable="true" minOccurs="0"/>
+						<xs:element name="RoleInOrganisation" type="administration:EDMDRoleInOrganisation" nillable="true" minOccurs="0"/>
+						<xs:element name="RoleOnItem" type="administration:EDMDRoleOnItem" nillable="true" minOccurs="0"/>
+						<xs:element name="RoleOnItemInstance" type="administration:EDMDRoleOnItemInstance" nillable="true" minOccurs="0"/>
+						<xs:element name="FunctionalItemShape" type="pdm:EDMDFunctionalItemShape" nillable="true" minOccurs="0"/>
+						<xs:element name="NonFeatureItemShape" type="pdm:EDMDNonFeatureItemShape" nillable="true" minOccurs="0"/>
+						<xs:element name="SimpleText" type="text:EDMDSimpleText" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitPower" type="property:EDMDUnitPower" nillable="true" minOccurs="0"/>
+						<xs:element name="ExternalGeometricModel" type="external:EDMDExternalGeometricModel" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitWork" type="property:EDMDUnitWork" nillable="true" minOccurs="0"/>
+						<xs:element name="ExternalSource" type="external:EDMDExternalSource" nillable="true" minOccurs="0"/>
+						<xs:element name="GeneralClassification" type="grouping:EDMDGeneralClassification" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitCapacitance" type="property:EDMDUnitCapacitance" nillable="true" minOccurs="0"/>
+						<xs:element name="Arc" type="geometry.d2:EDMDArc" nillable="true" minOccurs="0"/>
+						<xs:element name="Hyperbola" type="geometry.d2:EDMDHyperbola" nillable="true" minOccurs="0"/>
+						<xs:element name="CurveSet2d" type="geometry.d2:EDMDCurveSet2d" nillable="true" minOccurs="0"/>
+						<xs:element name="Circle3Point" type="geometry.d2:EDMDCircle3Point" nillable="true" minOccurs="0"/>
+						<xs:element name="Annotation" type="annotation:EDMDAnnotation" nillable="true" minOccurs="0"/>
+						<xs:element name="InterStratumFeature" type="pdm:EDMDInterStratumFeature" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitResistance" type="property:EDMDUnitResistance" nillable="true" minOccurs="0"/>
+						<xs:element name="Item" type="pdm:EDMDItem" nillable="true" minOccurs="0"/>
+						<xs:element name="ItemConstraint" type="grouping:EDMDItemConstraint" nillable="true" minOccurs="0"/>
+						<xs:element name="Line" type="geometry.d2:EDMDLine" nillable="true" minOccurs="0"/>
+						<xs:element name="Material" type="material:EDMDMaterial" nillable="true" minOccurs="0"/>
+						<xs:element name="OffsetCurve" type="geometry.d2:EDMDOffsetCurve" nillable="true" minOccurs="0"/>
+						<xs:element name="Organisation" type="administration:EDMDOrganisation" nillable="true" minOccurs="0"/>
+						<xs:element name="Parabola" type="geometry.d2:EDMDParabola" nillable="true" minOccurs="0"/>
+						<xs:element name="Person" type="administration:EDMDPerson" nillable="true" minOccurs="0"/>
+						<xs:element name="PointOnCurveIntersection" type="geometry.d2:EDMDPointOnCurveIntersection" nillable="true" minOccurs="0"/>
+						<xs:element name="PointOnCurveDistance" type="geometry.d2:EDMDPointOnCurveDistance" nillable="true" minOccurs="0"/>
+						<xs:element name="PolyLine" type="geometry.d2:EDMDPolyLine" nillable="true" minOccurs="0"/>
+						<xs:element name="ShapeElement" type="pdm:EDMDShapeElement" nillable="true" minOccurs="0"/>
+						<xs:element name="AssemblyComponent" type="pdm:EDMDAssemblyComponent" nillable="true" minOccurs="0"/>
+						<xs:element name="BSplineCurve" type="geometry.d2:EDMDBSplineCurve" nillable="true" minOccurs="0"/>
+						<xs:element name="CartesianPoint" type="geometry.d2:EDMDCartesianPoint" nillable="true" minOccurs="0"/>
+						<xs:element name="Stratum" type="pdm:EDMDStratum" nillable="true" minOccurs="0"/>
+						<xs:element name="System" type="tns:EDMDSystem" nillable="true" minOccurs="0"/>
+						<xs:element name="TrimmedCurve" type="geometry.d2:EDMDTrimmedCurve" nillable="true" minOccurs="0"/>
+						<xs:element name="CircleCenter" type="geometry.d2:EDMDCircleCenter" nillable="true" minOccurs="0"/>
+						<xs:element name="CompositeCurve" type="geometry.d2:EDMDCompositeCurve" nillable="true" minOccurs="0"/>
+						<xs:element name="History" type="annotation:EDMDHistory" nillable="true" minOccurs="0"/>
+						<xs:element name="HistoryEntry" type="annotation:EDMDHistoryEntry" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitLength" type="property:EDMDUnitLength" nillable="true" minOccurs="0"/>
+						<xs:element name="AngleLength" type="property:EDMDAngleProperty" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitSurface" type="property:EDMDUnitSurface" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitVolume" type="property:EDMDUnitVolume" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitWeight" type="property:EDMDUnitWeight" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitAmperage" type="property:EDMDUnitAmperage" nillable="true" minOccurs="0"/>
+						<xs:element name="UnitVoltage" type="property:EDMDUnitVoltage" nillable="true" minOccurs="0"/>
+						<xs:element name="MasterPart" type="masterpart3d:EDMD3DMasterModelType" nillable="true" minOccurs="0"/>
+						<xs:element name="Bend" type="pdm:EDMDBend" nillable="true" minOccurs="0"/>
+						<xs:element name="Model3D" type="pdm:EDMD3DModel" nillable="true" minOccurs="0"/>
+					</xs:choice>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:element name="EDMDName" type="tns:EDMDName" nillable="true"/>
+	<xs:element name="EDMDIdentifier" type="tns:EDMDIdentifier" nillable="true"/>
+	<xs:element name="EDMDSystemType" type="tns:EDMDSystemType"/>
+	<xs:element name="EDMDDataSetBody" type="tns:EDMDDataSetBody" nillable="true"/>
+</xs:schema>

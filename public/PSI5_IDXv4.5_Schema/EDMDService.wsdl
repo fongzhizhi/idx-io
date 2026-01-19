@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 3.5
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+
+
+-->
+<wsdl:definitions 
+  xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" 
+  xmlns:s="http://www.w3.org/2001/XMLSchema" 
+  xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" 
+  xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" 
+  xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"   
+  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+  
+  xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/3.5/ws" 
+
+  xmlns:text="http://www.prostep.org/ecad-mcad/edmd/3.5/text" 
+  xmlns:pdm="http://www.prostep.org/ecad-mcad/edmd/3.5/pdm" 
+  xmlns:d2="http://www.prostep.org/ecad-mcad/edmd/3.5/geometry.d2" 
+  xmlns:annotation="http://www.prostep.org/ecad-mcad/edmd/3.5/annotation" 
+  xmlns:material="http://www.prostep.org/ecad-mcad/edmd/3.5/material" 
+  xmlns:external="http://www.prostep.org/ecad-mcad/edmd/3.5/external" 
+  xmlns:property="http://www.prostep.org/ecad-mcad/edmd/3.5/property" 
+  xmlns:administration="http://www.prostep.org/ecad-mcad/edmd/3.5/administration" 
+  xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/3.5/foundation" 
+  xmlns:grouping="http://www.prostep.org/ecad-mcad/edmd/3.5/grouping" 
+  xmlns:computational="http://www.prostep.org/ecad-mcad/edmd/3.5/computational" 
+  xmlns:masterPart="http://www.prostep.org/ecad-mcad/edmd/3.5/3dpart"
+  targetNamespace="http://www.prostep.org/ecad-mcad/edmd/3.5/ws" 
+  >
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://www.prostep.org/ecad-mcad/edmd/3.5/ws">
+      <s:import namespace="http://www.prostep.org/ecad-mcad/edmd/3.5/foundation" schemaLocation="./plain/foundation.xsd" />
+      <s:import namespace="http://www.prostep.org/ecad-mcad/edmd/3.5/computational" schemaLocation="./plain/computational.xsd"/>
+            
+      
+      <s:element name="SendInformation">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" ref="foundation:EDMDDataSet" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="SendInformationResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="SendInformationResult" type="computational:EDMDServiceResult"/>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="SendChanges">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="Actor" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="Changes" type="tns:ArrayOfEDMDAbstractChange" />
+            <s:element minOccurs="1" maxOccurs="1" ref="foundation:EDMDDataSet" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfEDMDAbstractChange">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="EDMDAbstractChange" nillable="true" type="computational:EDMDAbstractChange" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="SendChangesResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="SendChangesResult" type="computational:EDMDServiceResult"/>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="RequestForInformation">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="Actor" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="InformationType" type="tns:ArrayOfEDMDInformationType" />
+            <s:element minOccurs="1" maxOccurs="1" ref="foundation:EDMDDataSet" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="ArrayOfEDMDInformationType">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="EDMDInformationType" type="tns:EDMDInformationType" />
+        </s:sequence>
+      </s:complexType>
+      <s:simpleType name="EDMDInformationType">
+        <s:restriction base="s:string">
+          <s:enumeration value="Idenfication" />
+          <s:enumeration value="Structure" />
+          <s:enumeration value="Classification" />
+          <s:enumeration value="Geometry" />
+          <s:enumeration value="External" />
+          <s:enumeration value="Ownership" />
+          <s:enumeration value="All" />
+        </s:restriction>
+      </s:simpleType>
+      <s:element name="RequestForInformationResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="RequestForInformationResult" type="computational:EDMDServiceResult"/>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="SendInformationSoapIn">
+    <wsdl:part name="parameters" element="tns:SendInformation" />
+  </wsdl:message>
+  <wsdl:message name="SendInformationSoapOut">
+    <wsdl:part name="parameters" element="tns:SendInformationResponse" />
+  </wsdl:message>
+  <wsdl:message name="SendChangesSoapIn">
+    <wsdl:part name="parameters" element="tns:SendChanges" />
+  </wsdl:message>
+  <wsdl:message name="SendChangesSoapOut">
+    <wsdl:part name="parameters" element="tns:SendChangesResponse" />
+  </wsdl:message>
+  <wsdl:message name="RequestForInformationSoapIn">
+    <wsdl:part name="parameters" element="tns:RequestForInformation" />
+  </wsdl:message>
+  <wsdl:message name="RequestForInformationSoapOut">
+    <wsdl:part name="parameters" element="tns:RequestForInformationResponse" />
+  </wsdl:message>
+  <wsdl:portType name="ServiceSoap">
+    <wsdl:operation name="SendInformation">
+      <wsdl:input message="tns:SendInformationSoapIn" />
+      <wsdl:output message="tns:SendInformationSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="SendChanges">
+      <wsdl:input message="tns:SendChangesSoapIn" />
+      <wsdl:output message="tns:SendChangesSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="RequestForInformation">
+      <wsdl:input message="tns:RequestForInformationSoapIn" />
+      <wsdl:output message="tns:RequestForInformationSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ServiceSoap" type="tns:ServiceSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="SendInformation">
+      <soap:operation soapAction="http://www.prostep.org/ecad-mcad/edmd/3.5/ws/SendInformation" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="SendChanges">
+      <soap:operation soapAction="http://www.prostep.org/ecad-mcad/edmd/3.5/ws/SendChanges" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="RequestForInformation">
+      <soap:operation soapAction="http://www.prostep.org/ecad-mcad/edmd/3.5/ws/RequestForInformation" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="ServiceSoap12" type="tns:ServiceSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="SendInformation">
+      <soap12:operation soapAction="http://www.prostep.org/ecad-mcad/edmd/3.5/ws/SendInformation" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="SendChanges">
+      <soap12:operation soapAction="http://www.prostep.org/ecad-mcad/edmd/3.5/ws/SendChanges" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="RequestForInformation">
+      <soap12:operation soapAction="http://www.prostep.org/ecad-mcad/edmd/3.5/ws/RequestForInformation" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <!--
+        Service description has to be changed to implementation specfic URI
+     -->
+  <wsdl:service name="Service">
+    <wsdl:port name="ServiceSoap" binding="tns:ServiceSoap">
+      <soap:address location="http://localhost:2783/EDMDService/Service.asmx" />
+    </wsdl:port>
+    <wsdl:port name="ServiceSoap12" binding="tns:ServiceSoap12">
+      <soap12:address location="http://localhost:2783/EDMDService/Service.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

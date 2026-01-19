@@ -1,0 +1,707 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Author: Working Group ECAD-MCAD Collaboration
+    Purpose: EDMD-Schema 4.0
+    Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+    
+    prostep ivip Association
+    Dolivostr. 11
+    D-64293 Darmstadt, Germany
+
+-->
+<xs:schema
+  elementFormDefault="qualified"
+  targetNamespace="http://www.prostep.org/ecad-mcad/edmd/4.0/geometry.d2" xmlns:tns="http://www.prostep.org/ecad-mcad/edmd/4.0/geometry.d2" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:foundation="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" xmlns:property="http://www.prostep.org/ecad-mcad/edmd/4.0/property" xmlns:pdm="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm">
+    <xs:annotation>
+        <xs:documentation>
+			Author: Working Group ECAD-MCAD Collaboration
+			Purpose: EDMD-Schema 4.0
+			Copyright (C) prostep ivip Association 2006-2019, all rights reserved.
+			
+			prostep ivip Association
+			Dolivostr. 11
+			D-64293 Darmstadt, Germany
+		</xs:documentation>
+    </xs:annotation>
+    <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/foundation" schemaLocation="foundation.xsd" />
+    <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/property" schemaLocation="property.xsd" />
+    <xs:import namespace="http://www.prostep.org/ecad-mcad/edmd/4.0/pdm" schemaLocation="pdm.xsd" />
+	
+    <xs:element name="EDMDDetailedGeometricModelElement" nillable="true" type="tns:EDMDDetailedGeometricModelElement" />
+    <xs:complexType name="EDMDDetailedGeometricModelElement" abstract="true" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            Abstract super type of 2d wire frame geometrical elements
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent
+        mixed="true">
+            <xs:extension base="foundation:EDMDCollaborationObject" />
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDCurve" nillable="true" type="tns:EDMDCurve" />
+    <xs:complexType name="EDMDCurve" abstract="true" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Curve is a path of a point moving in a coordinate space.
+            A Curve is an abstract data model element.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent
+        mixed="true">
+            <xs:extension
+              base="tns:EDMDDetailedGeometricModelElement">
+                <xs:sequence>
+                    <xs:element
+                      minOccurs="0"
+                      maxOccurs="1"
+                      name="Thickness"
+                      nillable="true"
+                      type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Thickness of the curve 
+            NOTE: a thickness will make a surface from a curve 
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDHyperbola" nillable="true" type="tns:EDMDHyperbola" />
+    <xs:complexType name="EDMDHyperbola" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Hyperbola is one branch of an open conic section defined by its 
+            radius, imaginary radius, the centre point and the direction of the 
+            line joining the centre to the focus.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Center" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Reference to an EDMDPoint as starting point of the vector. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="SemiMajor" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Semi-major axis (half the distance between the two branches)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="SemiMinor" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Semi-minor axis.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDTrimmedCurve" nillable="true" type="tns:EDMDTrimmedCurve" />
+    <xs:complexType name="EDMDTrimmedCurve" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDTrimmedCurve is a curve of finite length that is the result of 
+            trimming a curve between two points. The trimming points are the 
+            start and end points of the EDMDTrimmedCurve. These points are
+            specified by EDMDPoints.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="unbounded" name="Curve" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            The curve to trim. Has to refer to an EDMDCurve.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Start" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Starting point. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="End" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            End point. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDLine" nillable="true" type="tns:EDMDLine" />
+    <xs:complexType name="EDMDLine" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Line is an unbounded curve that is defined by a point and a vector. 
+            The vector is given as a vector point.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Point" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Reference to an EDMDPoint as starting point of the vector. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Vector" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Reference to an EDMDPoint as end point of the vector. Has to refer to an EDMDPoint. 
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDBSplineCurve" nillable="true" type="tns:EDMDBSplineCurve" />
+    <xs:complexType name="EDMDBSplineCurve" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDBSplineCurve is an EDMDCurve and is a piecewise parametric polynomial or rational curve 
+            described in terms of control points and basis functions. The B-spline curve has been selected 
+            as the most stable format to represent all types of polynomial or rational parametric curves. 
+            With appropriate attribute values it is capable of representing single span or spline curves 
+            of explicit polynomial, rational, Bézier or B-spline type. For further information take a look
+            in ISO 10303-42
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Degree" type="xs:int">
+                        <xs:annotation>
+                            <xs:documentation>
+            The algebraic degree of the basis functions.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="unbounded" name="ControlPointsList" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            The list of control points for the curve. Has to refer to EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="CurveForm" nillable="true" type="tns:EDMDBSplineCurveForm">
+                        <xs:annotation>
+                            <xs:documentation>
+            Used to identify particular types of curve; it is for information only.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="ClosedCurve" nillable="true" type="xs:boolean">
+                        <xs:annotation>
+                            <xs:documentation>
+            Indication of whether the curve is closed; it is for information only.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="SelfIntersect" nillable="true" type="xs:boolean">
+                        <xs:annotation>
+                            <xs:documentation>
+            Flag to indicate whether the curve self-intersects or not; it is for information only.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:simpleType name="EDMDBSplineCurveForm">
+        <xs:annotation>
+            <xs:documentation>
+            This type is used to indicate that the B-spline curve represents a part of a curve of some sppecific form.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="PolylineForm">
+                <xs:annotation>
+                    <xs:documentation>
+            A connected sequence of line segments represented by degree 1 B-spline basis functions.
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="CircularArc">
+                <xs:annotation>
+                    <xs:documentation>
+            An arc of a circle, or a complete circle represented by a B-spline curve.
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="EllipticArc">
+                <xs:annotation>
+                    <xs:documentation>
+            An arc of an ellipse, or a complete ellipse, represented by a B-spline curve.
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="ParabolicArc">
+                <xs:annotation>
+                    <xs:documentation>
+            An arc of finite length of a parabola represented by a B-spline curve.
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="HyperbolicArc">
+                <xs:annotation>
+                    <xs:documentation>
+            An arc of finite length of one branch of a hyperbola represented by a B-spline curve.
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="Unspecified">
+                <xs:annotation>
+                    <xs:documentation>
+            A B-spline curve for which no particular form is specified.
+            </xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:element name="EDMDCompositeCurve" nillable="true" type="tns:EDMDCompositeCurve" />
+    <xs:complexType name="EDMDCompositeCurve" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Composite_curve is a curve that is composed of a number 
+            of curves which join end to end.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="unbounded" name="Curve" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            A number of curves (refers to an EDMDCurve)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDPolyLine" nillable="true" type="tns:EDMDPolyLine" />
+    <xs:complexType name="EDMDPolyLine" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Polyline is a curve that is represented by n-1 linear segments, 
+            defined by a list of n points. 
+            A Polyline may be closed and may self-intersect.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="unbounded" name="Point" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+							List of n points. Has to refer to EDMDPoint.
+							</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDCurveSet2d" nillable="true" type="tns:EDMDCurveSet2d" />
+    <xs:complexType name="EDMDCurveSet2d" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDCurveSet2d is a collection of a two-dimensional EDMDCurve 
+            or EDMEPoint objects that establish a wire frame model (2d).
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="pdm:EDMDShapeDescription">
+                <xs:sequence>
+                    <xs:element minOccurs="0" maxOccurs="1" name="LowerBound" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Lower bound of the described element
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="UpperBound" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Upper bound of the described element
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="unbounded" name="DetailedGeometricModelElement" nillable="true" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            References to the included elements (has to refer to an EDMDDetailedGeometricModelElement)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDArc" nillable="true" type="tns:EDMDArc" />
+    <xs:complexType name="EDMDArc" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            EDMDArc represents an arc 
+            it is similar to an IDF 3.0 representation
+            
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="StartPoint" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+							Start Point (has to refer to an EDMDPoint)
+							</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="EndPoint" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+							End Point (has to refer to an EDMDPoint)
+							</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="IncludeAngle" type="property:EDMDAngleProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+							Included Angle, similar to IDF, some explanation adopted from David Kehmeiers standardisation document:
+							0 : Indicates that a straight line is to be created between StartPoint and EndPoint
+							360 degree : Indicates a circle is to be created with center at StartPoint and with EndPoint a point on the circle.
+							Any value : Indicates an arc is to be created between StartPoint and EndPoint. If positive, the arc is counterclockwise.
+							NOTE : Points should be reused to indicate a close loop.
+							NOTE : A circle is considered an entire loop.
+							NOTE : Use EDMDCircle to describe circles.
+							</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDEllipse" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An Ellipse is a conic section defined by the lengths of the 
+            semi-major and semi-minor diameters and by the position 
+            (centre or mid point of the line joining the foci) and orientation 
+            of the curve.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Center" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Reference to an EDMDPoint as centre or mid point (has to refer to an EDMDPoint)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="SemiMajor" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Semi-major diameter
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="SemiMinor" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Semi-minor diameter
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDCircle3Point" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDCircle3Point is an EDMDCircle, which is defined by three points.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCircle">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="P1" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            First Point (refers to an EDMDPoint)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="P2" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Second Point (refers to an EDMDPoint)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="P3" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Third Point (refers to an EDMDPoint)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDCircle" abstract="true" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Circle is a planar unbounded curve where all points 
+            are equidistant from one point.
+            EDMDCircle is abstract super type of circle types.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve" />
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDCircleCenter" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDCircle3Point is an EDMDCircle, which is defined by a center
+            and a diameter.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCircle">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Center" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Center of the circle (refers to an EDMDPoint)
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Diameter" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Diameter of the circle
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDOffsetCurve" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDOffsetCurve is a curve at a constant distance from a basis curve in two-dimensional space. 
+            This entity defines a simple plane-offset curve by offsetting by distance along the normal to 
+            BasisCurve in the plane of basis_curve.
+            For more details take a look to ISO 10303-42.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="BasisCurve" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            The curve that is being offset.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Distance" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            The distance of the offset curve from the basis curve. Distance may be positive, negative or
+             zero. A positive value of distance defines an offset in the direction which is normal to the 
+             curve in the sense of an anti-clockwise rotation through 90 degrees from the tangent vector 
+             T at the given point. (This is in the direction of orthogonal_complement(T).) For more details
+             take a look to ISO 10303-42.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="SelfIntersect" nillable="true" type="xs:boolean">
+                        <xs:annotation>
+                            <xs:documentation>
+            An indication of whether the offset curve self-intersects; this is for information only.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDParabola" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A parabola is an open conic curve defined by its focus and 
+            apex.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDCurve">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="unbounded" name="Focus" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Reference on a EMDMPoint, representing the focus of parabola. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="unbounded" name="Apex" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            Reference on a EMDMPoint, representing the apex of parabola. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDPointOnCurveIntersection" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDPointOnCurveIntersection is a point that is defined by 
+            evaluating the intersection of two given curves
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDPoint">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Curve" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            The first given curve. Has to refer to an EDMDCurve.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="Intersector" nillable="true" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            The second given curve. Has to refer to an EDMDCurve
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDPoint" abstract="true" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Point is a location in a Cartesian coordinate space.
+            A Point is an abstract data model element.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDDetailedGeometricModelElement" />
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDCartesianPoint" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            A Cartesian_point is a point that is defined by its coordinates 
+            in a rectangular Cartesian coordinate system.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDPoint">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="X" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            x-coordinate of the point
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Y" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            y-coordinate of the point
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="0" maxOccurs="1" name="Z" nillable="true" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            z-coordinate of the point, is not valid in 2D-Scenarios
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="EDMDPointOnCurveDistance" mixed="true">
+        <xs:annotation>
+            <xs:documentation>
+            An EDMDPointOnCurve is a point that is defined by evaluating 
+            a given distance on a given curve.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:complexContent mixed="true">
+            <xs:extension base="tns:EDMDPoint">
+                <xs:sequence>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Curve" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            The given curve. Has to refer to an EDMDCurve
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Start" type="xs:IDREF">
+                        <xs:annotation>
+                            <xs:documentation>
+            The given starting point. Has to refer to an EDMDPoint.
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element minOccurs="1" maxOccurs="1" name="Distance" type="property:EDMDLengthProperty">
+                        <xs:annotation>
+                            <xs:documentation>
+            Distance between point and starting on the given curve,
+            a negative value indicates movement against direction
+            of curve
+            </xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:element name="EDMDPoint" nillable="true" type="tns:EDMDPoint" />
+    <xs:element name="EDMDCartesianPoint" nillable="true" type="tns:EDMDCartesianPoint" />
+    <xs:element name="EDMDOffsetCurve" nillable="true" type="tns:EDMDOffsetCurve" />
+    <xs:element name="EDMDBSplineCurveForm" type="tns:EDMDBSplineCurveForm" />
+    <xs:element name="EDMDParabola" nillable="true" type="tns:EDMDParabola" />
+    <xs:element name="EDMDCircle" nillable="true" type="tns:EDMDCircle" />
+    <xs:element name="EDMDCircle3Point" nillable="true" type="tns:EDMDCircle3Point" />
+    <xs:element name="EDMDCircleCenter" nillable="true" type="tns:EDMDCircleCenter" />
+    <xs:element name="EDMDPointOnCurveIntersection" nillable="true" type="tns:EDMDPointOnCurveIntersection" />
+    <xs:element name="EDMDPointOnCurveDistance" nillable="true" type="tns:EDMDPointOnCurveDistance" />
+    <xs:element name="EDMDEllipse" nillable="true" type="tns:EDMDEllipse" />
+</xs:schema>
