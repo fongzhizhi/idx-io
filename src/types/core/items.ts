@@ -6,6 +6,7 @@
 import { EDMDObject, EDMName, EDMDTransformation, EDMDLengthProperty, EDMDUserSimpleProperty, EDMDIdentifier, CartesianPoint } from './common';
 import { GeometryType, ItemType } from './enums';
 import { ShapeType, EDMD3DModel, EDMDShapeElement } from './geometry';
+import { IDXComputationalTag, IDXProcessInstruction } from './namespace.types';
 
 // ------------ 项目实例 ------------
 /**
@@ -132,23 +133,24 @@ export interface PackagePin {
  * REF: Section 4
  */
 export interface EDMDDataSetBody {
-	/** 项目集合 */
-	Items: EDMDItem[];
 
-	/** 形状集合 */
-	Shapes?: ShapeType[];
-
-	/** 3D模型集合 */
-	Models3D?: EDMD3DModel[];
-
-	/** 几何元素集合（点、线、圆等） */
+	/** 几何元素集合 */
 	GeometricElements?: any[];
-
+	
 	/** 曲线集合 */
 	CurveSet2Ds?: any[];
 
 	/** 形状元素集合 */
 	ShapeElements?: any[];
+	
+	/** 项目集合 */
+	Items: EDMDItem[];
+	
+	/** 3D模型集合 */
+	Models3D?: EDMD3DModel[];
+	
+	/** 形状集合 */
+	Shapes?: ShapeType[];
 }
 
 // ------------ 交易和变更历史 ------------
@@ -247,7 +249,7 @@ export interface EDMHistory extends EDMDObject {
  */
 export interface EDMDProcessInstruction extends EDMDObject {
 	/** 指令类型 */
-	instructionType: string;
+	instructionType: IDXProcessInstruction;
 }
 
 /**
@@ -258,7 +260,7 @@ export interface EDMDProcessInstruction extends EDMDObject {
  * REF: Section 5.1
  */
 export interface EDMDProcessInstructionSendInformation extends EDMDProcessInstruction {
-	instructionType: 'SendInformation';
+	instructionType: IDXComputationalTag.SendInformation;
 
 	/** 执行者（可选） */
 	Actor?: string;
@@ -275,7 +277,7 @@ export interface EDMDProcessInstructionSendInformation extends EDMDProcessInstru
  * REF: Section 5.2
  */
 export interface EDMDProcessInstructionSendChanges extends EDMDProcessInstruction {
-	instructionType: 'SendChanges';
+	instructionType: IDXComputationalTag.SendChanges;
 
 	/** 执行者 */
 	Actor?: string;
@@ -304,7 +306,7 @@ export interface EDMDProcessInstructionSendChanges extends EDMDProcessInstructio
  * REF: Section 3
  */
 export interface EDMDProcessInstructionRequestForInformation extends EDMDProcessInstruction {
-	instructionType: 'RequestForInformation';
+	instructionType: IDXComputationalTag.RequestForInformation;
 
 	/** 请求的项目标识符 */
 	RequestedItems: EDMDIdentifier[];

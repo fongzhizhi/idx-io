@@ -739,7 +739,7 @@
 
 本项目只专注让`BOARD_OUTLINE`和`BOARD_AREA_RIGID`两种类型，我根据文档第46-61页详细解释这两种类型的区别和应用场景：
 
-## 📊 **核心区别总结**
+### 📊 **核心区别总结**
 
 | 特性           | `BOARD_OUTLINE` | `BOARD_AREA_RIGID` |
 | -------------- | --------------- | ------------------ |
@@ -750,9 +750,9 @@
 | **典型应用**   | 单层/简单板     | 多层板、刚柔结合板 |
 | **几何形状**   | 整个板子轮廓    | 板子内部某区域轮廓 |
 
-## 📖 **详细解释**
+### 📖 **详细解释**
 
-### **1. BOARD_OUTLINE（简单板子）**
+#### **1. BOARD_OUTLINE（简单板子）**
 - **文档参考**：第46-48页
 - **定义**：描述整个PCB板的**外部轮廓和整体厚度**
 - **特点**：
@@ -773,7 +773,8 @@
 </foundation:Item>
 ```
 
-### **2. BOARD_AREA_RIGID（刚性区域）**
+#### **2. BOARD_AREA_RIGID（刚性区域）**
+
 - **文档参考**：第58-60页
 - **定义**：描述**板子内部的一个区域**，该区域使用特定的层堆叠
 - **特点**：
@@ -793,9 +794,9 @@
 </foundation:Item>
 ```
 
-## 🔄 **实际应用场景**
+### 🔄 **实际应用场景**
 
-### **场景1：简单单层板**
+#### **场景1：简单单层板**
 ```xml
 <!-- 整个板子就是一个BOARD_OUTLINE -->
 <foundation:Item geometryType="BOARD_OUTLINE">
@@ -804,7 +805,7 @@
 </foundation:Item>
 ```
 
-### **场景2：多层板（全部刚性）**
+#### **场景2：多层板（全部刚性）**
 ```xml
 <!-- 定义层堆叠 -->
 <foundation:Item geometryType="LAYER_STACKUP" id="MAIN_STACKUP">
@@ -819,7 +820,7 @@
 </foundation:Item>
 ```
 
-### **场景3：刚柔结合板**（图25，第50页）
+#### **场景3：刚柔结合板**（图25，第50页）
 ```xml
 <!-- 刚性区域1 -->
 <foundation:Item geometryType="BOARD_AREA_RIGID">
@@ -840,17 +841,17 @@
 </foundation:Item>
 ```
 
-## ❓ **常见问题澄清**
+### ❓ **常见问题澄清**
 
-### **Q：有层堆叠信息时，还能用BOARD_OUTLINE吗？**
+#### **Q：有层堆叠信息时，还能用BOARD_OUTLINE吗？**
 **A：可以，但不推荐**。`BOARD_OUTLINE`是旧式简单表示。如果板子有分层，建议使用`BOARD_AREA_RIGID`和相关层定义。
 
-### **Q：一个板子可以同时有BOARD_OUTLINE和BOARD_AREA_RIGID吗？**
+#### **Q：一个板子可以同时有BOARD_OUTLINE和BOARD_AREA_RIGID吗？**
 **A：不可以**。它们是互斥的板子表示方式：
 - `BOARD_OUTLINE`：完整板子的简单表示
 - `BOARD_AREA_RIGID`：板子内部区域的详细表示
 
-### **Q：如何选择？**
+#### **Q：如何选择？**
 | 条件                   | 选择                                       |
 | ---------------------- | ------------------------------------------ |
 | 单层板，无详细层信息   | `BOARD_OUTLINE`                            |
@@ -858,7 +859,7 @@
 | 刚柔结合板             | `BOARD_AREA_RIGID` + `BOARD_AREA_FLEXIBLE` |
 | 有不同厚度区域         | 多个`BOARD_AREA_*`区域                     |
 
-## 📝 **总结**
+### 📝 **总结**
 
 你的理解**方向正确但需微调**：
 - ✅ `BOARD_OUTLINE`：简单板，无层堆叠
@@ -869,3 +870,859 @@
 
 - **简单板** → `BOARD_OUTLINE`（就像你的demo）
 - **复杂板（有层）** → `BOARD_AREA_RIGID` + `LAYER_STACKUP`
+
+## 八、关于Item的结构
+
+您的问题非常好，这触及了 IDX 协议中**核心数据模型**的设计。让我详细解释。
+
+### 🔍 **传统结构与简化结构的对比**
+
+#### **1. 传统结构（IDXv4.0之前）**
+
+```
+Item(assembly) → Item(single) → "Third Item" → ShapeElement → CurveSet2D → Geometry → Points
+```
+
+这里的 **"Third Item"** 指的是具体描述项目**类型和特性**的**中介对象**：
+
+| 项目类型              | "Third Item" 对象         | 作用                           |
+| --------------------- | ------------------------- | ------------------------------ |
+| **板（Board）**       | `EDMDStratum`             | 定义层类型（如设计层、文档层） |
+| **元件（Component）** | `EDMDAssemblyComponent`   | 定义是电气/机械元件            |
+| **禁布区（Keepout）** | `EDMDKeepOut`             | 定义禁布类型（布线、元件等）   |
+| **保持区（Keepin）**  | `EDMDKeepIn`              | 定义保持类型                   |
+| **钻孔（Hole）**      | `EDMDInterStratumFeature` | 定义孔类型（电镀/非电镀）      |
+| **铣削切口**          | `EDMDInterStratumFeature` | 定义铣削类型                   |
+| **柔性板弯曲**        | `EDMDFunctionalItemShape` | 定义弯曲特性                   |
+
+#### **2. 简化结构（IDXv4.0引入）**
+
+```
+Item(assembly) [geometryType="..."] → Item(single) → ShapeElement → CurveSet2D → Geometry → Points
+```
+
+**"Third Item"被省略了**，它的信息现在由 **`geometryType` 属性**直接表示。
+
+---
+
+### 📊 **完整结构链对比**
+
+#### **CurveSet2D 之后的完整结构链：**
+```
+CurveSet2D → DetailedGeometricModelElement → 2D几何曲线 → Points
+```
+具体可以是：
+- **曲线类型**：`PolyLine`、`Arc`、`Circle`、`Ellipse`、`BSplineCurve` 等
+- **曲线参数**：点、半径、角度、控制点等
+- **厚度属性**：`Thickness`（可选，用于走线、铣削路径等）
+
+---
+
+### 📝 **案例对比：一个矩形板**
+
+#### **案例1：使用 `geometryType`（简化方式）**
+
+```xml
+<!-- 顶层项目：板轮廓 -->
+<foundation:Item id="ITEM_BOARD_ASSY" geometryType="BOARD_OUTLINE">
+  <foundation:Name>My PCB Board</foundation:Name>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 实例 -->
+  <pdm:ItemInstance>
+    <pdm:Item>ITEM_BOARD_DEF</pdm:Item>
+    <pdm:InstanceName>BoardInstance1</pdm:InstanceName>
+  </pdm:ItemInstance>
+</foundation:Item>
+
+<!-- 板定义 -->
+<foundation:Item id="ITEM_BOARD_DEF">
+  <foundation:Name>Board Definition</foundation:Name>
+  <pdm:ItemType>single</pdm:ItemType>
+  <!-- 直接引用ShapeElement -->
+  <pdm:Shape>SHAPE_BOARD</pdm:Shape>
+</foundation:Item>
+
+<!-- ShapeElement -->
+<foundation:ShapeElement id="SHAPE_BOARD">
+  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+  <pdm:Inverted>false</pdm:Inverted>
+  <pdm:DefiningShape>CURVESET_BOARD</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- CurveSet2D -->
+<foundation:CurveSet2d id="CURVESET_BOARD">
+  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+  <d2:LowerBound>0</d2:LowerBound>
+  <d2:UpperBound>1.6</d2:UpperBound>
+  <d2:DetailedGeometricModelElement>POLY_BOARD</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+
+<!-- 矩形轮廓 -->
+<foundation:PolyLine id="POLY_BOARD">
+  <d2:Point>PT1</d2:Point>
+  <d2:Point>PT2</d2:Point>
+  <d2:Point>PT3</d2:Point>
+  <d2:Point>PT4</d2:Point>
+  <d2:Point>PT1</d2:Point>
+</foundation:PolyLine>
+```
+
+#### **案例2：不使用 `geometryType`（传统方式）**
+
+```xml
+<!-- 顶层项目：板轮廓 -->
+<foundation:Item id="ITEM_BOARD_ASSY">
+  <foundation:Name>My PCB Board</foundation:Name>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 实例 -->
+  <pdm:ItemInstance>
+    <pdm:Item>ITEM_BOARD_DEF</pdm:Item>
+    <pdm:InstanceName>BoardInstance1</pdm:InstanceName>
+  </pdm:ItemInstance>
+</foundation:Item>
+
+<!-- 板定义 -->
+<foundation:Item id="ITEM_BOARD_DEF">
+  <foundation:Name>Board Definition</foundation:Name>
+  <pdm:ItemType>single</pdm:ItemType>
+  <!-- 引用 Stratum 对象，而不是 ShapeElement -->
+  <pdm:Shape>STRATUM_BOARD</pdm:Shape>
+</foundation:Item>
+
+<!-- "Third Item": Stratum 对象 -->
+<foundation:Stratum id="STRATUM_BOARD">
+  <!-- Stratum 引用 ShapeElement -->
+  <pdm:ShapeElement>SHAPE_BOARD</pdm:ShapeElement>
+  <!-- Stratum 提供额外信息 -->
+  <pdm:StratumType>DesignLayerStratum</pdm:StratumType>
+  <pdm:StratumSurfaceDesignation>PrimarySurface</pdm:StratumSurfaceDesignation>
+</foundation:Stratum>
+
+<!-- ShapeElement 及之后的部分相同 -->
+<foundation:ShapeElement id="SHAPE_BOARD">
+  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+  <pdm:Inverted>false</pdm:Inverted>
+  <pdm:DefiningShape>CURVESET_BOARD</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- CurveSet2D 及之后的部分相同 -->
+<foundation:CurveSet2d id="CURVESET_BOARD">
+  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+  <d2:LowerBound>0</d2:LowerBound>
+  <d2:UpperBound>1.6</d2:UpperBound>
+  <d2:DetailedGeometricModelElement>POLY_BOARD</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+
+<!-- 矩形轮廓 -->
+<foundation:PolyLine id="POLY_BOARD">
+  <d2:Point>PT1</d2:Point>
+  <d2:Point>PT2</d2:Point>
+  <d2:Point>PT3</d2:Point>
+  <d2:Point>PT4</d2:Point>
+  <d2:Point>PT1</d2:Point>
+</foundation:PolyLine>
+```
+
+---
+
+### 📊 **对比总结**
+
+| 方面           | **传统方式（无 geometryType）**                            | **简化方式（有 geometryType）**                 |
+| -------------- | ---------------------------------------------------------- | ----------------------------------------------- |
+| **结构链长度** | 6层：Item→Item→Third Item→ShapeElement→CurveSet2D→Geometry | 5层：Item→Item→ShapeElement→CurveSet2D→Geometry |
+| **文件大小**   | 较大（多一层 XML）                                         | 较小（减少约 20-30% XML）                       |
+| **可读性**     | 较差（需要查看 Third Item 才知道项目类型）                 | 较好（直接看到 geometryType）                   |
+| **处理复杂度** | 较高（需要解析 Third Item）                                | 较低（直接读取属性）                            |
+| **向后兼容**   | IDXv3.0 及更早版本支持                                     | 仅 IDXv4.0+ 支持                                |
+
+---
+
+### 🧩 **"Third Item" 被省略后的功能保留**
+
+原本由 "Third Item" 提供的功能现在分布在：
+
+1. **`geometryType` 属性**：提供主要类型信息（如 `BOARD_OUTLINE`、`COMPONENT`、`HOLE_PLATED`）
+2. **`ShapeElementType`**：提供形状元素类型（如 `FeatureShapeElement`、`PartMountingFeature`）
+3. **`UserProperty` 自定义属性**：提供额外的特性信息（如 `THICKNESS`、`MATERIAL`）
+
+---
+
+### 🔄 **转换关系示例**
+
+| 传统方式                                                     | 简化方式                                |
+| ------------------------------------------------------------ | --------------------------------------- |
+| `EDMDStratum` + `StratumType="DesignLayerStratum"`           | `geometryType="BOARD_OUTLINE"`          |
+| `EDMDAssemblyComponent` + `AssemblyComponentType="Physical"` | `geometryType="COMPONENT"`              |
+| `EDMDKeepOut` + `Purpose="ComponentPlacement"`               | `geometryType="KEEPOUT_AREA_COMPONENT"` |
+| `EDMDInterStratumFeature` + `InterStratumFeatureType="PlatedCutout"` | `geometryType="HOLE_PLATED"`            |
+
+---
+
+### 💡 **实际开发建议**
+
+1. **新项目优先使用简化方式**：更简洁、更易维护
+2. **如需兼容旧系统**：可以同时支持两种方式
+3. **转换工具**：开发从传统到简化的转换器，用于处理历史数据
+4. **验证**：确保 `geometryType` 与 `ShapeElementType` 等属性一致
+
+这样设计的主要目的是**减少 XML 嵌套、提高解析效率、降低文件体积**，同时保持向后兼容性。
+
+## 九、构建顺序
+
+根据 **IDXv4.5 协议规范**和最佳实践，构建 IDX 文件有**两种主要方法**。让我详细分析每种方法的优缺点。
+
+### 📊 **两种构建策略对比**
+
+#### **方法1：按层级统一构建（推荐）**
+```
+先构建所有Points → 所有Geometry → 所有CurveSet2D → 所有ShapeElement → 所有Item
+```
+这是**文档示例采用的方式**，也是**最推荐的方法**。
+
+**示例结构：**
+```xml
+<!-- 1. 所有几何点 -->
+<foundation:CartesianPoint id="PT1">...</foundation:CartesianPoint>
+<foundation:CartesianPoint id="PT2">...</foundation:CartesianPoint>
+<foundation:CartesianPoint id="PT3">...</foundation:CartesianPoint>
+<foundation:CartesianPoint id="PT4">...</foundation:CartesianPoint>
+<foundation:CartesianPoint id="PT5">...</foundation:CartesianPoint>
+
+<!-- 2. 所有几何曲线 -->
+<foundation:PolyLine id="POLY_BOARD">...</foundation:PolyLine>
+<foundation:PolyLine id="POLY_COMP1">...</foundation:PolyLine>
+<foundation:Arc id="ARC_CUTOUT">...</foundation:Arc>
+
+<!-- 3. 所有曲线集 -->
+<foundation:CurveSet2d id="CURVESET_BOARD">...</foundation:CurveSet2d>
+<foundation:CurveSet2d id="CURVESET_COMP1">...</foundation:CurveSet2d>
+<foundation:CurveSet2d id="CURVESET_CUTOUT">...</foundation:CurveSet2d>
+
+<!-- 4. 所有形状元素 -->
+<foundation:ShapeElement id="SHAPE_BOARD">...</foundation:ShapeElement>
+<foundation:ShapeElement id="SHAPE_COMP1">...</foundation:ShapeElement>
+<foundation:ShapeElement id="SHAPE_CUTOUT">...</foundation:ShapeElement>
+
+<!-- 5. 所有项目定义（Item single） -->
+<foundation:Item id="ITEM_BOARD_DEF">...</foundation:Item>
+<foundation:Item id="ITEM_COMP1_DEF">...</foundation:Item>
+<foundation:Item id="ITEM_CUTOUT_DEF">...</foundation:Item>
+
+<!-- 6. 所有项目实例（Item assembly） -->
+<foundation:Item id="ITEM_BOARD_ASSY">...</foundation:Item>
+<foundation:Item id="ITEM_COMP1_ASSY">...</foundation:Item>
+<foundation:Item id="ITEM_CUTOUT_ASSY">...</foundation:Item>
+```
+
+#### **方法2：按项目分组构建**
+
+```
+每个项目独立构建：项目1的Points→Geometry→CurveSet2D→ShapeElement→Item
+然后项目2的同样结构...
+```
+
+### ✅ **方法1的优点（按层级构建）**
+
+| 优点                | 说明                                             |
+| ------------------- | ------------------------------------------------ |
+| **符合XML引用顺序** | 先定义后引用，避免XML解析错误                    |
+| **便于重用几何**    | 相同的几何定义（如标准焊盘形状）可被多个项目引用 |
+| **文件结构清晰**    | 逻辑分层，便于阅读和调试                         |
+| **性能优化**        | 一次生成所有同类元素，减少状态切换               |
+| **内存管理**        | 分阶段处理，减少内存占用峰值                     |
+
+### 🎯 **IDX 构建流程示例**
+
+以下是推荐的构建函数设计：
+
+```typescript
+/**
+ * IDX 构建器类 - 采用分层构建策略
+ */
+class IDXBuilder {
+    // 存储各层元素
+    private points: IDXPoint[] = [];
+    private geometries: IDXGeometry[] = [];
+    private curveSets: IDXCurveSet2D[] = [];
+    private shapeElements: IDXShapeElement[] = [];
+    private itemsSingle: IDXItem[] = [];
+    private itemsAssembly: IDXItem[] = [];
+    
+    /**
+     * 添加一个 PCB 项目到构建器中
+     */
+    addPCBProject(config: PCBConfig): void {
+        // 1. 创建几何点
+        const points = this.createPoints(config.geometry);
+        this.points.push(...points);
+        
+        // 2. 创建几何曲线
+        const geometry = this.createGeometry(points, config.geometryType);
+        this.geometries.push(geometry);
+        
+        // 3. 创建曲线集
+        const curveSet = this.createCurveSet2D(geometry, config.zRange);
+        this.curveSets.push(curveSet);
+        
+        // 4. 创建形状元素
+        const shapeElement = this.createShapeElement(curveSet, config.shapeType);
+        this.shapeElements.push(shapeElement);
+        
+        // 5. 创建项目定义（single）
+        const itemSingle = this.createItemSingle(shapeElement, config);
+        this.itemsSingle.push(itemSingle);
+        
+        // 6. 创建项目实例（assembly）
+        const itemAssembly = this.createItemAssembly(itemSingle, config);
+        this.itemsAssembly.push(itemAssembly);
+    }
+    
+    /**
+     * 生成完整的 IDX XML
+     */
+    build(): string {
+        // 按层级顺序输出
+        return this.generateXML({
+            points: this.points,
+            geometries: this.geometries,
+            curveSets: this.curveSets,
+            shapeElements: this.shapeElements,
+            itemsSingle: this.itemsSingle,
+            itemsAssembly: this.itemsAssembly,
+        });
+    }
+}
+
+/**
+ * 分步构建的详细流程
+ */
+function createIDXDocument(projects: PCBProject[]): string {
+    // 阶段1：收集所有几何数据
+    const allPoints = projects.flatMap(p => extractPoints(p));
+    const allGeometries = projects.map(p => createGeometryFromPoints(p));
+    
+    // 阶段2：创建 CurveSet2D
+    const allCurveSets = projects.map((p, i) => 
+        createCurveSet2D(allGeometries[i], p.thickness)
+    );
+    
+    // 阶段3：创建 ShapeElement
+    const allShapeElements = projects.map((p, i) => 
+        createShapeElement(allCurveSets[i], p.geometryType)
+    );
+    
+    // 阶段4：创建 Items
+    const allItemsSingle = projects.map((p, i) => 
+        createItemSingle(allShapeElements[i], p.properties)
+    );
+    
+    const allItemsAssembly = projects.map((p, i) => 
+        createItemAssembly(allItemsSingle[i], p.instance)
+    );
+    
+    // 阶段5：组装 XML
+    return assembleXML({
+        points: allPoints,
+        geometries: allGeometries,
+        curveSets: allCurveSets,
+        shapeElements: allShapeElements,
+        itemsSingle: allItemsSingle,
+        itemsAssembly: allItemsAssembly,
+    });
+}
+```
+
+🔄 **构建顺序的完整示例**
+
+#### **代码生成示例：**
+```typescript
+// 1. 首先创建所有点
+const points = [
+    {id: 'PT1', x: 0, y: 0},
+    {id: 'PT2', x: 50, y: 0},
+    {id: 'PT3', x: 50, y: 30},
+    {id: 'PT4', x: 0, y: 30},
+];
+
+// 2. 创建几何（多段线）
+const polyLine = {
+    id: 'POLY_BOARD',
+    points: ['PT1', 'PT2', 'PT3', 'PT4', 'PT1']
+};
+
+// 3. 创建 CurveSet2D
+const curveSet = {
+    id: 'CURVESET_BOARD',
+    lowerBound: 0,
+    upperBound: 1.6,
+    geometry: 'POLY_BOARD'
+};
+
+// 4. 创建 ShapeElement
+const shapeElement = {
+    id: 'SHAPE_BOARD',
+    elementType: 'FeatureShapeElement',
+    definingShape: 'CURVESET_BOARD',
+    inverted: false
+};
+
+// 5. 创建 Item (single)
+const itemSingle = {
+    id: 'ITEM_BOARD_DEF',
+    name: 'Board Definition',
+    itemType: 'single',
+    shape: 'SHAPE_BOARD'
+};
+
+// 6. 创建 Item (assembly)
+const itemAssembly = {
+    id: 'ITEM_BOARD_ASSY',
+    name: 'My PCB',
+    itemType: 'assembly',
+    geometryType: 'BOARD_OUTLINE',
+    itemInstance: {
+        item: 'ITEM_BOARD_DEF',
+        instanceName: 'Board1'
+    }
+};
+```
+
+### 📋 **IDX 文件结构的最佳实践**
+
+1. **必须遵循的顺序**：
+   - 被引用的元素（如 `CartesianPoint`）必须在引用者（如 `PolyLine`）**之前**定义
+   - 否则会导致 XML 解析错误
+
+2. **推荐的层次顺序**（文档示例采用）：
+   ```xml
+   <!-- 1. 点 -->
+   <foundation:CartesianPoint id="..."/>
+   
+   <!-- 2. 几何 -->
+   <foundation:PolyLine id="..."/>
+   <foundation:Arc id="..."/>
+   
+   <!-- 3. 曲线集 -->
+   <foundation:CurveSet2d id="..."/>
+   
+   <!-- 4. 形状元素 -->
+   <foundation:ShapeElement id="..."/>
+   
+   <!-- 5. 项目用途（可选，传统方式） -->
+   <foundation:Stratum id="..."/>
+   
+   <!-- 6. 项目定义 -->
+   <foundation:Item id="..." ItemType="single"/>
+   
+   <!-- 7. 项目实例 -->
+   <foundation:Item id="..." ItemType="assembly"/>
+   ```
+
+3. **命名约定**：
+   - 使用有意义的 ID：`BOARD_OUTLINE`, `COMP_0805_PAD`, `HOLE_3MM`
+   - 保持 ID 唯一性
+   - 考虑使用前缀：`PT_`, `PL_`, `CS_`, `SH_`, `IT_`
+
+4. **性能考虑**：
+   - 对于大型设计（数千个元件），按层级构建可以减少内存碎片
+   - 批量处理同类元素可以提高序列化性能
+
+### 🎯 **结论：推荐按层级构建**
+
+**使用"按层级统一构建"（方法1）** 是**最佳选择**，因为：
+
+1. **符合文档示例**：所有 IDX 示例都采用此方式
+2. **避免引用错误**：确保先定义后引用
+3. **便于代码维护**：清晰的逻辑分层
+4. **支持几何重用**：相同几何定义只存储一次
+5. **便于验证**：可分层验证数据完整性
+
+您的构建器应该采用这种分层方法，这会生成最规范、最易于其他系统解析的 IDX 文件。
+
+## 十、分层构建详解案例参考
+
+### 📊 IDX 分层构建详解
+
+根据 IDXv4.5 协议规范，以下是各层可能的数据元素枚举及示例：
+
+#### **第1层：点 (Points)**
+
+**可能元素：**
+- `CartesianPoint`：二维笛卡尔坐标点（必须）
+- 可选：`Point`的其他类型（如极坐标点，但IDX主要用CartesianPoint）
+
+**示例：**
+```xml
+<!-- 矩形板的四个角点 -->
+<foundation:CartesianPoint id="PT1" xsi:type="d2:EDMDCartesianPoint">
+  <d2:X><property:Value>0</property:Value></d2:X>
+  <d2:Y><property:Value>0</property:Value></d2:Y>
+</foundation:CartesianPoint>
+
+<foundation:CartesianPoint id="PT2" xsi:type="d2:EDMDCartesianPoint">
+  <d2:X><property:Value>50</property:Value></d2:X>
+  <d2:Y><property:Value>0</property:Value></d2:Y>
+</foundation:CartesianPoint>
+
+<foundation:CartesianPoint id="PT3" xsi:type="d2:EDMDCartesianPoint">
+  <d2:X><property:Value>50</property:Value></d2:X>
+  <d2:Y><property:Value>30</property:Value></d2:Y>
+</foundation:CartesianPoint>
+
+<foundation:CartesianPoint id="PT4" xsi:type="d2:EDMDCartesianPoint">
+  <d2:X><property:Value>0</property:Value></d2:X>
+  <d2:Y><property:Value>30</property:Value></d2:Y>
+</foundation:CartesianPoint>
+```
+
+#### **第2层：几何 (Geometry)**
+
+**可能元素：**
+- `PolyLine`：多段线（最常用）
+- `Arc`：圆弧
+- `Circle3Point`：三点定义的圆
+- `CircleCenter`：圆心和直径定义的圆
+- `Ellipse`：椭圆
+- `Parabola`：抛物线
+- `BSplineCurve`：B样条曲线
+- `CompositeCurve`：复合曲线（组合多种曲线）
+- `Line`：无限直线
+- `OffsetCurve`：偏移曲线
+- `TrimmedCurve`：修剪曲线
+
+**示例：**
+```xml
+<!-- 多段线（矩形轮廓） -->
+<foundation:PolyLine id="POLY_RECT" xsi:type="d2:EDMDPolyLine">
+  <d2:Point>PT1</d2:Point>
+  <d2:Point>PT2</d2:Point>
+  <d2:Point>PT3</d2:Point>
+  <d2:Point>PT4</d2:Point>
+  <d2:Point>PT1</d2:Point>
+</foundation:PolyLine>
+
+<!-- 圆弧 -->
+<foundation:Arc id="ARC_CORNER" xsi:type="d2:EDMDArc">
+  <d2:StartPoint>PT_A</d2:StartPoint>
+  <d2:MidPoint>PT_B</d2:MidPoint>
+  <d2:EndPoint>PT_C</d2:EndPoint>
+</foundation:Arc>
+
+<!-- 圆（圆心式） -->
+<foundation:CircleCenter id="CIRCLE_HOLE" xsi:type="d2:EDMDCircleCenter">
+  <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
+  <d2:Diameter><property:Value>3.2</property:Value></d2:Diameter>
+</foundation:CircleCenter>
+
+<!-- B样条曲线 -->
+<foundation:BSplineCurve id="BSPLINE_CURVE" xsi:type="d2:EDMDBSplineCurve">
+  <d2:ControlPoint>PT_CTRL1</d2:ControlPoint>
+  <d2:ControlPoint>PT_CTRL2</d2:ControlPoint>
+  <d2:ControlPoint>PT_CTRL3</d2:ControlPoint>
+  <d2:Degree>2</d2:Degree>
+</foundation:BSplineCurve>
+
+<!-- 复合曲线（组合多种） -->
+<foundation:CompositeCurve id="COMPOSITE_OUTLINE" xsi:type="d2:EDMDCompositeCurve">
+  <d2:Curve>POLY_SEG1</d2:Curve>
+  <d2:Curve>ARC_SEG1</d2:Curve>
+  <d2:Curve>POLY_SEG2</d2:Curve>
+</foundation:CompositeCurve>
+```
+
+#### **第3层：曲线集 (CurveSet2D)**
+
+**可能属性/子元素：**
+
+- `ShapeDescriptionType`：形状描述类型（通常为"GeometricModel"）
+- `LowerBound`：Z轴下边界
+- `UpperBound`：Z轴上边界
+- `DetailedGeometricModelElement`：引用的几何元素（一个或多个）
+- `Thickness`：可选，用于多段线的厚度定义
+
+**示例：**
+```xml
+<!-- 板的曲线集（厚度1.6mm） -->
+<foundation:CurveSet2d id="CURVESET_BOARD" xsi:type="d2:EDMDCurveSet2d">
+  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
+  <d2:UpperBound><property:Value>1.6</property:Value></d2:UpperBound>
+  <d2:DetailedGeometricModelElement>POLY_RECT</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+
+<!-- 孔的曲线集（贯穿孔，上下边界相同） -->
+<foundation:CurveSet2d id="CURVESET_HOLE" xsi:type="d2:EDMDCurveSet2d">
+  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
+  <d2:UpperBound><property:Value>0</property:Value></d2:UpperBound>
+  <d2:DetailedGeometricModelElement>CIRCLE_HOLE</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+
+<!-- 带厚度的多段线（用于走线或铣削路径） -->
+<foundation:CurveSet2d id="CURVESET_TRACE" xsi:type="d2:EDMDCurveSet2d">
+  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+  <d2:LowerBound><property:Value>0.035</property:Value></d2:LowerBound>
+  <d2:UpperBound><property:Value>0.035</property:Value></d2:UpperBound>
+  <d2:DetailedGeometricModelElement>POLY_TRACE</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+```
+
+#### **第4层：形状元素 (ShapeElement)**
+
+**可能属性：**
+- `ShapeElementType`：形状元素类型
+  - `FeatureShapeElement`：特征形状元素（最常用）
+  - `PartMountingFeature`：零件安装特征（用于孔等）
+  - `NonFeatureShapeElement`：非特征形状元素
+  - `PartFeature`：零件特征
+  - `ComponentTermination`：元件端子
+- `Inverted`：布尔运算标志（false=添加，true=减去）
+- `DefiningShape`：引用的曲线集
+
+**示例：**
+```xml
+<!-- 板的形状元素（添加材料） -->
+<foundation:ShapeElement id="SHAPE_BOARD" xsi:type="pdm:EDMDShapeElement">
+  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+  <pdm:Inverted>false</pdm:Inverted>
+  <pdm:DefiningShape>CURVESET_BOARD</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- 孔的形状元素（减去材料） -->
+<foundation:ShapeElement id="SHAPE_HOLE" xsi:type="pdm:EDMDShapeElement">
+  <pdm:ShapeElementType>PartMountingFeature</pdm:ShapeElementType>
+  <pdm:Inverted>true</pdm:Inverted>
+  <pdm:DefiningShape>CURVESET_HOLE</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- 走线的形状元素 -->
+<foundation:ShapeElement id="SHAPE_TRACE" xsi:type="pdm:EDMDShapeElement">
+  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+  <pdm:Inverted>false</pdm:Inverted>
+  <pdm:DefiningShape>CURVESET_TRACE</pdm:DefiningShape>
+</foundation:ShapeElement>
+```
+
+#### **第5层：项目用途 (可选，传统方式)**
+
+**可能元素：**
+- `Stratum`：层（用于板轮廓）
+- `AssemblyComponent`：装配组件（用于元件）
+- `KeepOut`：禁布区
+- `KeepIn`：保持区
+- `InterStratumFeature`：层间特征（用于孔、过孔等）
+- `FunctionalItemShape`：功能形状（用于柔性板弯曲等）
+- 在简化方式中，这些被`geometryType`属性替代
+
+**示例：**
+```xml
+<!-- 传统方式：板的层定义 -->
+<foundation:Stratum id="STRATUM_BOARD" xsi:type="pdm:EDMDStratum">
+  <pdm:ShapeElement>SHAPE_BOARD</pdm:ShapeElement>
+  <pdm:StratumType>DesignLayerStratum</pdm:StratumType>
+  <pdm:StratumSurfaceDesignation>PrimarySurface</pdm:StratumSurfaceDesignation>
+</foundation:Stratum>
+
+<!-- 传统方式：禁布区 -->
+<foundation:KeepOut id="KEEPOUT_AREA" xsi:type="pdm:EDMDKeepOut">
+  <pdm:ShapeElement>SHAPE_KEEPOUT</pdm:ShapeElement>
+  <pdm:Purpose>ComponentPlacement</pdm:Purpose>
+</foundation:KeepOut>
+```
+
+#### **第6层：项目定义 (Item single)**
+
+**可能属性：**
+- `ItemType`：必须为"single"
+- `Name`：项目名称
+- `Description`：项目描述
+- `Shape`：引用形状元素或传统方式的项目用途元素
+- `Identifier`：唯一标识符
+- `PackageName`：包名称（用于可重用封装）
+
+**示例：**
+```xml
+<!-- 简化方式：板定义 -->
+<foundation:Item id="ITEM_BOARD_DEF">
+  <foundation:Name>Board Definition</foundation:Name>
+  <foundation:Description>Simple rectangular board</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
+    <foundation:SystemScope>IDX-IO</foundation:SystemScope>
+    <foundation:Number>BOARD001</foundation:Number>
+    <foundation:Version>1</foundation:Version>
+  </pdm:Identifier>
+  <pdm:Shape>SHAPE_BOARD</pdm:Shape>
+</foundation:Item>
+
+<!-- 简化方式：孔定义 -->
+<foundation:Item id="ITEM_HOLE_DEF">
+  <foundation:Name>3.2mm Hole</foundation:Name>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:PackageName>
+    <foundation:SystemScope>LIBRARY</foundation:SystemScope>
+    <foundation:ObjectName>HOLE_3.2MM_NP</foundation:ObjectName>
+  </pdm:PackageName>
+  <pdm:Shape>SHAPE_HOLE</pdm:Shape>
+</foundation:Item>
+
+<!-- 传统方式：板定义（引用Stratum） -->
+<foundation:Item id="ITEM_BOARD_DEF_TRAD">
+  <foundation:Name>Board Definition</foundation:Name>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>STRATUM_BOARD</pdm:Shape>
+</foundation:Item>
+```
+
+#### **第7层：项目实例 (Item assembly)**
+
+**可能属性：**
+- `ItemType`：必须为"assembly"
+- `geometryType`：几何类型（简化方式的关键属性）
+- `Name`：项目名称
+- `ItemInstance`：一个或多个实例
+  - `Item`：引用的项目定义
+  - `InstanceName`：实例名称
+  - `Transformation`：变换矩阵
+  - `zOffset`：Z轴偏移（可选）
+- `AssembleToName`：装配参考名称（可选）
+- `ReferenceName`：参考名称（可选）
+
+**示例：**
+```xml
+<!-- 简化方式：板实例 -->
+<foundation:Item id="ITEM_BOARD_ASSY" geometryType="BOARD_OUTLINE">
+  <foundation:Name>Main PCB Board</foundation:Name>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  <pdm:ItemInstance id="INST_BOARD">
+    <pdm:Item>ITEM_BOARD_DEF</pdm:Item>
+    <pdm:InstanceName>Board1</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1</pdm:xx><pdm:xy>0</pdm:xy>
+      <pdm:yx>0</pdm:yx><pdm:yy>1</pdm:yy>
+      <pdm:tx><property:Value>0</property:Value></pdm:tx>
+      <pdm:ty><property:Value>0</property:Value></pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+</foundation:Item>
+
+<!-- 简化方式：孔实例 -->
+<foundation:Item id="ITEM_HOLE_ASSY" geometryType="HOLE_NON_PLATED">
+  <foundation:Name>Mounting Holes</foundation:Name>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  <pdm:ItemInstance id="INST_HOLE1">
+    <pdm:Item>ITEM_HOLE_DEF</pdm:Item>
+    <pdm:InstanceName>Hole1</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1</pdm:xx><pdm:xy>0</pdm:xy>
+      <pdm:yx>0</pdm:yx><pdm:yy>1</pdm:yy>
+      <pdm:tx><property:Value>10</property:Value></pdm:tx>
+      <pdm:ty><property:Value>10</property:Value></pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+  <pdm:ItemInstance id="INST_HOLE2">
+    <pdm:Item>ITEM_HOLE_DEF</pdm:Item>
+    <pdm:InstanceName>Hole2</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1</pdm:xx><pdm:xy>0</pdm:xy>
+      <pdm:yx>0</pdm:yx><pdm:yy>1</pdm:yy>
+      <pdm:tx><property:Value>40</property:Value></pdm:tx>
+      <pdm:ty><property:Value>10</property:Value></pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+</foundation:Item>
+
+<!-- 简化方式：元件实例 -->
+<foundation:Item id="ITEM_COMP_ASSY" geometryType="COMPONENT">
+  <foundation:Name>Resistor R1</foundation:Name>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECAD</foundation:SystemScope>
+      <foundation:ObjectName>REFDES</foundation:ObjectName>
+    </property:Key>
+    <property:Value>R1</property:Value>
+  </foundation:UserProperty>
+  <pdm:ItemInstance id="INST_COMP">
+    <pdm:Item>ITEM_COMP_DEF</pdm:Item>
+    <pdm:InstanceName>R1_Instance</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>0.707</pdm:xx><pdm:xy>0.707</pdm:xy>
+      <pdm:yx>-0.707</pdm:yx><pdm:yy>0.707</pdm:yy>
+      <pdm:tx><property:Value>25</property:Value></pdm:tx>
+      <pdm:ty><property:Value>15</property:Value></pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+  <pdm:AssembleToName>TOP_SURFACE</pdm:AssembleToName>
+</foundation:Item>
+```
+
+### 🎯 **构建顺序建议**
+
+在实际代码中，推荐这样的构建流程：
+
+```typescript
+// 1. 创建所有点
+const points = createPoints([
+    {id: 'PT1', x: 0, y: 0},
+    {id: 'PT2', x: 50, y: 0},
+    {id: 'PT3', x: 50, y: 30},
+    {id: 'PT4', x: 0, y: 30},
+    {id: 'PT_CENTER1', x: 10, y: 10},
+    {id: 'PT_CENTER2', x: 40, y: 10}
+]);
+
+// 2. 创建所有几何元素
+const geometries = createGeometries([
+    {type: 'PolyLine', id: 'POLY_BOARD', points: ['PT1','PT2','PT3','PT4','PT1']},
+    {type: 'CircleCenter', id: 'CIRCLE_HOLE1', center: 'PT_CENTER1', diameter: 3.2},
+    {type: 'CircleCenter', id: 'CIRCLE_HOLE2', center: 'PT_CENTER2', diameter: 3.2}
+]);
+
+// 3. 创建所有曲线集
+const curveSets = createCurveSets([
+    {id: 'CURVESET_BOARD', geometry: 'POLY_BOARD', lower: 0, upper: 1.6},
+    {id: 'CURVESET_HOLE1', geometry: 'CIRCLE_HOLE1', lower: 0, upper: 0},
+    {id: 'CURVESET_HOLE2', geometry: 'CIRCLE_HOLE2', lower: 0, upper: 0}
+]);
+
+// 4. 创建所有形状元素
+const shapeElements = createShapeElements([
+    {id: 'SHAPE_BOARD', curveSet: 'CURVESET_BOARD', inverted: false},
+    {id: 'SHAPE_HOLE1', curveSet: 'CURVESET_HOLE1', inverted: true},
+    {id: 'SHAPE_HOLE2', curveSet: 'CURVESET_HOLE2', inverted: true}
+]);
+
+// 5. 创建所有项目定义（single）
+const itemSingles = createItemSingles([
+    {id: 'ITEM_BOARD_DEF', shape: 'SHAPE_BOARD', name: 'Board Definition'},
+    {id: 'ITEM_HOLE_DEF', shape: 'SHAPE_HOLE1', name: 'Hole Definition'}
+]);
+
+// 6. 创建所有项目实例（assembly）
+const itemAssemblies = createItemAssemblies([
+    {
+        id: 'ITEM_BOARD_ASSY', 
+        geometryType: 'BOARD_OUTLINE',
+        name: 'Main Board',
+        instances: [{item: 'ITEM_BOARD_DEF', name: 'Board1'}]
+    },
+    {
+        id: 'ITEM_HOLES_ASSY',
+        geometryType: 'HOLE_NON_PLATED',
+        name: 'Mounting Holes',
+        instances: [
+            {item: 'ITEM_HOLE_DEF', name: 'Hole1', x: 10, y: 10},
+            {item: 'ITEM_HOLE_DEF', name: 'Hole2', x: 40, y: 10}
+        ]
+    }
+]);
+```
+
+这样分层构建既符合XML的先定义后引用原则，又便于代码组织和维护。

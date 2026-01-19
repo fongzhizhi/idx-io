@@ -256,11 +256,11 @@ export enum IDXPropertyTag {
  */
 export enum IDXComputationalTag {
 	/** 处理指令-发送信息（基线） */
-	EDMDProcessInstructionSendInformation = 'EDMDProcessInstructionSendInformation',
+	SendInformation = 'EDMDProcessInstructionSendInformation',
 	/** 处理指令-发送变更（变更提议或响应） */
-	EDMDProcessInstructionSendChanges = 'EDMDProcessInstructionSendChanges',
+	SendChanges = 'EDMDProcessInstructionSendChanges',
 	/** 处理指令-请求信息 */
-	EDMDProcessInstructionRequestForInformation = 'EDMDProcessInstructionRequestForInformation',
+	RequestForInformation = 'EDMDProcessInstructionRequestForInformation',
 	/** 执行者，发起操作的用户或系统 */
 	Actor = 'Actor',
 	/** 变更集合 */
@@ -316,3 +316,6 @@ export enum IDXXSITag {
  * 用于类型安全的标签引用
  */
 export type IDXTag = IDXFoundationTag | IDXPDMTag | IDXD2Tag | IDXPropertyTag | IDXComputationalTag | IDXAdministrationTag | IDXXSITag;
+
+/** IDX 处理指令类型 */
+export type IDXProcessInstruction = IDXComputationalTag.SendInformation | IDXComputationalTag.SendChanges | IDXComputationalTag.RequestForInformation;

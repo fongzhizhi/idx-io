@@ -6,6 +6,7 @@ import { DefaultIDXWriterConfig } from '../../types/exporter/writes/idx-writer.c
 import { hasOwnProperty, iterateObject, toBoolean, toString } from '../../utils/object.utils';
 import { getIDXTagName, isIDXNameSpace, XsiTypeAttrName } from '../../core/utils/idx-namespace.utils';
 import { IDXComputationalTag, IDXD2Tag, IDXFoundationTag, IDXNameSpaceLinks, IDXXSITag } from '../../types/core/namespace.types';
+import { iterateArr } from '../../utils/array.utils';
 
 /** IDX 格式生成器 */
 export class IDXWriter {
@@ -22,6 +23,8 @@ export class IDXWriter {
 	private doc: XMLBuilder | undefined;
 	/** 数据集节点 */
 	private datasetEle: XMLBuilder | undefined;
+	/** 数据体节点 */
+	private bodyEle: XMLBuilder | undefined;
 
 	/** IDX 格式生成器 */
 	constructor(config?: IDXWriterConfig) {
@@ -57,6 +60,7 @@ export class IDXWriter {
 		this.dataset = undefined;
 		this.doc = undefined;
 		this.datasetEle = undefined;
+		this.bodyEle = undefined;
 	}
 
 	/** 创建 IDX 文档 */
@@ -177,16 +181,77 @@ export class IDXWriter {
 
 		// # 创建节点
 		if (enableComments) {
-			const headerComment = this.createSectionComment(
+			const bodyComment = this.createSectionComment(
 				'数据体',
 				'具体的EDMD交换数据, 如板子、层堆叠、元件、孔、禁止区等'
 			);
-			datasetEle.com(headerComment);
+			datasetEle.com(bodyComment);
 		}
 		const bodyTagName = getIDXTagName(IDXFoundationTag.Body);
 		const bodyEle = datasetEle.ele(bodyTagName);
+		this.bodyEle = bodyEle;
 
 		// # 创建数据体
+		this.buildGeometrics();
+		this.buildCurveSet2Ds();
+		// this.ShapeElements();
+		// this.Items();
+		// this.Models3D();
+	}
+
+	/** 批量构建基础几何 */
+	private buildGeometrics() {
+		const GeometricElements = this.dataset?.Body?.GeometricElements;
+		const bodyEle = this.bodyEle;
+		if (!GeometricElements || !bodyEle) {
+			return;
+		}
+		const config = this.config;
+		const enableComments = config.enableComments;
+
+		if(enableComments){
+			const geometricComment = this.createSectionComment(
+				'基础几何',
+				'几何数据: 点、线、圆等'
+			);
+			bodyEle.com(geometricComment);
+		}
+
+		iterateArr(GeometricElements, (geometric) => {
+			this.buildGeometric(geometric);
+		});
+	}
+
+	/** 构建基础几何 */
+	private buildGeometric(geometric:any) {
+		// TODO: 待实现
+	}
+
+	/** 批量构建2D曲线集 */
+	private buildCurveSet2Ds() {
+		const CurveSet2Ds = this.dataset?.Body?.CurveSet2Ds;
+		const bodyEle = this.bodyEle;
+		if (!CurveSet2Ds || !bodyEle) {
+			return;
+		}
+		const config = this.config;
+		const enableComments = config.enableComments;
+
+		if(enableComments){
+			const curveSetComment = this.createSectionComment(
+				'2D曲线集',
+				'???'
+			);
+			bodyEle.com(curveSetComment);
+		}
+
+		iterateArr(CurveSet2Ds, (curveSet2D) => {
+			this.buildCurveSet2d(curveSet2D);
+		});
+	}
+	
+	/** 构建2D曲线集 */
+	private buildCurveSet2d(curveSet2D:any) {
 		// TODO: 待实现
 	}
 
@@ -201,23 +266,26 @@ export class IDXWriter {
 		const enableComments = config.enableComments;
 
 		// # 创建节点
+		const ProcessInstruction = dataset.ProcessInstruction;
 		if (enableComments) {
-			const headerComment = this.createSectionComment(
+			const instructionComment = this.createSectionComment(
 				'处理指令',
 				'文件的类型和意图'
 			);
-			datasetEle.com(headerComment);
+			datasetEle.com(instructionComment);
 		}
-		const processTagName = getIDXTagName(IDXFoundationTag.ProcessInstruction);
-		const processXsiType = getIDXTagName(IDXComputationalTag.EDMDProcessInstructionSendInformation); // WARN: 应该根据文件类型定义
-		const processAttrs: Record<string, string> = {
-			[XsiTypeAttrName]: processXsiType,
+		const instructionTagName = getIDXTagName(IDXFoundationTag.ProcessInstruction);
+		const instructionXsiType = getIDXTagName(ProcessInstruction.instructionType);
+		const instructionAttrs: Record<string, string> = {
+			[XsiTypeAttrName]: instructionXsiType,
 		};
-		datasetEle.ele(processTagName, processAttrs);
+		datasetEle.ele(instructionTagName, instructionAttrs);
 	}
 
 	/** 构建历史记录 */
-	private buildHistory() {}
+	private buildHistory() {
+		// TODO: 暂不支持
+	}
 
 	/** 生成 IDX 源码 */
 	private createIDXSource(): string {
