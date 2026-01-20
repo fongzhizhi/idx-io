@@ -8,7 +8,7 @@ import { EDMDObject, EDMDLengthProperty, EDMDUserSimpleProperty, EDMDTransformat
 // ============= 几何描述类型 =============
 /**
  * 多段线几何元素
- * 
+ *
  * @remarks
  * 由一系列点连接而成的折线，可闭合
  * REF: Section 7.1.7
@@ -25,7 +25,7 @@ export interface EDMDPolyLine extends EDMDObject {
 
 /**
  * 圆弧几何元素
- * 
+ *
  * @remarks
  * 由起点、中间点和终点定义的圆弧
  * REF: Section 7.1.1
@@ -43,7 +43,7 @@ export interface EDMDArc extends EDMDObject {
 
 /**
  * 圆心式圆几何元素
- * 
+ *
  * @remarks
  * 由圆心点和直径定义的圆
  * REF: Section 7.1.4
@@ -57,7 +57,7 @@ export interface EDMDCircleCenter extends EDMDObject {
 
 /**
  * 三点式圆几何元素
- * 
+ *
  * @remarks
  * 由三个点定义的圆
  * REF: Section 7.1.3
@@ -73,7 +73,7 @@ export interface EDMDCircle3Point extends EDMDObject {
 
 /**
  * 椭圆几何元素
- * 
+ *
  * @remarks
  * 由中心点和长短半轴定义的椭圆
  * REF: Section 7.1.5
@@ -89,7 +89,7 @@ export interface EDMDEllipse extends EDMDObject {
 
 /**
  * B样条曲线几何元素
- * 
+ *
  * @remarks
  * 参数化曲线，通过控制点、阶数和节点向量定义
  * REF: Section 7.1.2
@@ -109,7 +109,7 @@ export interface EDMDBSplineCurve extends EDMDObject {
 
 /**
  * 复合曲线几何元素
- * 
+ *
  * @remarks
  * 由多条曲线组合而成的复杂曲线
  * REF: Section 7.1.8
@@ -121,7 +121,7 @@ export interface EDMDCompositeCurve extends EDMDObject {
 
 /**
  * 直线几何元素
- * 
+ *
  * @remarks
  * 由点和向量定义的无限长直线
  * REF: Section 6.1.2.4 (Bend Line)
@@ -136,21 +136,21 @@ export interface EDMDLine extends EDMDObject {
 /**
  * 几何元素联合类型
  */
-export type EDMDGeometry = 
-	| EDMDPolyLine 
-	| EDMDArc 
-	| EDMDCircleCenter 
-	| EDMDCircle3Point 
-	| EDMDEllipse 
-	| EDMDBSplineCurve 
-	| EDMDCompositeCurve 
+export type EDMDGeometry =
+	| EDMDPolyLine
+	| EDMDArc
+	| EDMDCircleCenter
+	| EDMDCircle3Point
+	| EDMDEllipse
+	| EDMDBSplineCurve
+	| EDMDCompositeCurve
 	| EDMDLine;
 
 // ============= 2D曲线集 =============
 
 /**
  * 2D曲线集合
- * 
+ *
  * @remarks
  * 定义几何元素的Z轴范围，实现2.5D表示
  * REF: Section 7.1

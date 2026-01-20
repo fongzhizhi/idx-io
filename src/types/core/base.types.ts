@@ -3,7 +3,7 @@
 // NOTE: 所有IDX类型都扩展自EDMDObject，包含通用属性
 // REF: PSI5_IDXv4.5_Implementation_Guidelines.pdf Section 4
 
-import { StratumSurfaceDesignation, StratumType } from "./enums";
+import { StratumSurfaceDesignation, StratumType } from './enums';
 
 // ============= 通用基础接口 =============
 /**
@@ -58,9 +58,9 @@ export interface CartesianPoint extends EDMDObject {
  */
 export interface EDMDLengthProperty {
 	/** 数值 */
-    Value: number;
-    /** 单位，可选，默认为 Header 中的 GlobalUnitLength */
-    Unit?: GlobalUnit;
+	Value: number;
+	/** 单位，可选，默认为 Header 中的 GlobalUnitLength */
+	Unit?: GlobalUnit;
 }
 
 // ============= 标识符和引用类型 =============
@@ -128,7 +128,7 @@ export interface EDMDUserSimpleProperty {
 export interface EDMDTransformation2D {
 	/** 变换类型标识 */
 	TransformationType: 'd2';
-	
+
 	// 旋转分量
 	xx: number; // cosθ
 	xy: number; // -sinθ
@@ -137,8 +137,8 @@ export interface EDMDTransformation2D {
 
 	// 平移分量（使用 foundation:Value 包装）
 	tx: number;
-    ty: number;
-	
+	ty: number;
+
 	// 可选Z偏移，用于相对层定位
 	zOffset?: number;
 }
@@ -238,15 +238,22 @@ export interface RoleOnItemInstance {
 
 /**
  * 层技术类型
- * 
+ *
  * @remarks
  * 定义层的技术特性
  * REF: Section 6.1.2.3
  */
 export interface EDMDStratumTechnology extends EDMDObject {
-    /** 技术类型：Design 或 Documentation */
-    TechnologyType: 'Design' | 'Documentation';
-    /** 层用途 */
-    LayerPurpose: 'OtherSignal' | 'PowerOrGround' | 'SolderMask' | 'SilkScreen' | 
-                 'LandsOnly' | 'SolderPaste' | 'PasteMask' | 'Dielectric';
+	/** 技术类型：Design 或 Documentation */
+	TechnologyType: 'Design' | 'Documentation';
+	/** 层用途 */
+	LayerPurpose:
+		| 'OtherSignal'
+		| 'PowerOrGround'
+		| 'SolderMask'
+		| 'SilkScreen'
+		| 'LandsOnly'
+		| 'SolderPaste'
+		| 'PasteMask'
+		| 'Dielectric';
 }

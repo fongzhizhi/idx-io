@@ -20,4 +20,4 @@ export * from './items.types';
 export * from './dataset.types';
 
 // 导出命名空间类型
-export * from './namespace.types'
+export * from './namespace.types';

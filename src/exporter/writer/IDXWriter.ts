@@ -1,8 +1,8 @@
 import { create } from 'xmlbuilder2';
 import { CartesianPoint, EDMDDataSet } from '../../types/core';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
-import { IDXWriterConfig } from '../../types/exporter/writes/idx-writer.types';
-import { DefaultIDXWriterConfig } from '../../types/exporter/writes/idx-writer.config';
+import { IDXWriteConfig } from '../../types/exporter/writer/idx-writer.interface';
+import { DefaultIDXWriteConfig } from './config/idx-writer.config';
 import { hasOwnProperty, iterateObject, toBoolean, toString } from '../../utils/object.utils';
 import { getIDXTagName, isIDXNameSpace, XsiTypeAttrName } from '../../core/utils/idx-namespace.utils';
 import { IDXComputationalTag, IDXD2Tag, IDXFoundationTag, IDXNameSpaceLinks, IDXPropertyTag, IDXXSITag } from '../../types/core/namespace.types';
@@ -15,9 +15,9 @@ export class IDXWriter {
 
 	// ------------ 私有变量 ------------
 	/** 配置 */
-	private config = DefaultIDXWriterConfig;
+	private config = DefaultIDXWriteConfig;
 
-	// ------------ 序列化相关状态 ------------
+	// ------------ 序列化状态量 ------------
 	/** 数据集 */
 	private dataset: EDMDDataSet | undefined;
 	/** 文档根节点 */
@@ -28,7 +28,7 @@ export class IDXWriter {
 	private bodyEle: XMLBuilder | undefined;
 
 	/** IDX 格式生成器 */
-	constructor(config?: IDXWriterConfig) {
+	constructor(config?: IDXWriteConfig) {
 		if (config) {
 			this.config = config;
 		}
@@ -208,15 +208,12 @@ export class IDXWriter {
 		const config = this.config;
 		const enableComments = config.enableComments;
 
-		if(enableComments){
-			const geometricComment = this.createSectionComment(
-				'坐标点',
-				'几何坐标点'
-			);
+		if (enableComments) {
+			const geometricComment = this.createSectionComment('坐标点', '几何坐标点');
 			bodyEle.com(geometricComment);
 		}
 
-		iterateArr(Points, (points) => {
+		iterateArr(Points, points => {
 			this.buildCartesianPoint(points);
 		});
 	}
@@ -227,23 +224,23 @@ export class IDXWriter {
 		if (!bodyEle) {
 			return;
 		}
-		
+
 		// # 创建节点
 		const pointTagName = getIDXTagName(IDXFoundationTag.CartesianPoint);
 		const pointAttrs: Record<string, string> = {
 			id: point.id,
-			XsiTypeAttrName: getIDXTagName(IDXD2Tag.EDMDCartesianPoint),	
+			XsiTypeAttrName: getIDXTagName(IDXD2Tag.EDMDCartesianPoint),
 		};
 		const pointEle = bodyEle.ele(pointTagName, pointAttrs);
 
 		// # 创建坐标
 		const xEle = pointEle.ele(getIDXTagName(IDXD2Tag.X));
 		xEle.ele(IDXPropertyTag.Value).txt(toString(point.X));
-		
+
 		const yEle = pointEle.ele(getIDXTagName(IDXD2Tag.Y));
 		yEle.ele(IDXPropertyTag.Value).txt(toString(point.Y));
 
-		if(isValidNumber(point.Z)) {
+		if (isValidNumber(point.Z)) {
 			const zEle = pointEle.ele(getIDXTagName(IDXD2Tag.Z));
 			zEle.ele(IDXPropertyTag.Value).txt(toString(point.Z));
 		}
@@ -269,7 +266,7 @@ export class IDXWriter {
 			datasetEle.com(instructionComment);
 		}
 		const instructionTagName = getIDXTagName(IDXFoundationTag.ProcessInstruction);
-		const instructionXsiType = getIDXTagName(ProcessInstruction); // TODO
+		const instructionXsiType = getIDXTagName(IDXComputationalTag.SendInformation); // TODO: 根据EDMDProcessInstruction类型调整
 		const instructionAttrs: Record<string, string> = {
 			[XsiTypeAttrName]: instructionXsiType,
 		};

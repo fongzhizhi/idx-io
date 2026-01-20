@@ -1,5 +1,5 @@
-/** IDX 格式生成器-配置 */
-export type IDXWriterConfig = Partial<{
+/** IDX 格式生成配置 */
+export type IDXWriteConfig = Partial<{
 	/**
 	 * 自定义命名空间表(非官方规范命名空间)
 	 * @example {'foundation': 'http://www.prostep.org/EDMD/Foundation'}

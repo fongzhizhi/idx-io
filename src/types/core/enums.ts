@@ -19,7 +19,7 @@ export enum ItemType {
 
 /**
  * 几何类型枚举
- * 
+ *
  * @remarks
  * IDXv4.0+引入的简化方式的关键属性，直接标识项目的类型和功能
  * 替代传统方式中的"Third Item"对象，减少XML嵌套和文件大小
@@ -145,9 +145,9 @@ export enum GeometryType {
  */
 export enum StratumType {
 	/** 设计层（物理层） */
-    DesignLayerStratum = 'DesignLayerStratum',
-    /** 文档层（非物理层） */
-    DocumentationLayerStratum = 'DocumentationLayerStratum'
+	DesignLayerStratum = 'DesignLayerStratum',
+	/** 文档层（非物理层） */
+	DocumentationLayerStratum = 'DocumentationLayerStratum',
 }
 
 /**
@@ -158,9 +158,9 @@ export enum StratumType {
  */
 export enum StratumSurfaceDesignation {
 	/** 主表面（通常为板顶面或底面） */
-    PrimarySurface = 'PrimarySurface',
-    /** 次表面 */
-    SecondarySurface = 'SecondarySurface'
+	PrimarySurface = 'PrimarySurface',
+	/** 次表面 */
+	SecondarySurface = 'SecondarySurface',
 }
 
 /**
@@ -248,7 +248,7 @@ export enum AssemblyComponentType {
 // ------------ 形状元素类型枚举 ------------
 /**
  * 形状元素类型枚举
- * 
+ *
  * @remarks
  * 定义形状元素的功能和用途
  * REF: Section 6.9 (Table 8)
@@ -265,7 +265,7 @@ export enum ShapeElementType {
 	/** 元件端子（用于引脚定义） */
 	ComponentTermination = 'ComponentTermination',
 	/** 设计层 */
-	DesignLayerStratum = 'DesignLayerStratum'
+	DesignLayerStratum = 'DesignLayerStratum',
 }
 
 // ------------ 功能形状类型枚举 ------------
