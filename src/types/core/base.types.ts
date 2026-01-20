@@ -56,12 +56,13 @@ export interface CartesianPoint extends EDMDObject {
  * IDX中所有长度值都应包装在此类型中，确保单位一致性
  * BUSINESS: 所有几何尺寸必须使用GlobalUnitLength指定的单位
  */
-export interface EDMDLengthProperty {
-	/** 数值 */
-	Value: number;
-	/** 单位，可选，默认为 Header 中的 GlobalUnitLength */
-	Unit?: GlobalUnit;
-}
+export type EDMDLengthProperty = number;
+// export interface EDMDLengthProperty {
+// 	/** 数值 */
+// 	Value: number;
+// 	/** 单位，可选，默认为 Header 中的 GlobalUnitLength */
+// 	Unit?: GlobalUnit;
+// }
 
 // ============= 标识符和引用类型 =============
 /**

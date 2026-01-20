@@ -22,6 +22,8 @@ const IDXXSITagSet = new Set(Object.values(IDXXSITag));
 
 /** XML类型声明属性名 */
 export const XsiTypeAttrName = getIDXTagName(IDXXSITag.type);
+/** 属性变更属性名 */
+export const PropAttrChanedAttrName = getIDXTagName(IDXPropertyTag.IsAttributeChanged);
 
 /**
  * 创建命名空间标签

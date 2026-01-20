@@ -35,3 +35,8 @@ export function iterateObject<V>(obj: Record<string, V> | undefined, cb: (value:
 	}
 	return false;
 }
+
+/** 是否为有效bool */
+export function isVialidBool(bool:boolean | undefined) {
+	return typeof bool == 'boolean';
+}

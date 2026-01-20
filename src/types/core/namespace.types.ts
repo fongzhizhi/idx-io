@@ -63,8 +63,12 @@ export enum IDXFoundationTag {
 	EDMDDataSet = 'EDMDDataSet',
 	/** 头部信息，包含创建者、时间戳、单位等元数据 */
 	Header = 'Header',
+	/** EDMD 头标识 */
+	EDMDHeader = 'EDMDHeader',
 	/** 数据体，包含所有几何元素、项目和形状定义 */
 	Body = 'Body',
+	/** EDMD 数据体标识 */
+	EDMDBody = 'EDMDBody',
 	/** 设计指令, 定义文件的类型和意图 */
 	ProcessInstruction = 'ProcessInstruction',
 	/** 设计项目元素，表示 PCB 上的各种组件（板、元件、孔等） */
@@ -172,6 +176,9 @@ export enum IDXPDMTag {
 	InnerAngle = 'InnerAngle',
 	/** 弯曲序列号，定义弯曲的应用顺序 */
 	bendSequenceNumber = 'bendSequenceNumber',
+
+	/** EDMD 形状元素标识 */
+	EDMDShapeElement = 'EDMDShapeElement'
 }
 
 /**
@@ -219,8 +226,50 @@ export enum IDXD2Tag {
 	Line = 'Line',
 	/** 向量，定义直线的方向 */
 	Vector = 'Vector',
-	/** 坐标点 */
+	/** 起点 */
+	StartPoint = 'StartPoint',
+	/** 中点 */
+	MidPoint = 'MidPoint',
+	/** 终点 */
+	EndPoint = 'EndPoint',
+	/** 圆心点 */
+	CenterPoint = 'CenterPoint',
+	/** 直径 */
+	Diameter = 'Diameter',
+	/** 控制点 */
+	ControlPoint = 'ControlPoint',
+	/** 阶数 */
+	Degree = 'Degree',
+	/** 是否闭合曲线 */
+	ClosedCurve = 'ClosedCurve',
+	/** 是否自相交 */
+	SelfIntersect = 'SelfIntersect',
+	/** 曲线形式 */
+	CurveForm = 'CurveForm',
+	/** 曲线元素 */
+	Curve = 'Curve',
+
+	/** EDMD 坐标点标识 */
 	EDMDCartesianPoint = 'EDMDCartesianPoint',
+	/** EDMD 多段线标识 */
+	EDMDPolyLine = 'EDMDPolyline',
+	/** EDMD Arc标识 */
+	EDMDArc = 'EDMDArc',
+	/** EDMD 圆（圆心直径式）标识 */
+	EDMDCircleCenter = 'EDMDCircleCenter',
+	/** EDMD 圆（三点式）标识 */
+	EDMDCircle3Point = 'EDMDCircle3Point',
+	/** EDMD 椭圆标识 */
+	EDMDEllipse = 'EDMDEllipse',
+	/** EDMD B样条曲线标识 */
+	EDMDBSplineCurve = 'EDMDBSplineCurve',
+	/** EDMD 复合曲线标识 */
+	EDMDCompositeCurve = 'EDMDCompositeCurve',
+	/** EDMD 直线标识 */
+	EDMDLine = 'EDMDLine',
+
+	/** EDMD 曲线集标识 */
+	EDMDCurveSet2d = 'EDMDCurveSet2d',
 }
 
 /**

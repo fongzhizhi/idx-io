@@ -3,9 +3,31 @@
 // REF: Section 7.1
 // NOTE: 所有几何类型都遵循"translation body"概念
 
-import { EDMDObject, EDMDLengthProperty, EDMDUserSimpleProperty, EDMDTransformation } from './base.types';
+import { EDMDObject, EDMDLengthProperty } from './base.types';
+import { IDXD2Tag } from './namespace.types';
 
 // ============= 几何描述类型 =============
+export type EDMDGeometryType = IDXD2Tag.EDMDPolyLine | IDXD2Tag.EDMDArc | IDXD2Tag.EDMDCircleCenter | IDXD2Tag.EDMDCircle3Point | IDXD2Tag.EDMDEllipse | IDXD2Tag.EDMDBSplineCurve | IDXD2Tag.EDMDCompositeCurve | IDXD2Tag.EDMDLine;
+
+/** 几何元素基础类型(便于判断几何类型) */
+export interface EDMDBaseGeometry extends EDMDObject {
+	/** 几何类型 */
+	type: EDMDGeometryType;
+}
+
+/**
+ * 几何元素联合类型
+ */
+export type EDMDGeometry =
+	| EDMDPolyLine
+	| EDMDArc
+	| EDMDCircleCenter
+	| EDMDCircle3Point
+	| EDMDEllipse
+	| EDMDBSplineCurve
+	| EDMDCompositeCurve
+	| EDMDLine;
+
 /**
  * 多段线几何元素
  *
@@ -14,13 +36,12 @@ import { EDMDObject, EDMDLengthProperty, EDMDUserSimpleProperty, EDMDTransformat
  * REF: Section 7.1.7
  * XML: <foundation:PolyLine xsi:type="d2:EDMDPolyLine">
  */
-export interface EDMDPolyLine extends EDMDObject {
+export interface EDMDPolyLine extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDPolyLine;
 	/** 点序列，引用 CartesianPoint 的 id */
 	Points: string[];
 	/** 可选厚度，用于表示走线或铣削路径的宽度 */
 	Thickness?: EDMDLengthProperty;
-	/** XML 类型声明 */
-	'@type'?: 'd2:EDMDPolyLine';
 }
 
 /**
@@ -30,15 +51,14 @@ export interface EDMDPolyLine extends EDMDObject {
  * 由起点、中间点和终点定义的圆弧
  * REF: Section 7.1.1
  */
-export interface EDMDArc extends EDMDObject {
+export interface EDMDArc extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDArc;
 	/** 起点，引用 CartesianPoint 的 id */
 	StartPoint: string;
 	/** 中间点，引用 CartesianPoint 的 id */
 	MidPoint: string;
 	/** 终点，引用 CartesianPoint 的 id */
 	EndPoint: string;
-	/** XML 类型声明 */
-	'@type'?: 'd2:EDMDArc';
 }
 
 /**
@@ -48,7 +68,8 @@ export interface EDMDArc extends EDMDObject {
  * 由圆心点和直径定义的圆
  * REF: Section 7.1.4
  */
-export interface EDMDCircleCenter extends EDMDObject {
+export interface EDMDCircleCenter extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDCircleCenter;
 	/** 圆心点，引用 CartesianPoint 的 id */
 	CenterPoint: string;
 	/** 直径 */
@@ -62,7 +83,8 @@ export interface EDMDCircleCenter extends EDMDObject {
  * 由三个点定义的圆
  * REF: Section 7.1.3
  */
-export interface EDMDCircle3Point extends EDMDObject {
+export interface EDMDCircle3Point extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDCircle3Point;
 	/** 点1，引用 CartesianPoint 的 id */
 	Point1: string;
 	/** 点2，引用 CartesianPoint 的 id */
@@ -78,7 +100,8 @@ export interface EDMDCircle3Point extends EDMDObject {
  * 由中心点和长短半轴定义的椭圆
  * REF: Section 7.1.5
  */
-export interface EDMDEllipse extends EDMDObject {
+export interface EDMDEllipse extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDEllipse;
 	/** 中心点，引用 CartesianPoint 的 id */
 	CenterPoint: string;
 	/** 长半轴长度 */
@@ -94,7 +117,8 @@ export interface EDMDEllipse extends EDMDObject {
  * 参数化曲线，通过控制点、阶数和节点向量定义
  * REF: Section 7.1.2
  */
-export interface EDMDBSplineCurve extends EDMDObject {
+export interface EDMDBSplineCurve extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDBSplineCurve;
 	/** 控制点序列，引用 CartesianPoint 的 id */
 	ControlPoints: string[];
 	/** 曲线阶数 */
@@ -114,7 +138,8 @@ export interface EDMDBSplineCurve extends EDMDObject {
  * 由多条曲线组合而成的复杂曲线
  * REF: Section 7.1.8
  */
-export interface EDMDCompositeCurve extends EDMDObject {
+export interface EDMDCompositeCurve extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDCompositeCurve;
 	/** 组成曲线的元素，引用其他几何元素的 id */
 	Curves: string[];
 }
@@ -126,25 +151,13 @@ export interface EDMDCompositeCurve extends EDMDObject {
  * 由点和向量定义的无限长直线
  * REF: Section 6.1.2.4 (Bend Line)
  */
-export interface EDMDLine extends EDMDObject {
+export interface EDMDLine extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDLine;
 	/** 起点，引用 CartesianPoint 的 id */
 	Point: string;
 	/** 方向向量，引用 CartesianPoint 的 id */
 	Vector: string;
 }
-
-/**
- * 几何元素联合类型
- */
-export type EDMDGeometry =
-	| EDMDPolyLine
-	| EDMDArc
-	| EDMDCircleCenter
-	| EDMDCircle3Point
-	| EDMDEllipse
-	| EDMDBSplineCurve
-	| EDMDCompositeCurve
-	| EDMDLine;
 
 // ============= 2D曲线集 =============
 

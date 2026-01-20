@@ -13,7 +13,7 @@ import {
 	CartesianPoint,
 	RoleOnItemInstance,
 } from './base.types';
-import { GeometryType } from './enums';
+import { GeometryType, ItemType } from './enums';
 
 // ============= 项目定义 (Item single) =============
 
@@ -27,7 +27,7 @@ import { GeometryType } from './enums';
  */
 export interface EDMDItemSingle extends EDMDObject {
 	/** 项目类型，必须为 "single" */
-	ItemType: 'single';
+	ItemType: ItemType.SINGLE;
 	/** 项目唯一标识符 */
 	Identifier?: EDMDIdentifier;
 	/** 包名称（用于可重用封装，如元件封装） */
@@ -97,7 +97,7 @@ export interface EDMDItemInstance extends EDMDObject {
  */
 export interface EDMDItemAssembly extends EDMDObject {
 	/** 项目类型，必须为 "assembly" */
-	ItemType: 'assembly';
+	ItemType: ItemType.ASSEMBLY;
 	/** 几何类型（简化方式的关键属性） */
 	geometryType?: GeometryType;
 	/** 项目唯一标识符 */
