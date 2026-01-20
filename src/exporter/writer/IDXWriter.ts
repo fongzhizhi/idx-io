@@ -18,17 +18,23 @@ import {
   EDMDArc,
   EDMDCircleCenter,
   EDMDBSplineCurve,
-  EDMDCompositeCurve
+  EDMDCompositeCurve,
+  EDMDIdentifier,
+  EDMName,
+  EDMPackagePin,
+  EDMDUserSimpleProperty,
+  EDMDHistory
 } from '../../types/core';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
 import { IDXWriteConfig } from '../../types/exporter/writer/idx-writer.interface';
 import { DefaultIDXWriteConfig } from './config/idx-writer.config';
-import { hasOwnProperty, isVialidBool, iterateObject, toBoolean, toString } from '../../utils/object.utils';
+import { hasOwnProperty, isValidBool, iterateObject, toBoolean, toString } from '../../utils/object.utils';
 import { getIDXTagName, isIDXNameSpace, PropAttrChanedAttrName, XsiTypeAttrName } from '../../core/utils/idx-namespace.utils';
 import { 
   IDXComputationalTag, 
   IDXD2Tag, 
   IDXFoundationTag, 
+  IDXNameSpace, 
   IDXNameSpaceLinks, 
   IDXPDMTag,
   IDXPropertyTag, 
@@ -108,7 +114,7 @@ export class IDXWriter {
 		this.buildProcessInstruction();
 
 		// ## 构建历史记录
-		this.buildHistory();
+		this.buildHistories();
 	}
 
 	/** 构建 EDMDDataSet */
@@ -240,7 +246,7 @@ export class IDXWriter {
 		this.buildItemsAssembly();
 		
 		// 8. 构建历史记录（可选）
-		this.buildHistoryInBody();
+		this.buildHistories();
 	}
 
 	/** 构建基础属性 */
@@ -253,7 +259,7 @@ export class IDXWriter {
 			
 		baseAttrs[id] = id;
 		
-		if (isVialidBool(IsAttributeChanged)) {
+		if (isValidBool(IsAttributeChanged)) {
 			baseAttrs[PropAttrChanedAttrName] = toString(IsAttributeChanged);
 		}
 
@@ -493,11 +499,11 @@ export class IDXWriter {
 		
 		// 构建可选数据
 		const closedCurve = bSpline.ClosedCurve;
-		if (isVialidBool(closedCurve)) {
+		if (isValidBool(closedCurve)) {
 			bSplineEle.ele(getIDXTagName(IDXD2Tag.ClosedCurve)).txt(toString(closedCurve));
 		}
 		const selfIntersect = bSpline.SelfIntersect;
-		if (isVialidBool(selfIntersect)) {
+		if (isValidBool(selfIntersect)) {
 			bSplineEle.ele(getIDXTagName(IDXD2Tag.SelfIntersect)).txt(toString(closedCurve));
 		}
 		const curveForm = bSpline.CurveForm;
@@ -664,11 +670,112 @@ export class IDXWriter {
 		});
 	}
 
+	/** 构建项目构建标识符 */
+	private buildItemIdentifier(targetEle: XMLBuilder, identifier?: EDMDIdentifier) {
+		if (!targetEle || !identifier) {
+			return;
+		}
+		const identifierEle = targetEle.ele(getIDXTagName(IDXPDMTag.Identifier));
+		identifierEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(identifier.SystemScope);
+		identifierEle.ele(getIDXTagName(IDXFoundationTag.Number)).txt(identifier.Number);
+		identifierEle.ele(getIDXTagName(IDXFoundationTag.Version)).txt(toString(identifier.Version));
+		identifierEle.ele(getIDXTagName(IDXFoundationTag.Revision)).txt(toString(identifier.Revision));
+		identifierEle.ele(getIDXTagName(IDXFoundationTag.Sequence)).txt(toString(identifier.Sequence));
+	}
+
+	/** 构建项目对象名称 */
+	private buildItemEDMName(targetEle: XMLBuilder, edaName?: EDMName){
+		if (!targetEle || !edaName) {
+			return;
+		}
+		const packageNameEle = targetEle.ele(getIDXTagName(IDXPDMTag.PackageName));
+		packageNameEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(edaName.SystemScope);
+		packageNameEle.ele(getIDXTagName(IDXFoundationTag.ObjectName)).txt(edaName.ObjectName);
+	}
+
+	/** 构建包引脚 */
+	private buildItemPackagePins(targetEle: XMLBuilder, packagePins?: EDMPackagePin[]) {
+		if (!targetEle || !packagePins) {
+			return;
+		}
+		iterateArr(packagePins, (pin) => {
+			const pinAttrs: Record<string, string> = {
+				pinNumber: pin.pinNumber,
+				primary: toString(pin.primary),
+			}
+			const pinEle = targetEle.ele(getIDXTagName(IDXPDMTag.PackagePin), pinAttrs);
+			pinEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(pin.Point);
+			
+			const pinShape = pin.Shape;
+			if (pinShape) {
+				pinEle.ele(getIDXTagName(IDXPDMTag.Shape)).txt(pinShape);
+			}
+		});
+	}
+
+	/** 构建自定义属性 */
+	private buildItemBaseLine(targetEle: XMLBuilder, baseLine?: boolean) {
+		if (targetEle && isValidBool(baseLine)) {
+			const baseLineEle = targetEle.ele(getIDXTagName(IDXPDMTag.BaseLine));
+			baseLineEle.ele(IDXPropertyTag.Value).txt(toString(baseLine));
+		}
+	}
+
+	/** 批量构建自定义属性 */
+	private buildUserProperties(targetEle: XMLBuilder, userProperties?: EDMDUserSimpleProperty[]) {
+		if(!targetEle || !userProperties || userProperties.length == 0){
+			return;
+		}
+		iterateArr(userProperties, (userProp) => {
+			this.buildUserProperty(targetEle, userProp);
+		});
+	}
+
+	/** 构建用户属性 */
+	private buildUserProperty(targetEle: XMLBuilder, userProp: EDMDUserSimpleProperty) {
+		if(!targetEle || !userProp){
+			return;
+		}
+
+		// # 构建节点
+		const userPropTagName = getIDXTagName(IDXPropertyTag.EDMDUserSimpleProperty);
+		
+		// ## 构建属性
+		const userPropAttrs: Record<string, string> = {};
+		const isChanged = userProp.IsChanged;
+		if (isValidBool(isChanged)) {
+			userPropAttrs['IsChanged'] = toString(isChanged);
+		}
+
+		const isNew = userProp.IsNew;
+		if (isValidBool(isNew)) {
+			userPropAttrs['IsNew'] = toString(isNew);
+		}
+
+		const isPersistent = userProp.Persistent;
+		if (isValidBool(isPersistent)) {
+			userPropAttrs['Persistent'] = toString(isPersistent);
+		}
+
+		const isOriginator = userProp.IsOriginator;
+		if (isValidBool(isOriginator)) {
+			userPropAttrs['IsOriginator'] = toString(isOriginator);
+		}
+		
+		const userPropEle = targetEle.ele(userPropTagName, userPropAttrs);
+		
+		// ## 构建键
+		this.buildItemEDMName(userPropEle, userProp.Key);
+		
+		// ## 构建值
+		userPropEle.ele(getIDXTagName(IDXPropertyTag.Value)).txt(toString(userProp.Value));
+	}
+
 	/** 构建项目定义（Item single） */
 	private buildItemSingle(itemSingle: EDMDItemSingle) {
 		const bodyEle = this.bodyEle;
 		if (!bodyEle) return;
-		
+
 		// # 构建节点
 		const itemTagName = getIDXTagName(IDXFoundationTag.Item);
 
@@ -686,55 +793,28 @@ export class IDXWriter {
 		itemSingleEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(itemSingle.ItemType);
 		
 		// ## 构建标识符（可选）
-		if (itemSingle.Identifier) {
-			const identifierEle = itemSingleEle.ele(getIDXTagName(IDXPDMTag.Identifier));
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(itemSingle.Identifier.SystemScope);
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Number)).txt(itemSingle.Identifier.Number);
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Version)).txt(itemSingle.Identifier.Version.toString());
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Revision)).txt(itemSingle.Identifier.Revision.toString());
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Sequence)).txt(itemSingle.Identifier.Sequence.toString());
-		}
+		this.buildItemIdentifier(itemSingleEle, itemSingle.Identifier);
 		
 		// ## 构建包名称（可选）
-		if (itemSingle.PackageName) {
-			const packageNameEle = itemSingleEle.ele(getIDXTagName(IDXPDMTag.PackageName));
-			packageNameEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(itemSingle.PackageName.SystemScope);
-			packageNameEle.ele(getIDXTagName(IDXFoundationTag.ObjectName)).txt(itemSingle.PackageName.ObjectName);
-		}
+		this.buildItemEDMName(itemSingleEle, itemSingle.PackageName);
 		
 		// ## 构建形状引用
 		itemSingleEle.ele(getIDXTagName(IDXPDMTag.Shape)).txt(itemSingle.Shape);
 		
 		// ## 构建包引脚定义（可选）
-		if (itemSingle.PackagePins && itemSingle.PackagePins.length > 0) {
-			iterateArr(itemSingle.PackagePins, (pin: any) => {
-				const pinEle = itemSingleEle.ele(getIDXTagName(IDXPDMTag.PackagePin));
-				pinEle.att('pinNumber', pin.pinNumber);
-				pinEle.att('primary', pin.primary.toString());
-				pinEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(pin.Point);
-				if (pin.Shape) {
-					pinEle.ele(getIDXTagName(IDXPDMTag.Shape)).txt(pin.Shape);
-				}
-			});
-		}
+		this.buildItemPackagePins(itemSingleEle, itemSingle.PackagePins);
 		
 		// ## 构建3D模型引用（可选）
-		if (itemSingle.EDMD3DModel) {
-			itemSingleEle.ele(getIDXTagName(IDXPDMTag.EDMD3DModel)).txt(itemSingle.EDMD3DModel);
+		const model3D= itemSingle.EDMD3DModel
+		if (model3D) {
+			itemSingleEle.ele(getIDXTagName(IDXPDMTag.EDMD3DModel)).txt(model3D);
 		}
 		
 		// ## 构建基线标记（可选）
-		if (itemSingle.BaseLine) {
-			const baseLineEle = itemSingleEle.ele(getIDXTagName(IDXPDMTag.BaseLine));
-			baseLineEle.ele(IDXPropertyTag.Value).txt(itemSingle.BaseLine.Value.toString());
-		}
+		this.buildItemBaseLine(itemSingleEle, itemSingle.BaseLine);
 		
 		// ## 构建用户属性（可选）
-		if (itemSingle.UserProperties && itemSingle.UserProperties.length > 0) {
-			iterateArr(itemSingle.UserProperties, (userProp: any) => {
-				this.buildUserProperty(itemSingleEle, userProp);
-			});
-		}
+		this.buildUserProperties(itemSingleEle, itemSingle.UserProperties);
 	}
 
 	/** 批量构建项目实例（Item assembly） */
@@ -746,12 +826,12 @@ export class IDXWriter {
 		}
 		const config = this.config;
 		const enableComments = config.enableComments;
-
+		
 		if (enableComments) {
 			const itemsAssemblyComment = this.createSectionComment('项目实例', '包含一个或多个实例的装配体');
 			bodyEle.com(itemsAssemblyComment);
 		}
-
+		
 		iterateArr(itemsAssembly, itemAssembly => {
 			this.buildItemAssembly(itemAssembly);
 		});
@@ -762,216 +842,149 @@ export class IDXWriter {
 		const bodyEle = this.bodyEle;
 		if (!bodyEle) return;
 		
-		// 检查ID是否已处理
-		if (this.processedIds.has(itemAssembly.id)) {
-			console.warn(`Duplicate itemAssembly ID: ${itemAssembly.id}`);
-			return;
-		}
-		this.processedIds.add(itemAssembly.id);
-		
+		// ## 构建名称
 		const itemTagName = getIDXTagName(IDXFoundationTag.Item);
-		const itemAttrs: Record<string, string> = {
-			id: itemAssembly.id,
-		};
 		
-		// ## 构建几何类型属性（简化方式的关键）
+		// ## 构建属性
+		const itemAttrs: Record<string, string> = {
+			...this.buildBaseAttr(itemAssembly)
+		};
+		// ### 构建几何类型属性（简化方式的关键）
 		if (itemAssembly.geometryType) {
 			itemAttrs['geometryType'] = itemAssembly.geometryType;
 		}
 		
-		if (itemAssembly.IsAttributeChanged !== undefined) {
-			itemAttrs['IsAttributeChanged'] = itemAssembly.IsAttributeChanged.toString();
-		}
+		const itemAssemblyEle = bodyEle.ele(itemTagName, itemAttrs);
 		
-		const itemEle = bodyEle.ele(itemTagName, itemAttrs);
-		
-		// ## 构建名称
-		if (itemAssembly.Name) {
-			itemEle.ele(getIDXTagName(IDXFoundationTag.Name)).txt(itemAssembly.Name);
-		}
-		
-		// ## 构建描述
-		if (itemAssembly.Description) {
-			itemEle.ele(getIDXTagName(IDXFoundationTag.Description)).txt(itemAssembly.Description);
-		}
+		// ## 构建基础数据
+		this.buildBaseData(itemAssemblyEle, itemAssembly);
 		
 		// ## 构建项目类型（必须为assembly）
-		itemEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(itemAssembly.ItemType);
+		itemAssemblyEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(itemAssembly.ItemType);
 		
 		// ## 构建标识符（可选）
-		if (itemAssembly.Identifier) {
-			const identifierEle = itemEle.ele(getIDXTagName(IDXPDMTag.Identifier));
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(itemAssembly.Identifier.SystemScope);
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Number)).txt(itemAssembly.Identifier.Number);
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Version)).txt(itemAssembly.Identifier.Version.toString());
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Revision)).txt(itemAssembly.Identifier.Revision.toString());
-			identifierEle.ele(getIDXTagName(IDXFoundationTag.Sequence)).txt(itemAssembly.Identifier.Sequence.toString());
-		}
+		this.buildItemIdentifier(itemAssemblyEle, itemAssembly.Identifier);
 		
 		// ## 构建项目实例列表
 		iterateArr(itemAssembly.ItemInstances, (instance: EDMDItemInstance) => {
-			this.buildItemInstance(itemEle, instance);
+			this.buildItemInstance(itemAssemblyEle, instance);
 		});
 		
 		// ## 构建装配到名称（用于相对定位）
-		if (itemAssembly.AssembleToName) {
-			itemEle.ele(getIDXTagName(IDXPDMTag.AssembleToName)).txt(itemAssembly.AssembleToName);
+		const assembleToName = itemAssembly.AssembleToName
+		if (assembleToName) {
+			itemAssemblyEle.ele(getIDXTagName(IDXPDMTag.AssembleToName)).txt(assembleToName);
 		}
 		
 		// ## 构建参考名称（可选）
-		if (itemAssembly.ReferenceName) {
-			itemEle.ele(getIDXTagName(IDXPDMTag.ReferenceName)).txt(itemAssembly.ReferenceName);
+		const referenceName = itemAssembly.ReferenceName
+		if (referenceName) {
+			itemAssemblyEle.ele(getIDXTagName(IDXPDMTag.ReferenceName)).txt(referenceName);
 		}
 		
 		// ## 构建基线标记（可选）
-		if (itemAssembly.BaseLine) {
-			const baseLineEle = itemEle.ele(getIDXTagName(IDXPDMTag.BaseLine));
-			baseLineEle.ele(IDXPropertyTag.Value).txt(itemAssembly.BaseLine.Value.toString());
-		}
+		this.buildItemBaseLine(itemAssemblyEle, itemAssembly.BaseLine);
 		
 		// ## 构建用户属性（可选）
-		if (itemAssembly.UserProperties && itemAssembly.UserProperties.length > 0) {
-			iterateArr(itemAssembly.UserProperties, (userProp: any) => {
-				this.buildUserProperty(itemEle, userProp);
-			});
-		}
+		this.buildUserProperties(itemAssemblyEle, itemAssembly.UserProperties);
 		
 		// ## 构建角色信息（可选）
-		if (itemAssembly.Roles && itemAssembly.Roles.length > 0) {
-			// TODO: 实现角色信息构建
-		}
+		// TODO: 实现角色信息构建
 	}
 
 	/** 构建项目实例 */
-	private buildItemInstance(parentEle: any, instance: EDMDItemInstance) {
+	private buildItemInstance(itemAssemblyEle: XMLBuilder, itemInstance: EDMDItemInstance) {
+		if(!itemAssemblyEle) {
+			return;
+		}
+
+		// # 构建节点
 		const instanceTagName = getIDXTagName(IDXPDMTag.ItemInstance);
+
+		// ## 构建属性
 		const instanceAttrs: Record<string, string> = {
-			id: instance.id,
+			...this.buildBaseAttr(itemInstance),
 		};
-		if (instance.IsAttributeChanged !== undefined) {
-			instanceAttrs['IsAttributeChanged'] = instance.IsAttributeChanged.toString();
-		}
+
+		const instanceEle = itemAssemblyEle.ele(instanceTagName, instanceAttrs);
 		
-		const instanceEle = parentEle.ele(instanceTagName, instanceAttrs);
-		
-		// ## 构建名称
-		if (instance.Name) {
-			instanceEle.ele(getIDXTagName(IDXFoundationTag.Name)).txt(instance.Name);
-		}
-		
-		// ## 构建实例名称
-		if (instance.InstanceName) {
-			const instanceNameEle = instanceEle.ele(getIDXTagName(IDXPDMTag.InstanceName));
-			instanceNameEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(instance.InstanceName.SystemScope);
-			instanceNameEle.ele(getIDXTagName(IDXFoundationTag.ObjectName)).txt(instance.InstanceName.ObjectName);
-		}
+		// ## 构建基础数据
+		this.buildBaseData(instanceEle, itemInstance);
 		
 		// ## 构建变换矩阵
-		if (instance.Transformation) {
-			this.buildTransformation(instanceEle, instance.Transformation);
-		}
+		this.buildTransformation(instanceEle, itemInstance.Transformation);
 		
 		// ## 构建Z轴偏移（IDXv4.0+）
-		if (instance.zOffset !== undefined) {
-			instanceEle.att('zOffset', instance.zOffset.Value.toString());
+		const zOffset = itemInstance.zOffset;
+		if(isValidNumber(zOffset)) {
+			instanceEle.att('zOffset', toString(zOffset));
 		}
 		
 		// ## 构建弯曲序列号（用于柔性板）
-		if (instance.bendSequenceNumber !== undefined) {
-			instanceEle.att('bendSequenceNumber', instance.bendSequenceNumber.toString());
+		const bendSequenceNumber = itemInstance.bendSequenceNumber;
+		if(isValidNumber(bendSequenceNumber)) {
+			instanceEle.att('bendSequenceNumber', toString(bendSequenceNumber));
 		}
 		
 		// ## 构建引用的项目定义
-		instanceEle.ele(getIDXTagName(IDXPDMTag.Item)).txt(instance.Item);
+		instanceEle.ele(getIDXTagName(IDXPDMTag.Item, IDXNameSpace.PDM)).txt(itemInstance.Item);
 		
 		// ## 构建用户属性（可选）
-		if (instance.UserProperties && instance.UserProperties.length > 0) {
-			iterateArr(instance.UserProperties, (userProp: any) => {
-				this.buildUserProperty(instanceEle, userProp);
-			});
-		}
+		this.buildUserProperties(instanceEle, itemInstance.UserProperties)
 		
 		// ## 构建实例用户区域层名称（用于Other Outline映射）
-		if (instance.InstanceUserAreaLayerName) {
-			const layerNameEle = instanceEle.ele(getIDXTagName(IDXPDMTag.InstanceUserAreaLayerName));
-			layerNameEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(instance.InstanceUserAreaLayerName.SystemScope);
-			layerNameEle.ele(getIDXTagName(IDXFoundationTag.ObjectName)).txt(instance.InstanceUserAreaLayerName.ObjectName);
-		}
+		this.buildItemEDMName(instanceEle, itemInstance.InstanceUserAreaLayerName)
 	}
 
 	/** 构建变换矩阵 */
-	private buildTransformation(parentEle: any, transformation: EDMDTransformation) {
-		const transformationEle = parentEle.ele(getIDXTagName(IDXPDMTag.Transformation));
+	private buildTransformation(instanceEle: XMLBuilder, transformation?: EDMDTransformation) {
+		if(!instanceEle || !transformation) {
+			return;
+		}
+
+		// # 构建节点
+		const transformationEle = instanceEle.ele(getIDXTagName(IDXPDMTag.Transformation));
 		
 		// ## 构建变换类型
 		transformationEle.ele(getIDXTagName(IDXPDMTag.TransformationType)).txt(transformation.TransformationType);
 		
 		if (transformation.TransformationType === 'd2') {
-			// 2D变换
-			const d2 = transformation as any;
-			transformationEle.ele(getIDXTagName(IDXPDMTag.xx)).txt(d2.xx.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.xy)).txt(d2.xy.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.yx)).txt(d2.yx.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.yy)).txt(d2.yy.toString());
+			// ## 构建 2D 变换
+			const d2 = transformation;
+			transformationEle.ele(getIDXTagName(IDXPDMTag.XX)).txt(toString(d2.xx));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.XY)).txt(toString(d2.xy));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.YX)).txt(toString(d2.yx));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.YY)).txt(toString(d2.yy));
 			
-			// 平移分量使用property:Value包装
-			const txEle = transformationEle.ele(getIDXTagName(IDXPDMTag.tx));
-			txEle.ele(IDXPropertyTag.Value).txt(d2.tx.toString());
+			// 平移分量使用 property:Value 包装
+			const txEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TX));
+			txEle.ele(IDXPropertyTag.Value).txt(toString(d2.tx));
 			
-			const tyEle = transformationEle.ele(getIDXTagName(IDXPDMTag.ty));
-			tyEle.ele(IDXPropertyTag.Value).txt(d2.ty.toString());
+			const tyEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TY));
+			tyEle.ele(IDXPropertyTag.Value).txt(toString(d2.ty));
 		} else {
-			// 3D变换
-			const d3 = transformation as any;
-			transformationEle.ele(getIDXTagName(IDXPDMTag.xx)).txt(d3.xx.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.xy)).txt(d3.xy.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.xz)).txt(d3.xz.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.yx)).txt(d3.yx.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.yy)).txt(d3.yy.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.yz)).txt(d3.yz.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.zx)).txt(d3.zx.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.zy)).txt(d3.zy.toString());
-			transformationEle.ele(getIDXTagName(IDXPDMTag.zz)).txt(d3.zz.toString());
+			// ## 构建 3D 变换
+			const d3 = transformation;
+			transformationEle.ele(getIDXTagName(IDXPDMTag.XX)).txt(toString(d3.xx));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.XY)).txt(toString(d3.xy));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.XZ)).txt(toString(d3.xz));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.YX)).txt(toString(d3.yx));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.YY)).txt(toString(d3.yy));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.YZ)).txt(toString(d3.yz));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.ZX)).txt(toString(d3.zx));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.ZY)).txt(toString(d3.zy));
+			transformationEle.ele(getIDXTagName(IDXPDMTag.ZZ)).txt(toString(d3.zz));
 			
-			// 平移分量使用property:Value包装
-			const txEle = transformationEle.ele(getIDXTagName(IDXPDMTag.tx));
-			txEle.ele(IDXPropertyTag.Value).txt(d3.tx.toString());
+			// 平移分量使用 property:Value 包装
+			const txEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TX));
+			txEle.ele(IDXPropertyTag.Value).txt(toString(d3.tx));
 			
-			const tyEle = transformationEle.ele(getIDXTagName(IDXPDMTag.ty));
-			tyEle.ele(IDXPropertyTag.Value).txt(d3.ty.toString());
+			const tyEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TY));
+			tyEle.ele(IDXPropertyTag.Value).txt(toString(d3.ty));
 			
-			const tzEle = transformationEle.ele(getIDXTagName(IDXPDMTag.tz));
-			tzEle.ele(IDXPropertyTag.Value).txt(d3.tz.toString());
+			const tzEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TZ));
+			tzEle.ele(IDXPropertyTag.Value).txt(toString(d3.tz));
 		}
-	}
-
-	/** 构建用户属性 */
-	private buildUserProperty(parentEle: any, userProp: any) {
-		const userPropTagName = getIDXTagName(IDXPropertyTag.EDMDUserSimpleProperty);
-		const userPropAttrs: Record<string, string> = {};
-		
-		if (userProp.IsChanged !== undefined) {
-			userPropAttrs['IsChanged'] = userProp.IsChanged.toString();
-		}
-		if (userProp.IsNew !== undefined) {
-			userPropAttrs['IsNew'] = userProp.IsNew.toString();
-		}
-		if (userProp.Persistent !== undefined) {
-			userPropAttrs['Persistent'] = userProp.Persistent.toString();
-		}
-		if (userProp.IsOriginator !== undefined) {
-			userPropAttrs['IsOriginator'] = userProp.IsOriginator.toString();
-		}
-		
-		const userPropEle = parentEle.ele(userPropTagName, userPropAttrs);
-		
-		// ## 构建键
-		const keyEle = userPropEle.ele(getIDXTagName(IDXPropertyTag.Key));
-		keyEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(userProp.Key.SystemScope);
-		keyEle.ele(getIDXTagName(IDXFoundationTag.ObjectName)).txt(userProp.Key.ObjectName);
-		
-		// ## 构建值
-		userPropEle.ele(getIDXTagName(IDXPropertyTag.Value)).txt(userProp.Value.toString());
 	}
 
 	/** 构建处理指令 */
@@ -1025,16 +1038,11 @@ export class IDXWriter {
 		}
 	}
 
-	/** 构建历史记录 */
-	private buildHistory() {
-		// TODO: 实现历史记录构建
-	}
-
-	/** 在Body中构建历史记录 */
-	private buildHistoryInBody() {
-		const history = this.dataset?.Body?.History;
+	/** 批量构建历史记录 */
+	private buildHistories() {
+		const Histories = this.dataset?.Body?.Histories;
 		const bodyEle = this.bodyEle;
-		if (!history || !bodyEle || history.length === 0) {
+		if (!Histories || !bodyEle || Histories.length === 0) {
 			return;
 		}
 		
@@ -1046,6 +1054,16 @@ export class IDXWriter {
 			bodyEle.com(historyComment);
 		}
 		
+		iterateArr(Histories, history => {
+			this.buildHistory(history);
+		})
+	}
+
+	/** 构建历史记录 */
+	private buildHistory(history: EDMDHistory) {
+		const bodyEle = this.bodyEle;
+		if (!bodyEle) return;
+
 		// TODO: 实现历史记录构建
 	}
 
@@ -1071,7 +1089,6 @@ export class IDXWriter {
 		this.doc = undefined;
 		this.datasetEle = undefined;
 		this.bodyEle = undefined;
-		this.processedIds.clear();
 	}
 
 	// ============= 私有化工具函数 =============

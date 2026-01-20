@@ -38,10 +38,13 @@ export function createNameSpaceTag(tag: string, nameSpace?: string): string {
 /**
  * 获取 IDX 标签的完整命名空间标签
  * @param tagName 标签枚举值
+ * @param nameSpace 命名空间（避免 tagName 重复的情况, 手动指定）
  * @returns 完整的命名空间标签字符串
  */
-export function getIDXTagName(tagName: IDXTag): string {
-	const nameSpace = getIDXNamespaceForTag(tagName);
+export function getIDXTagName(tagName: IDXTag, nameSpace?: IDXNameSpace): string {
+	if(!nameSpace) {
+		nameSpace = getIDXNamespaceForTag(tagName);
+	}
 	return createNameSpaceTag(tagName, nameSpace);
 }
 

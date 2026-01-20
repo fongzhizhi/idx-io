@@ -187,8 +187,8 @@ export interface EDMDDataSet {
 		ItemsSingle?: EDMDItemSingle[];
 		/** 项目实例集合（Item assembly） */
 		ItemsAssembly?: EDMDItemAssembly[];
-		/** 历史记录（可选） */
-		History?: EDMDHistory[];
+		/** 历史记录集合（可选） */
+		Histories?: EDMDHistory[];
 	};
 	/** 处理指令 */
 	ProcessInstruction: EDMDProcessInstruction;

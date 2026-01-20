@@ -39,7 +39,7 @@ export interface EDMDItemSingle extends EDMDObject {
 	/** 3D模型引用（可选） */
 	EDMD3DModel?: string;
 	/** 基线标记 */
-	BaseLine?: { Value: boolean };
+	BaseLine?: boolean;
 	/** 用户自定义属性 */
 	UserProperties?: EDMDUserSimpleProperty[];
 }
@@ -109,7 +109,7 @@ export interface EDMDItemAssembly extends EDMDObject {
 	/** 参考名称（便于其他项目引用） */
 	ReferenceName?: string;
 	/** 基线标记 */
-	BaseLine?: { Value: boolean };
+	BaseLine?: boolean;
 	/** 用户自定义属性 */
 	UserProperties?: EDMDUserSimpleProperty[];
 	/** 角色和权限信息 */

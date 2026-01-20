@@ -92,7 +92,9 @@ export interface EDMDIdentifier {
  * 包含系统范围和对象名称，确保在协作中正确引用
  */
 export interface EDMName {
+	/** 系统作用域，定义对象的唯一命名空间 */
 	SystemScope: string;
+	/** 对象名称，在系统作用域内的唯一标识 */
 	ObjectName: string;
 }
 

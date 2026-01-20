@@ -105,6 +105,15 @@ export enum IDXFoundationTag {
 	PostProcessorVersion = 'PostProcessorVersion',
 	/** 创建者 */
 	Creator = 'Creator',
+	/** 标识符编号 */
+	Number = 'Number',
+	/** 版本号，通常从1开始 */
+	Version = 'Version',
+	/** 修订号 */
+	Revision = 'Revision',
+	/** 序列号，每次变更递增 */
+	Sequence = 'Sequence',
+
 }
 
 /**
@@ -112,6 +121,8 @@ export enum IDXFoundationTag {
  * 包含产品数据管理元素，位于 pdm 命名空间
  */
 export enum IDXPDMTag {
+	/** 项目引用(注意命名空间, 不是 IDXFoundationTag 的 Item) */
+	Item = 'Item',
 	/** 项目类型，可以是 "assembly" 或 "single" */
 	ItemType = 'ItemType',
 	/** 唯一标识符，包含系统作用域、编号、版本、修订和序列号 */
@@ -176,6 +187,34 @@ export enum IDXPDMTag {
 	InnerAngle = 'InnerAngle',
 	/** 弯曲序列号，定义弯曲的应用顺序 */
 	bendSequenceNumber = 'bendSequenceNumber',
+	/** 包引脚定义（用于元件引脚位置） */
+	PackagePin = 'PackagePin',
+	/** 3D模型引用 */
+	EDMD3DModel = 'EDMD3DModel',
+	/** 矩阵偏移量 */
+	XX = 'xx',
+	/** 矩阵偏移量 */
+	XY = 'xy',
+	/** 矩阵偏移量 */
+	XZ = 'xz',
+	/** 矩阵偏移量 */
+	YX = 'yx',
+	/** 矩阵偏移量 */
+	YY = 'yy',
+	/** 矩阵偏移量 */
+	YZ = 'yz',
+	/** 矩阵偏移量 */
+	ZX = 'zx',
+	/** 矩阵偏移量 */
+	ZY = 'zy',
+	/** 矩阵偏移量 */
+	ZZ = 'zz',
+	/** 矩阵偏移量 */
+	TX = 'tx',
+	/** 矩阵偏移量 */
+	TY = 'ty',
+	/** 矩阵偏移量 */
+	TZ = 'tz',
 
 	/** EDMD 形状元素标识 */
 	EDMDShapeElement = 'EDMDShapeElement'
