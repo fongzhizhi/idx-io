@@ -1,11 +1,11 @@
 import { create } from 'xmlbuilder2';
-import { EDMDDataSet } from '../../types/core';
+import { CartesianPoint, EDMDDataSet } from '../../types/core';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
 import { IDXWriterConfig } from '../../types/exporter/writes/idx-writer.types';
 import { DefaultIDXWriterConfig } from '../../types/exporter/writes/idx-writer.config';
 import { hasOwnProperty, iterateObject, toBoolean, toString } from '../../utils/object.utils';
 import { getIDXTagName, isIDXNameSpace, XsiTypeAttrName } from '../../core/utils/idx-namespace.utils';
-import { IDXComputationalTag, IDXD2Tag, IDXFoundationTag, IDXNameSpaceLinks, IDXXSITag } from '../../types/core/namespace.types';
+import { IDXComputationalTag, IDXD2Tag, IDXFoundationTag, IDXNameSpaceLinks, IDXPropertyTag, IDXXSITag } from '../../types/core/namespace.types';
 import { iterateArr } from '../../utils/array.utils';
 
 /** IDX 格式生成器 */
@@ -225,6 +225,34 @@ export class IDXWriter {
 	/** 构建基础几何 */
 	private buildGeometric(geometric:any) {
 		// TODO: 待实现
+	}
+
+	/** 构建坐标点 */
+	private buildCartesianPoint(point: CartesianPoint) {
+		const bodyEle = this.bodyEle;
+		if (!bodyEle) {
+			return;
+		}
+		
+		// # 创建节点
+		const pointTagName = getIDXTagName(IDXFoundationTag.CartesianPoint);
+		const pointAttrs: Record<string, string> = {
+			id: point.id,
+			XsiTypeAttrName: getIDXTagName(IDXD2Tag.EDMDCartesianPoint),	
+		};
+		const pointEle = bodyEle.ele(pointTagName, pointAttrs);
+
+		// # 创建坐标
+		const xEle = pointEle.ele(getIDXTagName(IDXD2Tag.X));
+		xEle.ele(IDXPropertyTag.Value).txt(toString(point.X));
+		
+		const yEle = pointEle.ele(getIDXTagName(IDXD2Tag.Y));
+		yEle.ele(IDXPropertyTag.Value).txt(toString(point.Y));
+	}
+
+	/** 创建 Polyline */
+	private buildPolyline(PolyLine) {
+
 	}
 
 	/** 批量构建2D曲线集 */

@@ -1,89 +1,4 @@
-// ============= IDX消息类型 =============
-// DESIGN: IDX协议支持三种消息类型，所有消息都基于EDMDDataSet
-// REF: Section 3, 5.1-5.5
-// NOTE: 消息类型决定了数据集的用途和解释方式
-
-import { EDMDHeader, GlobalUnit } from './common';
-import {
-	EDMDDataSetBody,
-	EDMDProcessInstruction,
-	EDMHistory,
-	EDMDProcessInstructionSendInformation,
-	EDMDProcessInstructionSendChanges,
-	EDMDProcessInstructionRequestForInformation,
-} from './items';
-
-// ------------ 完整数据集 ------------
-/**
- * EDMD数据集 - IDX消息的根容器
- *
- * @remarks
- * 所有IDX消息（基线、变更、响应）都使用此结构
- * REF: Section 4, Figure 5
- *
- * @example
- * ```typescript
- * // TEST_CASE: 创建基线数据集
- * // TEST_INPUT: 包含PCB板和两个组件的基线
- * // TEST_EXPECT: 生成有效的SendInformation消息
- * const dataset: EDMDDataSet = {
- *   Header: { ... },
- *   Body: { ... },
- *   ProcessInstruction: { instructionType: 'SendInformation' }
- * };
- * ```
- */
-export interface EDMDDataSet {
-	/** 数据集头部信息 */
-	Header: EDMDHeader;
-
-	/** 数据集体（几何和项目数据） */
-	Body: EDMDDataSetBody;
-
-	/** 过程指令（定义消息类型） */
-	ProcessInstruction: EDMDProcessInstruction;
-
-	/** 可选的交易历史 */
-	History?: EDMHistory[];
-
-	/** 可选的XML命名空间声明 */
-	namespaces?: Record<string, string>;
-}
-
-// ------------ 消息类型别名 ------------
-/**
- * 发送信息消息（基线消息）
- *
- * @remarks
- * 用于发送初始设计基线或重新基线
- * REF: Section 5.1
- * BUSINESS: 基线必须被接收系统自动完全接受
- */
-export type SendInformationMessage = EDMDDataSet & {
-	ProcessInstruction: EDMDProcessInstructionSendInformation;
-};
-
-/**
- * 发送变更消息
- *
- * @remarks
- * 用于发送变更请求或响应变更请求
- * REF: Section 5.2
- * NOTE: 同一个消息格式用于变更请求和变更响应
- */
-export type SendChangesMessage = EDMDDataSet & {
-	ProcessInstruction: EDMDProcessInstructionSendChanges;
-};
-
-/**
- * 请求信息消息
- *
- * @remarks
- * 请求项目当前状态信息（目前很少实现）
- */
-export type RequestForInformationMessage = EDMDDataSet & {
-	ProcessInstruction: EDMDProcessInstructionRequestForInformation;
-};
+import { GlobalUnit } from '../core/base.types';
 
 // ------------ 文件相关类型 ------------
 /**
@@ -108,19 +23,14 @@ export enum IDXFileType {
 export interface IDXFileMetadata {
 	/** 文件类型 */
 	type: IDXFileType;
-
 	/** 文件名（不包含扩展名） */
 	name: string;
-
 	/** 完整文件路径 */
 	path: string;
-
 	/** 创建时间戳 */
 	timestamp: string;
-
 	/** 设计名称 */
 	designName: string;
-
 	/** 序列号 */
 	sequence: number;
 }
@@ -135,10 +45,8 @@ export interface IDXFileMetadata {
 export interface CompressionOptions {
 	/** 是否启用压缩 */
 	enabled: boolean;
-
 	/** 压缩算法（默认deflate） */
 	algorithm: 'deflate' | 'gzip';
-
 	/** 压缩级别 1-9 */
 	level: number;
 }
@@ -155,16 +63,12 @@ export interface IDXExportConfig {
 	output: {
 		/** 输出目录 */
 		directory: string;
-
 		/** 设计名称（用于文件名生成） */
 		designName: string;
-
 		/** 是否生成压缩文件 (.idz) */
 		compress: boolean;
-
 		/** 压缩选项 */
 		compression?: CompressionOptions;
-
 		/** 文件命名模式 */
 		namingPattern: string; // 例如: "{designName}_{type}_{sequence:03d}.idx"
 	};
@@ -176,10 +80,8 @@ export interface IDXExportConfig {
 	geometry: {
 		/** 是否使用简化表示法（geometryType） */
 		useSimplified: boolean;
-
 		/** 默认单位 */
 		defaultUnit: GlobalUnit;
-
 		/** 几何精度（小数位数） */
 		precision: number;
 	};
@@ -188,13 +90,10 @@ export interface IDXExportConfig {
 	collaboration: {
 		/** 创建者系统名称 */
 		creatorSystem: string;
-
 		/** 创建者公司 */
 		creatorCompany: string;
-
 		/** 是否包含非协作项目（如走线） */
 		includeNonCollaborative: boolean;
-
 		/** 是否包含层堆叠信息 */
 		includeLayerStackup: boolean;
 	};
@@ -203,7 +102,6 @@ export interface IDXExportConfig {
 	validation: {
 		/** 是否在导出时验证数据 */
 		enabled: boolean;
-
 		/** 验证严格级别 */
 		strictness: 'strict' | 'normal' | 'lenient';
 	};
@@ -227,22 +125,16 @@ export interface ExportResult {
 	statistics: {
 		/** 项目总数 */
 		totalItems: number;
-
 		/** 组件数量 */
 		components: number;
-
 		/** 孔数量 */
 		holes: number;
-
 		/** 保持区域数量 */
 		keepouts: number;
-
 		/** 层数量 */
 		layers: number;
-
 		/** 文件大小（字节） */
 		fileSize: number;
-
 		/** 导出耗时（毫秒） */
 		exportDuration: number;
 	};
@@ -262,12 +154,3 @@ export interface ExportResult {
 		warnings: string[];
 	};
 }
-
-// ------------ 消息类型联合 ------------
-/**
- * 所有IDX消息类型的联合
- *
- * @remarks
- * 用于类型安全的消息处理
- */
-export type IDXMessage = SendInformationMessage | SendChangesMessage | RequestForInformationMessage;

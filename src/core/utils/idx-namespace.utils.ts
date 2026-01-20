@@ -20,7 +20,7 @@ const IDXComputationalTagSet = new Set(Object.values(IDXComputationalTag));
 const IDXAdministrationTagSet = new Set(Object.values(IDXAdministrationTag));
 const IDXXSITagSet = new Set(Object.values(IDXXSITag));
 
-/** XSI类型属性名 */
+/** XML类型声明属性名 */
 export const XsiTypeAttrName = getIDXTagName(IDXXSITag.type);
 
 /**

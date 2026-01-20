@@ -219,6 +219,8 @@ export enum IDXD2Tag {
 	Line = 'Line',
 	/** 向量，定义直线的方向 */
 	Vector = 'Vector',
+	/** 坐标点 */
+	EDMDCartesianPoint = 'EDMDCartesianPoint',
 }
 
 /**

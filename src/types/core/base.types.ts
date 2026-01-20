@@ -3,6 +3,8 @@
 // NOTE: 所有IDX类型都扩展自EDMDObject，包含通用属性
 // REF: PSI5_IDXv4.5_Implementation_Guidelines.pdf Section 4
 
+import { StratumSurfaceDesignation, StratumType } from "./enums";
+
 // ============= 通用基础接口 =============
 /**
  * IDX协议中所有对象的基接口
@@ -22,18 +24,15 @@
 export interface EDMDObject {
 	/** 对象唯一标识符，在上下文中必须唯一 */
 	id: string;
-
 	/** 标记对象属性是否已变更 */
 	IsAttributeChanged?: boolean;
-
 	/** 对象名称 */
 	Name?: string;
-
 	/** 对象描述 */
 	Description?: string;
 }
 
-// ============= 坐标和几何基础类型 =============
+// ============= 几何基础类型 =============
 /**
  * 二维笛卡尔坐标点
  *
@@ -44,22 +43,10 @@ export interface EDMDObject {
 export interface CartesianPoint extends EDMDObject {
 	/** X坐标值 */
 	X: number;
-
 	/** Y坐标值 */
 	Y: number;
-}
-
-/**
- * 三维笛卡尔坐标点
- *
- * @remarks
- * 用于描述3D空间中的位置，通常在组件或板堆叠中使用
- * REF: Section 4.1.1
- */
-export interface CartesianPoint3D extends EDMDObject {
-	X: number;
-	Y: number;
-	Z: number;
+	/** Z坐标值(不常用) */
+	Z?: number;
 }
 
 /**
@@ -70,8 +57,10 @@ export interface CartesianPoint3D extends EDMDObject {
  * BUSINESS: 所有几何尺寸必须使用GlobalUnitLength指定的单位
  */
 export interface EDMDLengthProperty {
-	Value: number;
-	Unit?: string; // 可选单位，默认为GlobalUnitLength
+	/** 数值 */
+    Value: number;
+    /** 单位，可选，默认为 Header 中的 GlobalUnitLength */
+    Unit?: GlobalUnit;
 }
 
 // ============= 标识符和引用类型 =============
@@ -85,16 +74,12 @@ export interface EDMDLengthProperty {
 export interface EDMDIdentifier {
 	/** 创建该标识符的系统范围 */
 	SystemScope: string;
-
 	/** 标识符编号 */
 	Number: string;
-
 	/** 版本号，通常从1开始 */
 	Version: number;
-
 	/** 修订号 */
 	Revision: number;
-
 	/** 序列号，每次变更递增 */
 	Sequence: number;
 }
@@ -121,9 +106,6 @@ export interface EDMName {
  * TEST_EXPECT: 正确序列化为XML属性
  */
 export interface EDMDUserSimpleProperty {
-	/** XML 类型声明，使用正确的命名空间 */
-	'@type'?: 'property:EDMDUserSimpleProperty';
-
 	Key: EDMName;
 	Value: string | number | boolean;
 	IsChanged?: boolean;
@@ -146,7 +128,7 @@ export interface EDMDUserSimpleProperty {
 export interface EDMDTransformation2D {
 	/** 变换类型标识 */
 	TransformationType: 'd2';
-
+	
 	// 旋转分量
 	xx: number; // cosθ
 	xy: number; // -sinθ
@@ -154,11 +136,11 @@ export interface EDMDTransformation2D {
 	yy: number; // cosθ
 
 	// 平移分量（使用 foundation:Value 包装）
-	tx: { Value: number };
-	ty: { Value: number };
-
+	tx: number;
+    ty: number;
+	
 	// 可选Z偏移，用于相对层定位
-	zOffset?: { Value: number };
+	zOffset?: number;
 }
 
 /**
@@ -185,9 +167,9 @@ export interface EDMDTransformation3D {
 	zz: number;
 
 	// 平移分量（使用 foundation:Value 包装）
-	tx: { Value: number };
-	ty: { Value: number };
-	tz: { Value: number };
+	tx: number;
+	ty: number;
+	tz: number;
 }
 
 export type EDMDTransformation = EDMDTransformation2D | EDMDTransformation3D;
@@ -250,4 +232,21 @@ export interface RoleOnItemInstance {
 	Category: 'Mechanical' | 'Electrical' | 'Both';
 	Function: 'Design' | 'Review' | 'Manufacturing';
 	Context: string; // 引用的ItemInstance ID
+}
+
+// ============= 层技术定义 =============
+
+/**
+ * 层技术类型
+ * 
+ * @remarks
+ * 定义层的技术特性
+ * REF: Section 6.1.2.3
+ */
+export interface EDMDStratumTechnology extends EDMDObject {
+    /** 技术类型：Design 或 Documentation */
+    TechnologyType: 'Design' | 'Documentation';
+    /** 层用途 */
+    LayerPurpose: 'OtherSignal' | 'PowerOrGround' | 'SolderMask' | 'SilkScreen' | 
+                 'LandsOnly' | 'SolderPaste' | 'PasteMask' | 'Dielectric';
 }
