@@ -26,7 +26,7 @@ export enum ItemType {
  * REF: Section 6.1 (Table 8), Section 6.9 (Table 8)
  */
 export enum GeometryType {
-	// ============= 板相关 =============
+	// ------------ 板相关 ------------
 	/** 板轮廓：定义PCB板的外形轮廓和厚度 */
 	BOARD_OUTLINE = 'BOARD_OUTLINE',
 	/** 柔性板区域：定义柔性电路板的可弯曲区域 */
@@ -36,13 +36,13 @@ export enum GeometryType {
 	/** 加强板区域：定义用于增加刚性的加强区域 */
 	BOARD_AREA_STIFFENER = 'BOARD_AREA_STIFFENER',
 
-	// ============= 组件相关 =============
+	// ------------ 组件相关 ------------
 	/** 电气元件：标准电气元件（电阻、电容、IC等） */
 	COMPONENT = 'COMPONENT',
 	/** 机械元件：非电气元件（散热器、安装支架等） */
 	COMPONENT_MECHANICAL = 'COMPONENT_MECHANICAL',
 
-	// ============= 孔相关 =============
+	// ------------ 孔相关 ------------
 	/** 电镀孔：具有导电镀层的通孔（PTH） */
 	HOLE_PLATED = 'HOLE_PLATED',
 	/** 非电镀孔：无导电镀层的机械孔（NPTH） */
@@ -56,7 +56,7 @@ export enum GeometryType {
 	/** 填充过孔：内部填充材料（树脂/铜）的过孔 */
 	FILLED_VIA = 'FILLED_VIA',
 
-	// ============= 禁止区域相关 =============
+	// ------------ 禁止区域相关 ------------
 	/** 布线禁布区：禁止布线的区域 */
 	KEEPOUT_AREA_ROUTE = 'KEEPOUT_AREA_ROUTE',
 	/** 元件禁布区：禁止放置元件的区域 */
@@ -70,7 +70,7 @@ export enum GeometryType {
 	/** 其他禁布区：未分类的其他类型禁布区域 */
 	KEEPOUT_AREA_OTHER = 'KEEPOUT_AREA_OTHER',
 
-	// ============= 保持区域相关 =============
+	// ------------ 保持区域相关 ------------
 	/** 布线保持区：必须布线的区域（保持布线） */
 	KEEPIN_AREA_ROUTE = 'KEEPIN_AREA_ROUTE',
 	/** 元件保持区：必须放置元件的区域 */
@@ -84,13 +84,13 @@ export enum GeometryType {
 	/** 其他保持区：未分类的其他类型保持区域 */
 	KEEPIN_AREA_OTHER = 'KEEPIN_AREA_OTHER',
 
-	// ============= 布局区域 =============
+	// ------------ 布局区域 ------------
 	/** 放置组区域：逻辑上相关的元件分组区域（不强制放置） */
 	PLACEMENT_GROUP_AREA = 'PLACEMENT_GROUP_AREA',
 	/** 其他轮廓/用户区域：用户自定义的未分类区域（如logo位置等） */
 	OTHER_OUTLINE = 'OTHER_OUTLINE',
 
-	// ============= 层相关 =============
+	// ------------ 层相关 ------------
 	/** 阻焊层：用于防止焊锡粘附的绝缘层 */
 	LAYER_SOLDERMASK = 'LAYER_SOLDERMASK',
 	/** 焊膏层：用于SMT焊接的锡膏印刷层 */
@@ -122,11 +122,11 @@ export enum GeometryType {
 	/** 通用层定义：未指定类型的通用层（兼容性） */
 	LAYER = 'LAYER',
 
-	// ============= 弯曲区域 =============
+	// ------------ 弯曲区域 ------------
 	/** 弯曲区域：定义柔性板的弯曲位置和参数 */
 	BEND = 'BEND',
 
-	// ============= 铜相关 =============
+	// ------------ 铜相关 ------------
 	/** 铜焊盘：元件引脚的铜连接区域 */
 	COPPER_PAD = 'COPPER_PAD',
 	/** 铜走线：信号连接的铜线条 */

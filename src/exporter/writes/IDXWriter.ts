@@ -7,6 +7,7 @@ import { hasOwnProperty, iterateObject, toBoolean, toString } from '../../utils/
 import { getIDXTagName, isIDXNameSpace, XsiTypeAttrName } from '../../core/utils/idx-namespace.utils';
 import { IDXComputationalTag, IDXD2Tag, IDXFoundationTag, IDXNameSpaceLinks, IDXPropertyTag, IDXXSITag } from '../../types/core/namespace.types';
 import { iterateArr } from '../../utils/array.utils';
+import { isValidNumber } from '../../utils/number.utils';
 
 /** IDX 格式生成器 */
 export class IDXWriter {
@@ -191,19 +192,17 @@ export class IDXWriter {
 		const bodyEle = datasetEle.ele(bodyTagName);
 		this.bodyEle = bodyEle;
 
-		// # 创建数据体
-		this.buildGeometrics();
-		this.buildCurveSet2Ds();
-		// this.ShapeElements();
-		// this.Items();
-		// this.Models3D();
+		// # 构建数据体
+		// TODO: 根据层次, 依次构建：坐标点、几何、曲线集、形状元素、项目用途、项目定义、项目实例
+		this.buildbuildCartesianPoints();
+		// TODO: ...
 	}
 
-	/** 批量构建基础几何 */
-	private buildGeometrics() {
-		const GeometricElements = this.dataset?.Body?.GeometricElements;
+	/** 批量构建坐标点 */
+	private buildbuildCartesianPoints() {
+		const Points = this.dataset?.Body?.Points;
 		const bodyEle = this.bodyEle;
-		if (!GeometricElements || !bodyEle) {
+		if (!Points || !bodyEle) {
 			return;
 		}
 		const config = this.config;
@@ -211,20 +210,15 @@ export class IDXWriter {
 
 		if(enableComments){
 			const geometricComment = this.createSectionComment(
-				'基础几何',
-				'几何数据: 点、线、圆等'
+				'坐标点',
+				'几何坐标点'
 			);
 			bodyEle.com(geometricComment);
 		}
 
-		iterateArr(GeometricElements, (geometric) => {
-			this.buildGeometric(geometric);
+		iterateArr(Points, (points) => {
+			this.buildCartesianPoint(points);
 		});
-	}
-
-	/** 构建基础几何 */
-	private buildGeometric(geometric:any) {
-		// TODO: 待实现
 	}
 
 	/** 构建坐标点 */
@@ -248,39 +242,11 @@ export class IDXWriter {
 		
 		const yEle = pointEle.ele(getIDXTagName(IDXD2Tag.Y));
 		yEle.ele(IDXPropertyTag.Value).txt(toString(point.Y));
-	}
 
-	/** 创建 Polyline */
-	private buildPolyline(PolyLine) {
-
-	}
-
-	/** 批量构建2D曲线集 */
-	private buildCurveSet2Ds() {
-		const CurveSet2Ds = this.dataset?.Body?.CurveSet2Ds;
-		const bodyEle = this.bodyEle;
-		if (!CurveSet2Ds || !bodyEle) {
-			return;
+		if(isValidNumber(point.Z)) {
+			const zEle = pointEle.ele(getIDXTagName(IDXD2Tag.Z));
+			zEle.ele(IDXPropertyTag.Value).txt(toString(point.Z));
 		}
-		const config = this.config;
-		const enableComments = config.enableComments;
-
-		if(enableComments){
-			const curveSetComment = this.createSectionComment(
-				'2D曲线集',
-				'???'
-			);
-			bodyEle.com(curveSetComment);
-		}
-
-		iterateArr(CurveSet2Ds, (curveSet2D) => {
-			this.buildCurveSet2d(curveSet2D);
-		});
-	}
-	
-	/** 构建2D曲线集 */
-	private buildCurveSet2d(curveSet2D:any) {
-		// TODO: 待实现
 	}
 
 	/** 构建处理指令 */
@@ -303,7 +269,7 @@ export class IDXWriter {
 			datasetEle.com(instructionComment);
 		}
 		const instructionTagName = getIDXTagName(IDXFoundationTag.ProcessInstruction);
-		const instructionXsiType = getIDXTagName(ProcessInstruction.instructionType);
+		const instructionXsiType = getIDXTagName(ProcessInstruction); // TODO
 		const instructionAttrs: Record<string, string> = {
 			[XsiTypeAttrName]: instructionXsiType,
 		};
