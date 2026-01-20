@@ -7,7 +7,15 @@ import { EDMDObject, EDMDLengthProperty } from './base.types';
 import { IDXD2Tag } from './namespace.types';
 
 // ============= 几何描述类型 =============
-export type EDMDGeometryType = IDXD2Tag.EDMDPolyLine | IDXD2Tag.EDMDArc | IDXD2Tag.EDMDCircleCenter | IDXD2Tag.EDMDCircle3Point | IDXD2Tag.EDMDEllipse | IDXD2Tag.EDMDBSplineCurve | IDXD2Tag.EDMDCompositeCurve | IDXD2Tag.EDMDLine;
+export type EDMDGeometryType =
+	| IDXD2Tag.EDMDPolyLine
+	| IDXD2Tag.EDMDArc
+	| IDXD2Tag.EDMDCircleCenter
+	| IDXD2Tag.EDMDCircle3Point
+	| IDXD2Tag.EDMDEllipse
+	| IDXD2Tag.EDMDBSplineCurve
+	| IDXD2Tag.EDMDCompositeCurve
+	| IDXD2Tag.EDMDLine;
 
 /** 几何元素基础类型(便于判断几何类型) */
 export interface EDMDBaseGeometry extends EDMDObject {

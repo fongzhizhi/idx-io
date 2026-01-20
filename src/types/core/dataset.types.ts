@@ -21,9 +21,11 @@ export type EDMDProcessInstruction =
 	| EDMDProcessInstructionSendChanges
 	| EDMDProcessInstructionRequestForInformation;
 
-
 /** 指令类型 */
-export type EDMDProcessInstructionType = IDXComputationalTag.SendInformation  | IDXComputationalTag.SendChanges| IDXComputationalTag.RequestForInformation;
+export type EDMDProcessInstructionType =
+	| IDXComputationalTag.SendInformation
+	| IDXComputationalTag.SendChanges
+	| IDXComputationalTag.RequestForInformation;
 
 /** 指令基础 */
 export interface EDMDProcessInstructionBase {
@@ -31,7 +33,7 @@ export interface EDMDProcessInstructionBase {
 	type: EDMDProcessInstructionType;
 	/** 执行者（发送者） */
 	Actor?: string;
-};
+}
 /**
  * 发送信息指令（基线发送）
  *
@@ -65,7 +67,7 @@ export interface EDMDProcessInstructionSendChanges extends EDMDProcessInstructio
  * 用于请求项目状态信息，当前较少使用
  * REF: Section 3 Introduction
  */
-export interface EDMDProcessInstructionRequestForInformation extends EDMDProcessInstructionBase{
+export interface EDMDProcessInstructionRequestForInformation extends EDMDProcessInstructionBase {
 	type: IDXComputationalTag.RequestForInformation;
 	/** 请求的项目标识符 */
 	RequestedItems?: EDMDIdentifier[];

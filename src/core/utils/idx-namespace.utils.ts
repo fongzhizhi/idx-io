@@ -42,7 +42,7 @@ export function createNameSpaceTag(tag: string, nameSpace?: string): string {
  * @returns 完整的命名空间标签字符串
  */
 export function getIDXTagName(tagName: IDXTag, nameSpace?: IDXNameSpace): string {
-	if(!nameSpace) {
+	if (!nameSpace) {
 		nameSpace = getIDXNamespaceForTag(tagName);
 	}
 	return createNameSpaceTag(tagName, nameSpace);

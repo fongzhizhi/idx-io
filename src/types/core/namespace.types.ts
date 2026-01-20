@@ -113,7 +113,6 @@ export enum IDXFoundationTag {
 	Revision = 'Revision',
 	/** 序列号，每次变更递增 */
 	Sequence = 'Sequence',
-
 }
 
 /**
@@ -217,7 +216,7 @@ export enum IDXPDMTag {
 	TZ = 'tz',
 
 	/** EDMD 形状元素标识 */
-	EDMDShapeElement = 'EDMDShapeElement'
+	EDMDShapeElement = 'EDMDShapeElement',
 }
 
 /**

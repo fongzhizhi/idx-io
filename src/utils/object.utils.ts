@@ -37,6 +37,6 @@ export function iterateObject<V>(obj: Record<string, V> | undefined, cb: (value:
 }
 
 /** 是否为有效bool */
-export function isValidBool(bool:boolean | undefined) {
+export function isValidBool(bool: boolean | undefined) {
 	return typeof bool == 'boolean';
 }
