@@ -1,14 +1,18 @@
+import { describe, test, expect } from 'vitest';
 import { IDXWriter } from '../../../src/exporter/writer/IDXWriter';
 import { 
   EDMDDataSet, 
   GlobalUnit,
   GeometryType,
-  ItemType
+  ItemType,
+  ShapeElementType,
+  IDXComputationalTag,
+  IDXD2Tag
 } from '../../../src/types/core';
 
 describe('IDXWriter', () => {
   test('应该能够序列化简单的数据集', () => {
-    // 创建测试数据
+    // # 创建测试数据
     const testDataSet: EDMDDataSet = {
       Header: {
         Description: 'Test PCB design',
@@ -33,10 +37,12 @@ describe('IDXWriter', () => {
         Geometries: [
           {
             id: 'POLY_BOARD',
+            type: IDXD2Tag.EDMDPolyLine,
             Points: ['PT1', 'PT2', 'PT3', 'PT4', 'PT1']
           },
           {
             id: 'CIRCLE_HOLE',
+            type: IDXD2Tag.EDMDCircleCenter,
             CenterPoint: 'PT_CENTER',
             Diameter:  3.2
           }
@@ -60,13 +66,13 @@ describe('IDXWriter', () => {
         ShapeElements: [
           {
             id: 'SHAPE_BOARD',
-            ShapeElementType: 'FeatureShapeElement',
+            ShapeElementType: ShapeElementType.FeatureShapeElement,
             Inverted: false,
             DefiningShape: 'CURVESET_BOARD'
           },
           {
             id: 'SHAPE_HOLE',
-            ShapeElementType: 'FeatureShapeElement',
+            ShapeElementType: ShapeElementType.FeatureShapeElement,
             Inverted: true, // 减去材料
             DefiningShape: 'CURVESET_HOLE'
           }
@@ -137,12 +143,13 @@ describe('IDXWriter', () => {
         ]
       },
       ProcessInstruction: {
+        type: IDXComputationalTag.SendInformation,
         Actor: 'testuser',
         Description: 'Initial baseline'
       }
     };
 
-    // 创建写入器
+    // # 创建写入器
     const writer = new IDXWriter({
       enableComments: true,
       formatting: {
@@ -150,10 +157,10 @@ describe('IDXWriter', () => {
       }
     });
 
-    // 序列化
+    // # 序列化
     const xml = writer.serialize(testDataSet);
     
-    // 验证
+    // # 验证
     expect(xml).toBeTruthy();
     expect(xml).toContain('<foundation:EDMDDataSet');
     expect(xml).toContain('<foundation:Header');
@@ -161,6 +168,6 @@ describe('IDXWriter', () => {
     expect(xml).toContain('geometryType="BOARD_OUTLINE"');
     expect(xml).toContain('geometryType="HOLE_NON_PLATED"');
     
-    console.log(xml); // 可以查看生成的XML
+    // console.log(xml); // 查看生成的XML
   });
 });
