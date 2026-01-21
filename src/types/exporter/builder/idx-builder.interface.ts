@@ -8,4 +8,10 @@ export interface IDXBuildConfig {
 	unit: GlobalUnit;
 	/** 几何精度(小数位数) */
 	precision: number;
+	/** 是否包含非协作数据 */
+    includeNonCollaborative: boolean;
+    /** 是否生成历史记录 */
+    includeHistory: boolean;
+    /** 系统范围标识符 */
+    systemScope: string;
 }

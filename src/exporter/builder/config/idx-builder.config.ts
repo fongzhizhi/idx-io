@@ -6,4 +6,7 @@ export const DefaultIDXBuildConfig: IDXBuildConfig = {
 	useSimplified: true,
 	unit: GlobalUnit.UNIT_MM,
 	precision: 3,
+	includeNonCollaborative: false,
+	includeHistory: false,
+	systemScope: ''
 };
