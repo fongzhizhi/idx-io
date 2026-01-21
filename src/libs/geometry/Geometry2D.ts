@@ -7,7 +7,11 @@ export enum GeometryType {
 	Line = 'line',
 	/** 圆弧 */
 	Arc = 'arc',
-	/** 折线/曲线 */
+	/** 整圆 */
+	Circle = 'circle',
+	/** 矩形 */
+	Rect = 'Rect',
+	/** 复合曲线(曲线和直线拼接) */
 	Polyline = 'polyline',
 }
 

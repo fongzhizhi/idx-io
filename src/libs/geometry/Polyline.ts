@@ -5,13 +5,13 @@ import { Line } from './Line';
 import { Matrix3 } from './Matrix3';
 import { Vector2 } from './Vector2';
 
-/** 折线 */
+/** 复合曲线(曲线和直线拼接) */
 export class Polyline extends Geometry2D {
 	readonly type = GeometryType.Polyline;
 	/** 连续的几何图元集合 */
-	readonly primitives: Geometry2D[];
+	readonly primitives: (Line | Arc)[];
 
-	constructor(primitives: Geometry2D[]) {
+	constructor(primitives: (Line | Arc)[]) {
 		super();
 		this.primitives = primitives;
 	}
@@ -89,7 +89,7 @@ export class Polyline extends Geometry2D {
 	}
 
 	transform(matrix: Matrix3): Polyline {
-		const transformedPrimitives = this.primitives.map(prim => prim.transform(matrix) as Geometry2D);
+		const transformedPrimitives = this.primitives.map(prim => prim.transform(matrix));
 		return new Polyline(transformedPrimitives);
 	}
 
@@ -122,7 +122,7 @@ export class Polyline extends Geometry2D {
 	/**
 	 * 添加图元
 	 */
-	addPrimitive(primitive: Geometry2D): Polyline {
+	addPrimitive(primitive: Line | Arc): Polyline {
 		return new Polyline([...this.primitives, primitive]);
 	}
 
@@ -130,7 +130,7 @@ export class Polyline extends Geometry2D {
 	 * 反转折线方向
 	 */
 	reverse(): Polyline {
-		const reversedPrimitives: Geometry2D[] = [];
+		const reversedPrimitives: (Line | Arc)[] = [];
 
 		for (let i = this.primitives.length - 1; i >= 0; i--) {
 			const primitive = this.primitives[i];

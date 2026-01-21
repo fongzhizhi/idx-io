@@ -1,4 +1,4 @@
-# IDXv4.5 建模简明指南
+# IDXv4.5 建模指南梳理
 ---
 
 ## IDX简介
@@ -1726,3 +1726,347 @@ const itemAssemblies = createItemAssemblies([
 ```
 
 这样分层构建既符合XML的先定义后引用原则，又便于代码组织和维护。
+
+## 十一、IDXv4.5 实体几何详细说明
+
+根据IDXv4.5协议文档，以下是各实体几何的详细说明：
+
+### 📐 **1. 板子（Board）几何**
+
+#### **允许的几何类型：**
+```typescript
+// 板子几何可以是：
+export type ECADBoardGeometry = 
+    | ECADPolyline          // 最常用，90%场景
+    | ECADCompositeGeometry // 复杂板形
+    | ECADCurveSet          // 多段曲线组合
+```
+
+#### **具体限制：**
+- **必须闭合**：形成封闭区域
+- **不能自相交**：多边形边不能相交
+- **方向**：通常外轮廓逆时针，内孔顺时针
+- **最少点数**：至少3个点（三角形）
+
+#### **示例场景：**
+```xml
+<!-- 简单矩形板 -->
+<foundation:PolyLine id="BOARD_OUTLINE">
+  <d2:Point>PT1</d2:Point> <!-- 0,0 -->
+  <d2:Point>PT2</d2:Point> <!-- 100,0 -->
+  <d2:Point>PT3</d2:Point> <!-- 100,60 -->
+  <d2:Point>PT4</d2:Point> <!-- 0,60 -->
+  <d2:Point>PT1</d2:Point> <!-- 闭合 -->
+</foundation:PolyLine>
+
+<!-- 带圆弧的板 -->
+<foundation:CompositeCurve id="BOARD_COMPLEX">
+  <d2:Curve>POLY_SEG1</d2:Curve> <!-- 直线段 -->
+  <d2:Curve>ARC_CORNER</d2:Curve> <!-- 圆弧角 -->
+  <d2:Curve>POLY_SEG2</d2:Curve> <!-- 直线段 -->
+  <d2:Curve>ARC_CORNER2</d2:Curve> <!-- 圆弧角 -->
+</foundation:CompositeCurve>
+
+<!-- 柔性板（多个区域） -->
+<foundation:CurveSet2d id="FLEX_BOARD_AREA1">
+  <!-- 柔性区域1 -->
+</foundation:CurveSet2d>
+<foundation:CurveSet2d id="FLEX_BOARD_AREA2">
+  <!-- 柔性区域2 -->
+</foundation:CurveSet2d>
+```
+
+#### **特殊板形支持：**
+- **刚柔结合板**：多个LayerZone，每个有独立几何
+- **阶梯板**：不同区域不同厚度
+- **异形板**：任意复杂轮廓
+- **挖洞板**：通过多个ShapeElement实现
+
+### 🔵 **2. 孔（Hole）几何**
+
+#### **允许的几何类型：**
+```typescript
+export type ECADHoleGeometry =
+    | ECADCircle          // 标准圆形孔（90%）
+    | ECADPolyline        // 异形孔（槽孔、方孔）
+    | ECADCompositeCurve  // 复合孔形
+    | ECADMillingPath     // 铣削路径孔
+```
+
+#### **孔类型与几何对应：**
+
+| 孔类型               | 典型几何           | 是否闭合 | 特殊属性     |
+| -------------------- | ------------------ | -------- | ------------ |
+| **PTH（电镀通孔）**  | Circle             | 必须闭合 | 直径、电镀   |
+| **NPTH（非电镀孔）** | Circle             | 必须闭合 | 直径、无电镀 |
+| **盲孔/埋孔**        | Circle             | 必须闭合 | 起始/结束层  |
+| **过孔（VIA）**      | Circle             | 必须闭合 | 直径、连接层 |
+| **槽孔（Slot）**     | Polyline           | 必须闭合 | 长度、宽度   |
+| **铣削孔**           | Polyline           | 可以开放 | 刀具直径     |
+| **异形孔**           | Polyline/Composite | 必须闭合 | 复杂轮廓     |
+
+#### **示例场景：**
+```xml
+<!-- 标准圆形孔 -->
+<foundation:CircleCenter id="HOLE_3MM">
+  <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
+  <d2:Diameter><property:Value>3.0</property:Value></d2:Diameter>
+</foundation:CircleCenter>
+
+<!-- 槽孔（矩形） -->
+<foundation:PolyLine id="SLOT_HOLE">
+  <d2:Point>PT1</d2:Point> <!-- 0,0 -->
+  <d2:Point>PT2</d2:Point> <!-- 10,0 -->
+  <d2:Point>PT3</d2:Point> <!-- 10,3 -->
+  <d2:Point>PT4</d2:Point> <!-- 0,3 -->
+  <d2:Point>PT1</d2:Point> <!-- 闭合 -->
+</foundation:PolyLine>
+
+<!-- 铣削路径孔 -->
+<foundation:PolyLine id="MILLED_PATH">
+  <d2:Thickness><property:Value>2.0</property:Value></d2:Thickness>
+  <d2:Point>PT_START</d2:Point>
+  <d2:Point>PT_MID</d2:Point>
+  <d2:Point>PT_END</d2:Point>
+  <!-- 开放路径，表示铣刀中心线 -->
+</foundation:PolyLine>
+
+<!-- 复合孔形 -->
+<foundation:CompositeCurve id="COMPLEX_HOLE">
+  <d2:Curve>ARC_SEG1</d2:Curve> <!-- 圆弧段 -->
+  <d2:Curve>LINE_SEG1</d2:Curve> <!-- 直线段 -->
+  <d2:Curve>ARC_SEG2</d2:Curve> <!-- 圆弧段 -->
+  <d2:Curve>LINE_SEG2</d2:Curve> <!-- 直线段 -->
+</foundation:CompositeCurve>
+```
+
+#### **几何限制：**
+- **闭合性**：除铣削路径外都必须闭合
+- **尺寸**：直径/宽度必须大于0
+- **位置**：必须在板子轮廓内（除非是板边孔）
+- **重叠**：孔之间可以重叠形成大孔
+
+### 🧩 **3. 封装（Footprint）几何**
+
+#### **封装几何组成：**
+一个封装由**多个几何元素**组成，包括：
+
+```typescript
+export interface ECADFootprintGeometry {
+    /** 外形轮廓（必须） */
+    outline: ECADPolyline;
+    
+    /** 焊盘几何（必须，至少一个） */
+    pads: ECADPadGeometry[];
+    
+    /** 丝印几何（可选） */
+    silkscreen?: ECADSilkscreenGeometry[];
+    
+    /** 装配几何（可选） */
+    assembly?: ECADAssemblyGeometry[];
+    
+    /** 禁布区（可选） */
+    courtyard?: ECADPolyline;
+    
+    /** 3D模型引用（可选） */
+    model3d?: ECADModel3D;
+}
+```
+
+#### **各部分几何限制：**
+
+**a) 外形轮廓（Outline）**
+
+- **类型**：Polyline（90%）、CompositeCurve
+- **必须闭合**：形成封闭区域
+- **不能自相交**
+- **最少点数**：至少3点
+- **示例**：
+  ```xml
+  <!-- 0402封装外形 -->
+  <foundation:PolyLine id="OUTLINE_0402">
+    <d2:Point>PT1</d2:Point> <!-- -1.0, -0.5 -->
+    <d2:Point>PT2</d2:Point> <!-- 1.0, -0.5 -->
+    <d2:Point>PT3</d2:Point> <!-- 1.0, 0.5 -->
+    <d2:Point>PT4</d2:Point> <!-- -1.0, 0.5 -->
+    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
+  </foundation:PolyLine>
+  ```
+
+##### **b) 焊盘（Pads）**
+- **类型**：
+  ```typescript
+  export type ECADPadGeometry =
+    | ECADCircle      // 圆形焊盘（过孔、测试点）
+    | ECADPolyline    // 矩形/异形焊盘（SMT焊盘）
+    | ECADRoundedRect // 圆角矩形（特殊处理为Polyline）
+  ```
+- **必须闭合**：形成封闭区域
+- **位置**：相对于封装原点
+- **层关联**：顶层/底层/内层
+- **示例**：
+  ```xml
+  <!-- 圆形焊盘（过孔） -->
+  <foundation:CircleCenter id="PAD_VIA">
+    <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
+    <d2:Diameter><property:Value>0.6</property:Value></d2:Diameter>
+  </foundation:CircleCenter>
+  
+  <!-- 矩形焊盘（SMT） -->
+  <foundation:PolyLine id="PAD_SMT">
+    <d2:Point>PT1</d2:Point> <!-- -0.75, -0.25 -->
+    <d2:Point>PT2</d2:Point> <!-- 0.75, -0.25 -->
+    <d2:Point>PT3</d2:Point> <!-- 0.75, 0.25 -->
+    <d2:Point>PT4</d2:Point> <!-- -0.75, 0.25 -->
+    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
+  </foundation:PolyLine>
+  ```
+
+##### **c) 丝印（Silkscreen）**
+- **类型**：
+  ```typescript
+  export type ECADSilkscreenGeometry =
+    | ECADLine        // 线段（元件框）
+    | ECADArc         // 圆弧（标识）
+    | ECADPolyline    // 多边形（标识）
+    | ECADText        // 文字（元件值、标识）
+    | ECADCircle      // 圆（极性标识）
+  ```
+- **可以开放或闭合**：线段可以是开放的
+- **厚度属性**：定义线宽
+- **示例**：
+  ```xml
+  <!-- 元件外框（线段） -->
+  <foundation:PolyLine id="SILK_OUTLINE">
+    <d2:Thickness><property:Value>0.15</property:Value></d2:Thickness>
+    <d2:Point>PT1</d2:Point>
+    <d2:Point>PT2</d2:Point>
+    <d2:Point>PT3</d2:Point>
+    <d2:Point>PT4</d2:Point>
+    <!-- 可能不闭合（表示U形框） -->
+  </foundation:PolyLine>
+  
+  <!-- 极性标识（圆） -->
+  <foundation:CircleCenter id="SILK_POLARITY">
+    <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
+    <d2:Diameter><property:Value>1.0</property:Value></d2:Diameter>
+  </foundation:CircleCenter>
+  ```
+
+##### **d) 禁布区（Courtyard）**
+- **类型**：Polyline
+- **必须闭合**：定义元件占用区域
+- **通常在元件轮廓外扩一定距离**
+- **示例**：
+  ```xml
+  <!-- 0402封装的禁布区 -->
+  <foundation:PolyLine id="COURTYARD_0402">
+    <d2:Point>PT1</d2:Point> <!-- -1.2, -0.7 (外扩0.2mm) -->
+    <d2:Point>PT2</d2:Point> <!-- 1.2, -0.7 -->
+    <d2:Point>PT3</d2:Point> <!-- 1.2, 0.7 -->
+    <d2:Point>PT4</d2:Point> <!-- -1.2, 0.7 -->
+    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
+  </foundation:PolyLine>
+  ```
+
+### ⚠️ **4. 禁止区域（Keepout/Keepin）几何**
+
+#### **约束类型与几何对应：**
+
+| 约束类型       | 目的               | 典型几何         | 闭合要求     | 特殊属性   |
+| -------------- | ------------------ | ---------------- | ------------ | ---------- |
+| **区域禁布**   | ComponentPlacement | Polyline, Circle | **必须闭合** | 高度范围   |
+| **路径禁布**   | Route              | Line, Polyline   | **可以开放** | 宽度、网络 |
+| **过孔禁布**   | Via                | Circle, Polyline | **必须闭合** | 层关联     |
+| **测试点禁布** | TestPoint          | Circle           | **必须闭合** | 直径       |
+| **热禁布**     | Thermal            | Polyline         | **必须闭合** | 热参数     |
+| **通用禁布**   | Generic            | 任意几何         | 根据用途     | 自定义     |
+
+#### **详细说明：**
+
+##### **a) 区域禁布（Component/Route/Via等）**
+
+- **几何类型**：Polyline（多边形）、Circle（圆形）、Composite
+- **必须闭合**：定义不可进入的区域
+- **可以有内洞**：通过多个ShapeElement实现
+- **Z轴范围**：可定义作用高度
+- **示例**：
+  ```xml
+  <!-- 矩形禁布区 -->
+  <foundation:PolyLine id="KEEPOUT_RECT">
+    <d2:Point>PT1</d2:Point> <!-- 定义区域边界 -->
+    <d2:Point>PT2</d2:Point>
+    <d2:Point>PT3</d2:Point>
+    <d2:Point>PT4</d2:Point>
+    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
+  </foundation:PolyLine>
+  
+  <!-- 圆形禁布区 -->
+  <foundation:CircleCenter id="KEEPOUT_CIRCLE">
+    <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
+    <d2:Diameter><property:Value>20.0</property:Value></d2:Diameter>
+  </foundation:CircleCenter>
+  ```
+
+##### **b) 路径禁布（布线限制）**
+- **几何类型**：Line（直线）、Polyline（折线）、Arc（圆弧）
+- **可以开放**：定义不可布线的路径
+- **厚度属性**：定义禁布宽度
+- **示例**：
+  ```xml
+  <!-- 直线禁布（高速信号隔离） -->
+  <foundation:Line id="KEEPOUT_LINE">
+    <d2:Point>PT_START</d2:Point>
+    <d2:Vector>PT_END</d2:Vector>
+  </foundation:Line>
+  
+  <!-- 带宽度的路径禁布 -->
+  <foundation:PolyLine id="KEEPOUT_PATH">
+    <d2:Thickness><property:Value>2.0</property:Value></d2:Thickness>
+    <d2:Point>PT1</d2:Point>
+    <d2:Point>PT2</d2:Point>
+    <d2:Point>PT3</d2:Point>
+    <!-- 开放路径 -->
+  </foundation:PolyLine>
+  ```
+
+##### **c) 特殊禁布类型**
+```xml
+<!-- 热禁布区（散热限制） -->
+<foundation:PolyLine id="THERMAL_KEEPOUT">
+  <!-- 定义散热器安装区域 -->
+</foundation:PolyLine>
+
+<!-- 测试点禁布（测试探针区域） -->
+<foundation:CircleCenter id="TESTPOINT_KEEPOUT">
+  <d2:CenterPoint>PT_TEST</d2:CenterPoint>
+  <d2:Diameter><property:Value>2.54</property:Value></d2:Diameter>
+</foundation:CircleCenter>
+
+<!-- 复合禁布（复杂形状） -->
+<foundation:CompositeCurve id="COMPLEX_KEEPOUT">
+  <d2:Curve>POLY_MAIN</d2:Curve>
+  <d2:Curve>ARC_CORNER</d2:Curve>
+  <d2:Curve>POLY_EXTENSION</d2:Curve>
+</foundation:CompositeCurve>
+```
+
+**几何有效性规则总结：**
+
+| 规则           | 板子 | 孔   | 封装轮廓 | 焊盘 | 丝印 | 区域禁布 | 路径禁布 |
+| -------------- | ---- | ---- | -------- | ---- | ---- | -------- | -------- |
+| **必须闭合**   | ✅    | ✅    | ✅        | ✅    | ❌    | ✅        | ❌        |
+| **不能自相交** | ✅    | ✅    | ✅        | ✅    | ✅    | ✅        | ✅        |
+| **最小点数**   | 3    | 3    | 3        | 3    | 2    | 3        | 2        |
+| **厚度属性**   | ❌    | ❌    | ❌        | ❌    | ✅    | ❌        | ✅        |
+| **内洞支持**   | ✅    | ❌    | ❌        | ❌    | ❌    | ✅        | ❌        |
+| **Z轴范围**    | ✅    | ✅    | ✅        | ✅    | ❌    | ✅        | ✅        |
+
+### 🎯 **关键要点：**
+
+1. **板子**：最灵活，支持复杂轮廓和挖洞
+2. **孔**：以圆形为主，但支持任意闭合形状
+3. **封装**：多部分组合，各子部分有不同规则
+4. **禁布区**：根据用途决定几何特性，最灵活的是路径禁布
+
+所有几何最终都通过IDX的**分层结构**（点→几何→曲线集→形状元素）来表示，并通过**Inverted属性**和**CSG布尔运算**实现复杂形状的构造。

@@ -46,7 +46,6 @@ import { isValidNumber } from '../../utils/number.utils';
 /** IDX 格式生成器 */
 export class IDXWriter {
 	// ============= 状态量 =============
-
 	// ------------ 私有变量 ------------
 	/** 配置 */
 	private config = DefaultIDXWriteConfig;
