@@ -32,6 +32,6 @@ export class IDXBuilder {
 		// TODO: 待实现
 		this.ecadData = ecadData;
 
-		// 
+		//
 	}
 }

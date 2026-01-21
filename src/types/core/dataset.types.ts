@@ -51,7 +51,7 @@ export type EDMDDataSetBody = Partial<{
 	ItemsAssembly: EDMDItemAssembly[];
 	/** 历史记录集合 */
 	Histories: EDMDHistory[];
-}>
+}>;
 
 /**
  * 处理指令类型

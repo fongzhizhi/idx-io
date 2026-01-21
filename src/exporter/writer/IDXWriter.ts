@@ -422,7 +422,7 @@ export class IDXWriter {
 		// ## 构建点序列
 		iterateArr(polyLine.Points, pointId => {
 			polyLineEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(pointId);
-		})
+		});
 	}
 
 	/** 构建圆弧 */
