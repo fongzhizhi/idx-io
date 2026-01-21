@@ -1954,10 +1954,11 @@ export interface ECADFootprintGeometry {
   ```
 
 ##### **d) 禁布区（Courtyard）**
-- **类型**：Polyline
+- **类型**：闭合区域
 - **必须闭合**：定义元件占用区域
 - **通常在元件轮廓外扩一定距离**
 - **示例**：
+  
   ```xml
   <!-- 0402封装的禁布区 -->
   <foundation:PolyLine id="COURTYARD_0402">

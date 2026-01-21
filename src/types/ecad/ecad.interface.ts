@@ -1,6 +1,8 @@
 import { Arc } from '../../libs/geometry/Arc';
+import { Circle } from '../../libs/geometry/Circle';
 import { Line } from '../../libs/geometry/Line';
 import { Polyline } from '../../libs/geometry/Polyline';
+import { Rect } from '../../libs/geometry/Rect';
 import { Vector2 } from '../../libs/geometry/Vector2';
 import { EDMDIdentifier, EDMDTransformation3D, EDMDUserSimpleProperty, GlobalUnit, RoleOnItemInstance } from '../core/base.types';
 
@@ -130,8 +132,8 @@ export interface ECADLayerZone {
 	id: string;
 	/** 区域名称 */
 	name: string;
-	/** 区域形状（闭合多边形） */
-	geometry: Polyline;
+	/** 区域形状（闭合轮廓） */
+	geometry: ECADClosedGeometry;
 	/** 关联的层堆叠ID */
 	stackupId: string;
 	/** 区域类型，决定其机械特性 */
@@ -201,6 +203,15 @@ export interface ECADObject {
 	roles?: RoleOnItemInstance[];
 }
 
+/** ECAD 轮廓定义 */
+export type ECADGeometry = ECADOpenGeometry | ECADClosedGeometry;
+
+/** ECAD 开放几何路径 */
+export type ECADOpenGeometry = Line | Arc;
+
+/** ECAD 闭合几何轮廓 */
+export type ECADClosedGeometry = Polyline | Circle | Rect;
+
 /**
  * PCB板定义
  *
@@ -209,8 +220,8 @@ export interface ECADObject {
  * 支持简单单层板到复杂的多层刚柔结合板。
  */
 export interface ECADBoard extends ECADObject {
-	/** 板轮廓几何形状（闭合多边形） */
-	outline: Polyline;
+	/** 板轮廓几何形状（闭合轮廓） */
+	outline: ECADClosedGeometry;
 
 	/**
 	 * 板厚度（简单板）
@@ -237,7 +248,7 @@ export interface ECADBoard extends ECADObject {
  */
 export interface ECADBoardFeatures {
 	/** 切割区域列表（从板材料中去除的区域） */
-	cutouts?: Polyline[];
+	cutouts?: ECADClosedGeometry[];
 	/** 铣削路径列表 */
 	milling?: ECADMillingPath[];
 }
@@ -250,8 +261,8 @@ export interface ECADBoardFeatures {
  * REF: Section 6.4
  */
 export interface ECADMillingPath {
-	/** 刀具路径几何（开放或闭合多边形） */
-	path: Polyline;
+	/** 刀具路径几何（开放或闭合路径） */
+	path: ECADGeometry;
 	/** 刀具直径 */
 	toolDiameter: number;
 	/** 铣削深度（相对于参考面） */
@@ -287,12 +298,12 @@ export interface ECADFootprint extends ECADObject {
  * 定义封装的外形、禁布区和标识信息。
  */
 export interface ECADFootprintGeometry {
-	/** 封装外形轮廓（闭合多边形） */
-	outline: Polyline;
+	/** 封装外形轮廓（闭合轮廓） */
+	outline: ECADClosedGeometry;
 	/** 禁布区列表（可选），定义元件周围不可放置其他元件的区域 */
-	courtyards?: Polyline[];
+	courtyards?: ECADClosedGeometry[];
 	/** 丝印图形列表（可选），用于元件标识 */
-	silkscreen?: (Line | Arc | Polyline)[];
+	silkscreen?: ECADGeometry[];
 }
 
 /**
@@ -310,7 +321,7 @@ export interface ECADPin {
 	/** 引脚中心位置（相对于封装原点） */
 	position: Vector2;
 	/** 引脚几何形状（可选），定义焊盘形状 */
-	geometry?: Arc | Polyline;
+	geometry?: ECADClosedGeometry;
 	/** 网络名称（可选），用于电气连接信息 */
 	netName?: string;
 }
@@ -427,8 +438,8 @@ export interface ECADModel3D {
  * REF: Section 6.3
  */
 export interface ECADHole extends ECADObject {
-	/** 孔几何形状（圆形） */
-	geometry: Arc;
+	/** 孔几何形状（闭合轮廓） */
+	geometry: ECADClosedGeometry;
 	/** 孔类型 */
 	type: ECADHoleType;
 
@@ -444,12 +455,7 @@ export interface ECADHole extends ECADObject {
 	stackupId?: string;
 
 	/** 层跨度定义方式三：直接指定Z轴范围 */
-	zRange?: {
-		/** Z轴下边界 */
-		lowerBound: number;
-		/** Z轴上边界 */
-		upperBound: number;
-	};
+	zRange?: ECADZRange;
 
 	/** 是否为铣削孔标志（可选） */
 	isMilled?: boolean;
@@ -493,8 +499,8 @@ export interface ECADConstraintArea extends ECADObject {
 	type: 'KEEPOUT' | 'KEEPIN';
 	/** 约束目的，定义受约束的元素类型 */
 	purpose: ECADConstraintPurpose;
-	/** 约束区域几何形状 */
-	geometry: Polyline | Arc;
+	/** 约束区域几何形状（闭合轮廓） */
+	geometry: ECADClosedGeometry;
 	/** 装配参考（层或层堆叠名称，可选） */
 	assembleTo?: string;
 	/** Z轴范围（可选），定义约束在垂直方向上的作用范围 */
@@ -562,7 +568,7 @@ export interface ECADTrace {
 	/** 所在层 */
 	layer: string;
 	/** 走线路径几何 */
-	geometry: Polyline;
+	geometry: ECADOpenGeometry;
 	/** 走线宽度 */
 	width: number;
 	/** 网络名称（可选） */
@@ -578,8 +584,8 @@ export interface ECADTrace {
 export interface ECADCopperArea {
 	/** 所在层 */
 	layer: string;
-	/** 区域几何形状（闭合多边形） */
-	geometry: Polyline;
+	/** 区域几何形状（闭合轮廓） */
+	geometry: ECADClosedGeometry;
 	/** 是否为电源/地层标志（可选） */
 	isPlane?: boolean;
 }
@@ -594,7 +600,7 @@ export interface ECADSilkscreen {
 	/** 所在层 */
 	layer: string;
 	/** 图形几何 */
-	geometry: Line | Arc | Polyline;
+	geometry: ECADGeometry;
 	/** 文字内容（可选，当geometry表示文字时） */
 	text?: string;
 }

@@ -46,12 +46,8 @@ export class Rect extends Geometry2D {
 		const minY = Math.min(point1.y, point2.y);
 		const maxX = Math.max(point1.x, point2.x);
 		const maxY = Math.max(point1.y, point2.y);
-		
-		return new Rect(
-			new Vector2(minX, minY),
-			maxX - minX,
-			maxY - minY
-		);
+
+		return new Rect(new Vector2(minX, minY), maxX - minX, maxY - minY);
 	}
 
 	/**
@@ -62,19 +58,15 @@ export class Rect extends Geometry2D {
 	transform(matrix: Matrix3): Rect {
 		// 获取矩形的四个角点
 		const corners = this.getCorners();
-		
+
 		// 变换所有角点
 		const transformedCorners = corners.map(corner => matrix.transformVector(corner));
-		
+
 		// 计算变换后的边界框
 		const bbox = BBox2.fromPoints(transformedCorners);
-		
+
 		// 返回新的轴对齐矩形
-		return new Rect(
-			new Vector2(bbox.minX, bbox.minY),
-			bbox.width,
-			bbox.height
-		);
+		return new Rect(new Vector2(bbox.minX, bbox.minY), bbox.width, bbox.height);
 	}
 
 	/**
@@ -108,7 +100,7 @@ export class Rect extends Geometry2D {
 		if (!(other instanceof Rect)) {
 			return false;
 		}
-		
+
 		return (
 			this.leftBottom.equals(other.leftBottom, epsilon) &&
 			Math.abs(this.width - other.width) < epsilon &&
@@ -121,10 +113,7 @@ export class Rect extends Geometry2D {
 	 * @returns 中心点
 	 */
 	get center(): Vector2 {
-		return new Vector2(
-			this.leftBottom.x + this.width / 2,
-			this.leftBottom.y + this.height / 2
-		);
+		return new Vector2(this.leftBottom.x + this.width / 2, this.leftBottom.y + this.height / 2);
 	}
 
 	/**
@@ -132,10 +121,7 @@ export class Rect extends Geometry2D {
 	 * @returns 右上角点
 	 */
 	get rightTop(): Vector2 {
-		return new Vector2(
-			this.leftBottom.x + this.width,
-			this.leftBottom.y + this.height
-		);
+		return new Vector2(this.leftBottom.x + this.width, this.leftBottom.y + this.height);
 	}
 
 	/**
@@ -143,10 +129,7 @@ export class Rect extends Geometry2D {
 	 * @returns 左上角点
 	 */
 	get leftTop(): Vector2 {
-		return new Vector2(
-			this.leftBottom.x,
-			this.leftBottom.y + this.height
-		);
+		return new Vector2(this.leftBottom.x, this.leftBottom.y + this.height);
 	}
 
 	/**
@@ -154,10 +137,7 @@ export class Rect extends Geometry2D {
 	 * @returns 右下角点
 	 */
 	get rightBottom(): Vector2 {
-		return new Vector2(
-			this.leftBottom.x + this.width,
-			this.leftBottom.y
-		);
+		return new Vector2(this.leftBottom.x + this.width, this.leftBottom.y);
 	}
 
 	/**
@@ -165,12 +145,7 @@ export class Rect extends Geometry2D {
 	 * @returns 角点数组 [左下, 右下, 右上, 左上]
 	 */
 	getCorners(): Vector2[] {
-		return [
-			this.leftBottom,
-			this.rightBottom,
-			this.rightTop,
-			this.leftTop
-		];
+		return [this.leftBottom, this.rightBottom, this.rightTop, this.leftTop];
 	}
 
 	/**
@@ -249,11 +224,7 @@ export class Rect extends Geometry2D {
 		const maxX = Math.min(this.rightTop.x, other.rightTop.x);
 		const maxY = Math.min(this.rightTop.y, other.rightTop.y);
 
-		return new Rect(
-			new Vector2(minX, minY),
-			maxX - minX,
-			maxY - minY
-		);
+		return new Rect(new Vector2(minX, minY), maxX - minX, maxY - minY);
 	}
 
 	/**
@@ -267,11 +238,7 @@ export class Rect extends Geometry2D {
 		const maxX = Math.max(this.rightTop.x, other.rightTop.x);
 		const maxY = Math.max(this.rightTop.y, other.rightTop.y);
 
-		return new Rect(
-			new Vector2(minX, minY),
-			maxX - minX,
-			maxY - minY
-		);
+		return new Rect(new Vector2(minX, minY), maxX - minX, maxY - minY);
 	}
 
 	/**
@@ -297,7 +264,7 @@ export class Rect extends Geometry2D {
 		const center = this.center;
 		const newWidth = this.width * Math.abs(scaleX);
 		const newHeight = this.height * Math.abs(scaleY);
-		
+
 		return Rect.fromCenter(center, newWidth, newHeight);
 	}
 

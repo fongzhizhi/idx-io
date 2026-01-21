@@ -31,7 +31,7 @@ export class Circle extends Geometry2D {
 		const scaleY = matrix.jScale;
 		const avgScale = (scaleX + scaleY) / 2;
 		const transformedRadius = this.radius * avgScale;
-		
+
 		return new Circle(transformedCenter, transformedRadius);
 	}
 
@@ -66,11 +66,8 @@ export class Circle extends Geometry2D {
 		if (!(other instanceof Circle)) {
 			return false;
 		}
-		
-		return (
-			this.center.equals(other.center, epsilon) &&
-			Math.abs(this.radius - other.radius) < epsilon
-		);
+
+		return this.center.equals(other.center, epsilon) && Math.abs(this.radius - other.radius) < epsilon;
 	}
 
 	/**
@@ -132,36 +129,38 @@ export class Circle extends Geometry2D {
 	 */
 	intersectWithCircle(other: Circle, epsilon: number = 1e-10): Vector2[] {
 		const d = this.center.distanceTo(other.center);
-		
+
 		// 圆心重合
 		if (d < epsilon) {
 			return Math.abs(this.radius - other.radius) < epsilon ? [] : []; // 同心圆
 		}
-		
+
 		// 圆不相交
 		if (d > this.radius + other.radius + epsilon || d < Math.abs(this.radius - other.radius) - epsilon) {
 			return [];
 		}
-		
+
 		// 相切
-		if (Math.abs(d - (this.radius + other.radius)) < epsilon || 
-			Math.abs(d - Math.abs(this.radius - other.radius)) < epsilon) {
+		if (
+			Math.abs(d - (this.radius + other.radius)) < epsilon ||
+			Math.abs(d - Math.abs(this.radius - other.radius)) < epsilon
+		) {
 			const ratio = this.radius / d;
 			const direction = other.center.subtract(this.center).normalized;
 			return [this.center.add(direction.multiply(this.radius))];
 		}
-		
+
 		// 两个交点
 		const a = (this.radius * this.radius - other.radius * other.radius + d * d) / (2 * d);
 		const h = Math.sqrt(this.radius * this.radius - a * a);
-		
+
 		const p2 = this.center.add(other.center.subtract(this.center).multiply(a / d));
-		const offset = other.center.subtract(this.center).perpendicular().multiply(h / d);
-		
-		return [
-			p2.add(offset),
-			p2.subtract(offset)
-		];
+		const offset = other.center
+			.subtract(this.center)
+			.perpendicular()
+			.multiply(h / d);
+
+		return [p2.add(offset), p2.subtract(offset)];
 	}
 
 	/**
