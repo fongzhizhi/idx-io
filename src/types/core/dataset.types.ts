@@ -10,6 +10,50 @@ import { EDMDShapeElement, EDMDStratum } from './shape-element.types';
 // NOTE: 消息类型决定了数据集的用途和解释方式
 
 /**
+ * EDMD数据集根元素
+ *
+ * @remarks
+ * IDX文件的根元素，包含头部、数据体和处理指令
+ * REF: Section 4
+ * XML: <foundation:EDMDDataSet>
+ */
+export interface EDMDDataSet {
+	/** 头部信息 */
+	Header: EDMDHeader;
+	/** 数据体，包含所有设计数据 */
+	Body: EDMDDataSetBody;
+	/** 处理指令 */
+	ProcessInstruction: EDMDProcessInstruction;
+}
+
+/**
+ * 数据体，包含所有设计数据
+ * @description 按层级划分和统计数据
+ */
+export type EDMDDataSetBody = Partial<{
+	/** 点集合 */
+	Points: CartesianPoint[];
+	/** 几何元素集合 */
+	Geometries: EDMDGeometry[];
+	/** 2D曲线集合 */
+	CurveSets: EDMDCurveSet2D[];
+	/** 形状元素集合 */
+	ShapeElements: EDMDShapeElement[];
+	/** 层技术定义集合 */
+	StratumTechnologies: EDMDStratumTechnology[];
+	/** 层定义集合（传统方式） */
+	Strata: EDMDStratum[];
+	/** 3D模型引用集合 */
+	Models3D: EDMDModel3D[];
+	/** 项目定义集合（Item single） */
+	ItemsSingle: EDMDItemSingle[];
+	/** 项目实例集合（Item assembly） */
+	ItemsAssembly: EDMDItemAssembly[];
+	/** 历史记录集合 */
+	Histories: EDMDHistory[];
+}>
+
+/**
  * 处理指令类型
  *
  * @remarks
@@ -156,42 +200,4 @@ export interface EDMDHistoryEntry {
 	CreationDateTime: string;
 	/** 系统范围 */
 	SystemScope: string;
-}
-
-/**
- * EDMD数据集根元素
- *
- * @remarks
- * IDX文件的根元素，包含头部、数据体和处理指令
- * REF: Section 4
- * XML: <foundation:EDMDDataSet>
- */
-export interface EDMDDataSet {
-	/** 头部信息 */
-	Header: EDMDHeader;
-	/** 数据体，包含所有设计数据 */
-	Body: {
-		/** 点集合 */
-		Points?: CartesianPoint[];
-		/** 几何元素集合 */
-		Geometries?: EDMDGeometry[];
-		/** 2D曲线集合 */
-		CurveSets?: EDMDCurveSet2D[];
-		/** 形状元素集合 */
-		ShapeElements?: EDMDShapeElement[];
-		/** 层技术定义集合 */
-		StratumTechnologies?: EDMDStratumTechnology[];
-		/** 层定义集合（传统方式） */
-		Strata?: EDMDStratum[];
-		/** 3D模型引用集合 */
-		Models3D?: EDMDModel3D[];
-		/** 项目定义集合（Item single） */
-		ItemsSingle?: EDMDItemSingle[];
-		/** 项目实例集合（Item assembly） */
-		ItemsAssembly?: EDMDItemAssembly[];
-		/** 历史记录集合（可选） */
-		Histories?: EDMDHistory[];
-	};
-	/** 处理指令 */
-	ProcessInstruction: EDMDProcessInstruction;
 }
