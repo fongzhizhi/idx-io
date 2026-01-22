@@ -20,10 +20,11 @@ import {
 	EDMDBSplineCurve,
 	EDMDCompositeCurve,
 	EDMDIdentifier,
-	EDMName,
+	EDMDName,
 	EDMPackagePin,
 	EDMDUserSimpleProperty,
 	EDMDHistory,
+	EDMDLine,
 } from '../../types/core';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
 import { IDXWriteConfig } from '../../types/exporter/writer/idx-writer.interface';
@@ -67,7 +68,6 @@ export class IDXWriter {
 		}
 	}
 
-	// ============= 序列化相关 =============
 	/** IDX格式序列化 */
 	serialize(dataset: EDMDDataSet): string {
 		// # IDX 初始化
@@ -89,6 +89,14 @@ export class IDXWriter {
 		return idxSource;
 	}
 
+	// ============= 私有化工具函数 =============
+	/** 创建分区节点注释 */
+	private createSectionComment(sectionName: string, sectionDesc?: string) {
+		const sectionDescFull = sectionDesc ? `: ${sectionDesc}` : '';
+		return `=============${sectionName}${sectionDescFull}=============`;
+	}
+
+	// ============= 序列化流程相关 =============
 	/** 创建 IDX 文档 */
 	private createDoc() {
 		const doc = create({
@@ -143,6 +151,31 @@ export class IDXWriter {
 		this.datasetEle = datasetEle;
 	}
 
+	/** 生成 IDX 源码 */
+	private createIDXSource(): string {
+		const doc = this.doc;
+		if (!doc) {
+			return '';
+		}
+		const formatting = this.config.formatting;
+
+		const prettyPrint = toBoolean(formatting?.prettyPrint);
+		const idxWriterOpts: XMLWriterOptions = {
+			prettyPrint,
+		};
+
+		return doc.end(idxWriterOpts);
+	}
+
+	/** 内存回收 */
+	private memoryCycle() {
+		this.dataset = undefined;
+		this.doc = undefined;
+		this.datasetEle = undefined;
+		this.bodyEle = undefined;
+	}
+
+	// ============= 序列化 Header =============
 	/** 构建 Header */
 	private buildHeader() {
 		const dataset = this.dataset;
@@ -195,6 +228,7 @@ export class IDXWriter {
 		headerElement.ele(getIDXTagName(IDXFoundationTag.ModifiedDateTime)).txt(Header.ModifiedDateTime);
 	}
 
+	// ============= 序列化 Body =============
 	/** 构建 Body */
 	private buildBody() {
 		const dataset = this.dataset;
@@ -248,6 +282,7 @@ export class IDXWriter {
 		this.buildHistories();
 	}
 
+	// ------------ 构建通用数据 ------------
 	/** 构建基础属性 */
 	private buildBasicAttr(baseObj: EDMDObject) {
 		const baseAttrs: Record<string, string> = {};
@@ -282,6 +317,10 @@ export class IDXWriter {
 		return;
 	}
 
+	// ------------ 构建层 ------------
+	// TODO: 层数据在 Item 中, 需要前置处理
+
+	// ------------ 构建几何 ------------
 	/** 批量构建坐标点 */
 	private buildCartesianPoints() {
 		const points = this.dataset?.Body?.Points;
@@ -372,6 +411,9 @@ export class IDXWriter {
 			case IDXD2Tag.EDMDPolyLine:
 				this.buildPolyLine(geometry);
 				break;
+			case IDXD2Tag.EDMDLine:
+				this.buildLine(geometry);
+				break;
 			case IDXD2Tag.EDMDArc:
 				this.buildArc(geometry);
 				break;
@@ -422,6 +464,30 @@ export class IDXWriter {
 		iterateArr(polyLine.Points, pointId => {
 			polyLineEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(pointId);
 		});
+	}
+
+	/** 构建线段 */
+	private buildLine(arc: EDMDLine) {
+		const bodyEle = this.bodyEle;
+		if (!bodyEle) return;
+
+		// # 构建节点
+		const arcTagName = getIDXTagName(IDXD2Tag.Line);
+
+		// ## 构建属性
+		const arcAttrs: Record<string, string> = {
+			...this.buildBasicAttr(arc),
+			[XsiTypeAttrName]: getIDXTagName(arc.type),
+		};
+
+		const arcEle = bodyEle.ele(arcTagName, arcAttrs);
+
+		// ## 构建基础数据
+		this.buildBasicData(arcEle, arc);
+
+		// ## 构建坐标点
+		arcEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(arc.Point);
+		arcEle.ele(getIDXTagName(IDXD2Tag.Vector)).txt(arc.Vector);
 	}
 
 	/** 构建圆弧 */
@@ -608,6 +674,7 @@ export class IDXWriter {
 		});
 	}
 
+	// ------------ 构建形状元素 ------------
 	/** 批量构建形状元素 */
 	private buildShapeElements() {
 		const shapeElements = this.dataset?.Body?.ShapeElements;
@@ -665,6 +732,7 @@ export class IDXWriter {
 		// TODO: 实现3D模型引用
 	}
 
+	// ------------ 构建项目定义 ------------
 	/** 批量构建项目定义（Item single） */
 	private buildItemsSingle() {
 		const itemsSingle = this.dataset?.Body?.ItemsSingle;
@@ -688,6 +756,52 @@ export class IDXWriter {
 		});
 	}
 
+	/** 构建项目定义（Item single） */
+	private buildItemSingle(itemSingle: EDMDItemSingle) {
+		const bodyEle = this.bodyEle;
+		if (!bodyEle) return;
+
+		// # 构建节点
+		const itemTagName = getIDXTagName(IDXFoundationTag.Item);
+
+		// ## 构建属性
+		const itemSingleAttrs: Record<string, string> = {
+			...this.buildBasicAttr,
+		};
+
+		const itemSingleEle = bodyEle.ele(itemTagName, itemSingleAttrs);
+
+		// ## 构建基础数据
+		this.buildBasicData(itemSingleEle, itemSingle);
+
+		// ## 构建项目类型（必须为single）
+		itemSingleEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(itemSingle.ItemType);
+
+		// ## 构建标识符（可选）
+		this.buildItemIdentifier(itemSingleEle, itemSingle.Identifier);
+
+		// ## 构建包名称（可选）
+		this.buildItemEDMName(itemSingleEle, itemSingle.PackageName);
+
+		// ## 构建形状引用
+		itemSingleEle.ele(getIDXTagName(IDXPDMTag.Shape)).txt(itemSingle.Shape);
+
+		// ## 构建包引脚定义（可选）
+		this.buildItemPackagePins(itemSingleEle, itemSingle.PackagePins);
+
+		// ## 构建3D模型引用（可选）
+		const model3D = itemSingle.EDMD3DModel;
+		if (model3D) {
+			itemSingleEle.ele(getIDXTagName(IDXPDMTag.EDMD3DModel)).txt(model3D);
+		}
+
+		// ## 构建基线标记（可选）
+		this.buildItemBaseLine(itemSingleEle, itemSingle.BaseLine);
+
+		// ## 构建用户属性（可选）
+		this.buildUserProperties(itemSingleEle, itemSingle.UserProperties);
+	}
+
 	/** 构建项目构建标识符 */
 	private buildItemIdentifier(targetEle: XMLBuilder, identifier?: EDMDIdentifier) {
 		if (!targetEle || !identifier) {
@@ -702,7 +816,7 @@ export class IDXWriter {
 	}
 
 	/** 构建项目对象名称 */
-	private buildItemEDMName(targetEle: XMLBuilder, edaName?: EDMName) {
+	private buildItemEDMName(targetEle: XMLBuilder, edaName?: EDMDName) {
 		if (!targetEle || !edaName) {
 			return;
 		}
@@ -791,52 +905,7 @@ export class IDXWriter {
 		userPropEle.ele(getIDXTagName(IDXPropertyTag.Value)).txt(toString(userProp.Value));
 	}
 
-	/** 构建项目定义（Item single） */
-	private buildItemSingle(itemSingle: EDMDItemSingle) {
-		const bodyEle = this.bodyEle;
-		if (!bodyEle) return;
-
-		// # 构建节点
-		const itemTagName = getIDXTagName(IDXFoundationTag.Item);
-
-		// ## 构建属性
-		const itemSingleAttrs: Record<string, string> = {
-			...this.buildBasicAttr,
-		};
-
-		const itemSingleEle = bodyEle.ele(itemTagName, itemSingleAttrs);
-
-		// ## 构建基础数据
-		this.buildBasicData(itemSingleEle, itemSingle);
-
-		// ## 构建项目类型（必须为single）
-		itemSingleEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(itemSingle.ItemType);
-
-		// ## 构建标识符（可选）
-		this.buildItemIdentifier(itemSingleEle, itemSingle.Identifier);
-
-		// ## 构建包名称（可选）
-		this.buildItemEDMName(itemSingleEle, itemSingle.PackageName);
-
-		// ## 构建形状引用
-		itemSingleEle.ele(getIDXTagName(IDXPDMTag.Shape)).txt(itemSingle.Shape);
-
-		// ## 构建包引脚定义（可选）
-		this.buildItemPackagePins(itemSingleEle, itemSingle.PackagePins);
-
-		// ## 构建3D模型引用（可选）
-		const model3D = itemSingle.EDMD3DModel;
-		if (model3D) {
-			itemSingleEle.ele(getIDXTagName(IDXPDMTag.EDMD3DModel)).txt(model3D);
-		}
-
-		// ## 构建基线标记（可选）
-		this.buildItemBaseLine(itemSingleEle, itemSingle.BaseLine);
-
-		// ## 构建用户属性（可选）
-		this.buildUserProperties(itemSingleEle, itemSingle.UserProperties);
-	}
-
+	// ------------ 构建项目装配 ------------
 	/** 批量构建项目实例（Item assembly） */
 	private buildItemsAssembly() {
 		const itemsAssembly = this.dataset?.Body?.ItemsAssembly;
@@ -1016,6 +1085,7 @@ export class IDXWriter {
 		}
 	}
 
+	// ============= 序列化 ProcessInstruction =============
 	/** 构建处理指令 */
 	private buildProcessInstruction() {
 		const dataset = this.dataset;
@@ -1071,6 +1141,7 @@ export class IDXWriter {
 		}
 	}
 
+	// ============= 序列化 History =============
 	/** 批量构建历史记录 */
 	private buildHistories() {
 		const Histories = this.dataset?.Body?.Histories;
@@ -1101,36 +1172,5 @@ export class IDXWriter {
 		if (!bodyEle) return;
 
 		// TODO: 实现历史记录构建
-	}
-
-	/** 生成 IDX 源码 */
-	private createIDXSource(): string {
-		const doc = this.doc;
-		if (!doc) {
-			return '';
-		}
-		const formatting = this.config.formatting;
-
-		const prettyPrint = toBoolean(formatting?.prettyPrint);
-		const idxWriterOpts: XMLWriterOptions = {
-			prettyPrint,
-		};
-
-		return doc.end(idxWriterOpts);
-	}
-
-	/** 内存回收 */
-	private memoryCycle() {
-		this.dataset = undefined;
-		this.doc = undefined;
-		this.datasetEle = undefined;
-		this.bodyEle = undefined;
-	}
-
-	// ============= 私有化工具函数 =============
-	/** 创建分区节点注释 */
-	private createSectionComment(sectionName: string, sectionDesc?: string) {
-		const sectionDescFull = sectionDesc ? `: ${sectionDesc}` : '';
-		return `=============${sectionName}${sectionDescFull}=============`;
 	}
 }

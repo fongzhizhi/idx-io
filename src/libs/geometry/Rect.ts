@@ -1,6 +1,7 @@
 import { BBox2 } from './BBox2';
 import { Geometry2D, GeometryType } from './Geometry2D';
 import { Matrix3 } from './Matrix3';
+import { Polyline } from './Polyline';
 import { Vector2 } from './Vector2';
 
 /** 矩形 */
@@ -266,6 +267,15 @@ export class Rect extends Geometry2D {
 		const newHeight = this.height * Math.abs(scaleY);
 
 		return Rect.fromCenter(center, newWidth, newHeight);
+	}
+
+	/** 转为折线 */
+	toPolyline() {
+		const leftTop = this.leftTop;
+		const leftBottom = this.leftBottom;
+		const rightBottom = this.rightBottom;
+		const rightTop = this.rightTop;
+		return Polyline.fromPoints([leftTop, leftBottom, rightBottom, rightTop, leftTop]);
 	}
 
 	/**

@@ -2071,3 +2071,562 @@ export interface ECADFootprintGeometry {
 4. **禁布区**：根据用途决定几何特性，最灵活的是路径禁布
 
 所有几何最终都通过IDX的**分层结构**（点→几何→曲线集→形状元素）来表示，并通过**Inverted属性**和**CSG布尔运算**实现复杂形状的构造。
+
+## 十二、IDX层和层堆叠定义与示例
+
+根据IDXv4.5协议文档，以下是层和层堆叠的详细定义和示例：
+
+### 🏗️ **层和层堆叠的IDX结构**
+
+#### **1. 简单案例：四层板堆叠**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<foundation:EDMDDataSet 
+    xmlns:foundation="http://prostep.org/EDMD/5.0/foundation" 
+    xmlns:pdm="http://prostep.org/EDMD/5.0/pdm" 
+    xmlns:property="http://prostep.org/EDMD/5.0/property" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    
+    <foundation:Header>
+        <!-- 头部信息省略 -->
+    </foundation:Header>
+    
+    <foundation:Body>
+        
+        <!-- ============ 第1步：定义物理层 ============ -->
+        
+        <!-- 顶层阻焊层 -->
+        <foundation:Item id="ITEM_TOP_SOLDERMASK" geometryType="LAYER_SOLDERMASK">
+            <foundation:Name>Top Solder Mask</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>TOP_SOLDERMASK</pdm:ReferenceName>
+            <!-- 用户属性：颜色（自定义扩展） -->
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Color</foundation:ObjectName>
+                </property:Key>
+                <property:Value>#4CAF50</property:Value> <!-- 绿色 -->
+            </foundation:UserProperty>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Thickness</foundation:ObjectName>
+                </property:Key>
+                <property:Value>0.025</property:Value> <!-- 0.025mm -->
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- 顶层信号层 -->
+        <foundation:Item id="ITEM_TOP_SIGNAL" geometryType="LAYER_OTHERSIGNAL">
+            <foundation:Name>Top Signal Layer</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>TOP_SIGNAL</pdm:ReferenceName>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Color</foundation:ObjectName>
+                </property:Key>
+                <property:Value>#FF5722</property:Value> <!-- 橙色 -->
+            </foundation:UserProperty>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>CopperWeight</foundation:ObjectName>
+                </property:Key>
+                <property:Value>1</property:Value> <!-- 1oz -->
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- 内层1（电源层） -->
+        <foundation:Item id="ITEM_POWER" geometryType="LAYER_POWERGROUND">
+            <foundation:Name>Power Plane</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>POWER_PLANE</pdm:ReferenceName>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Color</foundation:ObjectName>
+                </property:Key>
+                <property:Value>#2196F3</property:Value> <!-- 蓝色 -->
+            </foundation:UserProperty>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>NetName</foundation:ObjectName>
+                </property:Key>
+                <property:Value>VCC_3V3</property:Value>
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- 内层2（地层） -->
+        <foundation:Item id="ITEM_GROUND" geometryType="LAYER_POWERGROUND">
+            <foundation:Name>Ground Plane</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>GROUND_PLANE</pdm:ReferenceName>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Color</foundation:ObjectName>
+                </property:Key>
+                <property:Value>#795548</property:Value> <!-- 棕色 -->
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- 底层信号层 -->
+        <foundation:Item id="ITEM_BOTTOM_SIGNAL" geometryType="LAYER_OTHERSIGNAL">
+            <foundation:Name>Bottom Signal Layer</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>BOTTOM_SIGNAL</pdm:ReferenceName>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Color</foundation:ObjectName>
+                </property:Key>
+                <property:Value>#FF9800</property:Value> <!-- 橙色 -->
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- 底层阻焊层 -->
+        <foundation:Item id="ITEM_BOTTOM_SOLDERMASK" geometryType="LAYER_SOLDERMASK">
+            <foundation:Name>Bottom Solder Mask</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>BOTTOM_SOLDERMASK</pdm:ReferenceName>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Color</foundation:ObjectName>
+                </property:Key>
+                <property:Value>#4CAF50</property:Value>
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- 顶层丝印层 -->
+        <foundation:Item id="ITEM_TOP_SILKSCREEN" geometryType="LAYER_SILKSCREEN">
+            <foundation:Name>Top Silkscreen</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>TOP_SILKSCREEN</pdm:ReferenceName>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Color</foundation:ObjectName>
+                </property:Key>
+                <property:Value>#FFFFFF</property:Value> <!-- 白色 -->
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- 介质层（核心材料） -->
+        <foundation:Item id="ITEM_DIELECTRIC1" geometryType="LAYER_DIELECTRIC">
+            <foundation:Name>Core Material FR4</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ReferenceName>CORE_1</pdm:ReferenceName>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Material</foundation:ObjectName>
+                </property:Key>
+                <property:Value>FR4</property:Value>
+            </foundation:UserProperty>
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>DielectricConstant</foundation:ObjectName>
+                </property:Key>
+                <property:Value>4.5</property:Value>
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- ============ 第2步：定义层堆叠 ============ -->
+        
+        <foundation:Item id="ITEM_STACKUP_MAIN" geometryType="LAYER_STACKUP">
+            <foundation:Name>Main 4-Layer Stackup</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            
+            <!-- 第1层：顶层阻焊 -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>TopSolderMask_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <!-- 定义此层在堆叠中的位置（Z范围） -->
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.600</property:Value> <!-- 相对于板底 -->
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.625</property:Value> <!-- 厚度0.025mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_TOP_SOLDERMASK</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第2层：顶层信号层 -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>TopSignal_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.575</property:Value>
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.600</property:Value> <!-- 铜厚0.035mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_TOP_SIGNAL</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第3层：介质层1（顶层铜箔下面的预浸料） -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Prepreg1_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.200</property:Value>
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.575</property:Value> <!-- 厚度0.375mm -->
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LayerType</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>Dielectric</property:Value>
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_DIELECTRIC1</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第4层：内层1（电源层） -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>PowerPlane_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.165</property:Value>
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.200</property:Value> <!-- 铜厚0.035mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_POWER</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第5层：核心介质层 -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Core_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.800</property:Value>
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>1.165</property:Value> <!-- 厚度0.365mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_DIELECTRIC1</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第6层：内层2（地层） -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>GroundPlane_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.765</property:Value>
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.800</property:Value> <!-- 铜厚0.035mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_GROUND</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第7层：介质层2（底层铜箔上面的预浸料） -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Prepreg2_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.035</property:Value>
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.765</property:Value> <!-- 厚度0.730mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_DIELECTRIC1</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第8层：底层信号层 -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>BottomSignal_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.000</property:Value> <!-- 板底 -->
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.035</property:Value> <!-- 铜厚0.035mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_BOTTOM_SIGNAL</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 第9层：底层阻焊 -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>BottomSolderMask_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>-0.025</property:Value> <!-- 板底下方 -->
+                </foundation:UserProperty>
+                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                    <property:Key>
+                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+                    </property:Key>
+                    <property:Value>0.000</property:Value> <!-- 厚度0.025mm -->
+                </foundation:UserProperty>
+                <pdm:Item>ITEM_BOTTOM_SOLDERMASK</pdm:Item>
+            </pdm:ItemInstance>
+            
+            <!-- 堆叠的引用名称 -->
+            <pdm:ReferenceName>MAIN_4LAYER_STACKUP</pdm:ReferenceName>
+            
+            <!-- 堆叠总厚度计算 -->
+            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+                <property:Key>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>TotalThickness</foundation:ObjectName>
+                </property:Key>
+                <property:Value>1.650</property:Value> <!-- 1.65mm -->
+            </foundation:UserProperty>
+        </foundation:Item>
+        
+        <!-- ============ 第3步：定义层区域（Layer Zone） ============ -->
+        <!-- 将堆叠应用到板子的特定区域 -->
+        
+        <foundation:Item id="ITEM_BOARD_ZONE" geometryType="BOARD_AREA_RIGID">
+            <foundation:Name>Main Board Area</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>MainZone_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <!-- 引用层堆叠 -->
+                <pdm:AssembleToName>MAIN_4LAYER_STACKUP</pdm:AssembleToName>
+                <!-- 定义区域形状（简化，实际应为Polyline） -->
+                <pdm:Item>ITEM_ZONE_SHAPE</pdm:Item>
+            </pdm:ItemInstance>
+        </foundation:Item>
+        
+        <!-- ============ 第4步：定义板子 ============ -->
+        
+        <foundation:Item id="ITEM_BOARD" geometryType="BOARD_OUTLINE">
+            <foundation:Name>Main PCB Board</foundation:Name>
+            <pdm:ItemType>assembly</pdm:ItemType>
+            <!-- 板子轮廓几何省略 -->
+            <!-- 引用层区域 -->
+            <pdm:ItemInstance>
+                <pdm:InstanceName>
+                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                    <foundation:ObjectName>Board_Instance</foundation:ObjectName>
+                </pdm:InstanceName>
+                <pdm:Item>ITEM_BOARD_ZONE</pdm:Item>
+            </pdm:ItemInstance>
+        </foundation:Item>
+        
+    </foundation:Body>
+    
+</foundation:EDMDDataSet>
+```
+
+#### 🎨 **层属性的表达方式**
+
+#### **1. 层名称（Layer Name）**
+- **主要方式**：`<foundation:Name>` 元素
+- **引用名称**：`<pdm:ReferenceName>`（用于其他元素引用）
+- **实例名称**：`<pdm:InstanceName>`（在堆叠中的实例）
+
+#### **2. 层类型/用途（Layer Type/Purpose）**
+- **标准方式**：`geometryType` 属性（IDXv4.0+）
+  ```xml
+  geometryType="LAYER_SOLDERMASK"
+  geometryType="LAYER_OTHERSIGNAL"
+  geometryType="LAYER_POWERGROUND"
+  geometryType="LAYER_SILKSCREEN"
+  geometryType="LAYER_DIELECTRIC"
+  ```
+- **传统方式**：UserProperty "LayerType"
+  ```xml
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>LayerType</foundation:ObjectName>
+    </property:Key>
+    <property:Value>SolderMask</property:Value>
+  </foundation:UserProperty>
+  ```
+
+#### **3. 层颜色（Layer Color）**
+
+- **非标准属性**：使用UserProperty自定义
+  
+  ```xml
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>Color</foundation:ObjectName>
+    </property:Key>
+    <!-- 支持格式：十六进制、RGB、颜色名 -->
+    <property:Value>#4CAF50</property:Value>
+    <!-- 或 -->
+    <property:Value>rgb(76, 175, 80)</property:Value>
+    <!-- 或 -->
+    <property:Value>Green</property:Value>
+  </foundation:UserProperty>
+  ```
+
+**4. 其他层属性**
+
+```xml
+<!-- 厚度 -->
+<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+  <property:Key>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>Thickness</foundation:ObjectName>
+  </property:Key>
+  <property:Value>0.035</property:Value> <!-- 单位：毫米 -->
+</foundation:UserProperty>
+
+<!-- 铜厚（盎司） -->
+<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+  <property:Key>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>CopperWeight</foundation:ObjectName>
+  </property:Key>
+  <property:Value>1</property:Value> <!-- 1oz -->
+</foundation:UserProperty>
+
+<!-- 材料类型 -->
+<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+  <property:Key>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>Material</foundation:ObjectName>
+  </property:Key>
+  <property:Value>FR4</property:Value>
+</foundation:UserProperty>
+
+<!-- 介电常数 -->
+<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+  <property:Key>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>DielectricConstant</foundation:ObjectName>
+  </property:Key>
+  <property:Value>4.5</property:Value>
+</foundation:UserProperty>
+
+<!-- 网络名称（电源/地层） -->
+<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+  <property:Key>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>NetName</foundation:ObjectName>
+  </property:Key>
+  <property:Value>VCC_3V3</property:Value>
+</foundation:UserProperty>
+```
+
+### 📊 **层堆叠的Z轴坐标系**
+
+IDX使用以下Z轴坐标系：
+- **Z=0**：板子底面（Bottom）的组件安装面
+- **正Z方向**：从底面指向顶面
+- **负Z值**：可能用于底面下方的层（如底面阻焊）
+
+在示例中：
+- 板底：Z=0
+- 板顶：Z=1.65mm（总厚度）
+- 底面阻焊：Z=-0.025到0（板底下方）
+- 层堆叠从Z=-0.025到Z=1.65
+
+### 🎯 **关键概念总结**
+
+1. **物理层定义**：每个层是独立的EDMDItem，有geometryType和ReferenceName
+2. **层堆叠定义**：包含多个层实例，定义每个层的Z轴位置
+3. **层区域**：将堆叠应用到板子的特定区域
+4. **属性表达**：
+   - 名称：Name/ReferenceName
+   - 类型：geometryType 或 UserProperty
+   - 颜色：自定义UserProperty
+   - 其他：厚度、材料等通过UserProperty
+
+这样设计的层系统既符合IDXv4.5标准，又足够灵活以支持各种复杂的PCB层叠结构。

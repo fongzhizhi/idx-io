@@ -167,22 +167,76 @@ export enum StratumSurfaceDesignation {
  * 层目的枚举
  *
  * @remarks
- * 定义PCB层的功能和用途
+ * 定义PCB层的功能和用途，对应IDX协议中的EDMDLayerPurpose枚举。
+ * 用于传统方式（IDXv4.0之前）或StratumTechnology的LayerPurpose属性。
+ * 在简化方式（IDXv4.0+）中，通常使用GeometryType替代。
  * REF: Section 6.1.2, Table 4
  */
 export enum LayerPurpose {
+	/**
+	 * 阻焊层目的
+	 * @remarks 防止焊锡粘附的绝缘保护层
+	 */
 	SOLDERMASK = 'SolderMask',
+	/**
+	 * 焊膏层目的
+	 * @remarks 用于表面贴装焊接的锡膏印刷层
+	 */
 	SOLDERPASTE = 'SolderPaste',
+	/**
+	 * 丝印层目的
+	 * @remarks 用于印刷标识、符号和文字的油墨层
+	 */
 	SILKSCREEN = 'SilkScreen',
+	/**
+	 * 通用层目的
+	 * @remarks 未指定具体用途的通用设计层
+	 */
 	GENERIC = 'GenericLayer',
+	/**
+	 * 胶层目的
+	 * @remarks 用于元件固定的粘合剂层
+	 */
 	GLUE = 'Glue',
+	/**
+	 * 胶掩膜层目的
+	 * @remarks 定义胶层应用区域的掩膜层
+	 */
 	GLUEMASK = 'GlueMask',
+	/**
+	 * 焊膏掩膜层目的
+	 * @remarks 定义焊膏应用区域的掩膜层
+	 */
 	PASTEMASK = 'PasteMask',
+	/**
+	 * 其他信号层目的
+	 * @remarks 常规信号走线层，区别于电源/地层
+	 */
 	OTHERSIGNAL = 'OtherSignal',
+	/**
+	 * 仅焊盘层目的
+	 * @remarks 只包含焊盘连接点，无走线的层
+	 */
 	LANDSONLY = 'LandsOnly',
+	/**
+	 * 电源/地层目的
+	 * @remarks 用于电源分配和接地的完整铜平面层
+	 */
 	POWERGROUND = 'PowerOrGround',
+	/**
+	 * 嵌入式电容介质层目的
+	 * @remarks 用于嵌入式电容的特殊介质材料层
+	 */
 	EMBEDDED_CAP_DIELECTRIC = 'EmbeddedPassiveCapacitorDielectric',
+	/**
+	 * 嵌入式电阻层目的
+	 * @remarks 用于嵌入式电阻的特殊材料层
+	 */
 	EMBEDDED_RESISTOR = 'EmbeddedPassiveResistor',
+	/**
+	 * 介质层目的
+	 * @remarks 绝缘隔离材料层，如FR4、聚酰亚胺等
+	 */
 	DIELECTRIC = 'Dielectric',
 }
 
@@ -319,4 +373,57 @@ export enum BendSide {
  */
 export enum BendTypeEnum {
 	CIRCULAR_BEND = 'CircularBend',
+}
+
+/**
+ * 用户自定义属性通用枚举
+ * 用于在 EDMDItem 或 EDMDItemInstance 中存储自定义属性
+ */
+export enum UserSimpleProperty {
+	/** 下边界（Z轴），通常用于定义层或几何体的起始高度 */
+	LowerBound = 'LowerBound',
+	/** 上边界（Z轴），通常用于定义层或几何体的结束高度 */
+	UpperBound = 'UpperBound',
+	/** 层类型，如 SolderMask、Signal、SilkScreen 等（见表4） */
+	LayerType = 'LayerType',
+	/** 板厚，用于简单板的厚度定义 */
+	Thickness = 'THICKNESS',
+	/** 层堆叠总厚度 */
+	TotalThickness = 'TotalThickness',
+	/** 参考标志符（如 "C11"），用于标识组件实例 */
+	REFDES = 'REFDES',
+	/** 零件编号（如 "12333-CAP"） */
+	PARTNUM = 'PARTNUM',
+	/** 封装名称（如 "CC1206"） */
+	PKGNAME = 'PKGNAME',
+	/** 安装孔名称标识 */
+	MHNAME = 'MHNAME',
+	/** 焊盘堆栈名称，用于孔的库引用 */
+	PADSTACK = 'PADSTACK',
+	/** 项目类型，如 "BOARDOUTLINE" 标识板轮廓 */
+	TYPE = 'TYPE',
+	/** 操作功率等级（单位：瓦特） */
+	POWER_OPR = 'POWER_OPR',
+	/** 最大功率等级（单位：瓦特） */
+	POWER_MAX = 'POWER_MAX',
+	/** 热导率（单位：W/m·°C） */
+	THERM_COND = 'THERM_COND',
+	/** 结到板热阻（单位：°C/W） */
+	THETA_JB = 'THETA_JB',
+	/** 结到壳热阻（单位：°C/W） */
+	THETA_JC = 'THETA_JC',
+	/** 电阻值（单位：欧姆） */
+	RESISTANCE = 'RESISTANCE',
+	/** 电容值（单位：法拉） */
+	CAPACITANCE = 'CAPACITANCE',
+	/** 电感值（单位：亨利） */
+	INDUCTANCE = 'INDUCTANCE',
+	/** 容差（单位：百分比） */
+	TOLERANCE = 'TOLERANCE',
+	/** 侧面标识（TOP、BOTTOM、INNER），用于布线层 */
+	SIDE = 'SIDE',
+	/** 映射层名称，用于用户区域到ECAD设计层的映射 */
+	MAPPED_LAYER = 'MAPPED_LAYER',
+	/** 弯曲序列号，用于定义弯曲应用顺序 */
+	bendSequenceNumber = 'bendSequenceNumber',
 }

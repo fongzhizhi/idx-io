@@ -1,4 +1,4 @@
-import { EDMDIdentifier, EDMDObject, EDMName, EDMDTransformation, EDMDHeader, CartesianPoint, EDMDStratumTechnology } from './base.types';
+import { EDMDIdentifier, EDMDObject, EDMDName, EDMDTransformation, EDMDHeader, CartesianPoint } from './base.types';
 import { EDMDGeometry, EDMDCurveSet2D } from './geometry.types';
 import { EDMDItemSingle, EDMDItemAssembly } from './items.types';
 import { IDXComputationalTag } from './namespace.types';
@@ -39,9 +39,7 @@ export type EDMDDataSetBody = Partial<{
 	CurveSets: EDMDCurveSet2D[];
 	/** 形状元素集合 */
 	ShapeElements: EDMDShapeElement[];
-	/** 层技术定义集合 */
-	StratumTechnologies: EDMDStratumTechnology[];
-	/** 层定义集合（传统方式） */
+	/** 层次定义集合（传统方式） */
 	Strata: EDMDStratum[];
 	/** 3D模型引用集合 */
 	Models3D: EDMDModel3D[];
@@ -147,7 +145,7 @@ export interface EDMDChange {
 	/** 接受标记（用于响应） */
 	Accept?: { Value: boolean };
 	/** 删除的实例名称（用于删除操作） */
-	DeletedInstanceName?: EDMName;
+	DeletedInstanceName?: EDMDName;
 }
 
 /**

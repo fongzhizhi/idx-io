@@ -45,35 +45,76 @@ export interface ECADData {
  *
  * @remarks
  * 定义PCB制造中使用的各种物理层类型，对应IDX协议中的LayerPurpose枚举。
+ * 枚举值基于IDXv4.5协议文档Table 4定义。
  * REF: Section 6.1.2, Table 4
  */
-export type ECADLayerType =
-	/** 信号层，用于电气走线 */
-	| 'SIGNAL'
-	/** 电源或地层，通常为完整铜平面 */
-	| 'POWER_GROUND'
-	/** 介质层，绝缘材料 */
-	| 'DIELECTRIC'
-	/** 阻焊层，保护铜层并定义焊接区域 */
-	| 'SOLDERMASK'
-	/** 丝印层，元件标识和文字 */
-	| 'SILKSCREEN'
-	/** 焊膏层，定义SMT元件焊接区域 */
-	| 'SOLDERPASTE'
-	/** 焊膏掩膜层 */
-	| 'PASTEMASK'
-	/** 胶层，用于元件固定 */
-	| 'GLUE'
-	/** 胶掩膜层 */
-	| 'GLUEMASK'
-	/** 嵌入式电容介质层 */
-	| 'EMBEDDED_CAP_DIELECTRIC'
-	/** 嵌入式电阻层 */
-	| 'EMBEDDED_RESISTOR'
-	/** 通用层 */
-	| 'GENERIC'
-	/** 其他类型层 */
-	| 'OTHER';
+export enum ECADLayerType {
+	/**
+	 * 信号层，用于电气走线
+	 * @remarks 包含常规信号和时钟信号，通常为薄铜层
+	 */
+	SIGNAL = 'SIGNAL',
+	/**
+	 * 电源或地层，通常为完整铜平面
+	 * @remarks 用于电源分配、接地、EMI屏蔽
+	 */
+	POWER_GROUND = 'POWER_GROUND',
+	/**
+	 * 介质层，绝缘材料
+	 * @remarks 如FR4、聚酰亚胺等，提供电气隔离和机械支撑
+	 */
+	DIELECTRIC = 'DIELECTRIC',
+	/**
+	 * 阻焊层，保护铜层并定义焊接区域
+	 * @remarks 通常为绿油，防止短路和氧化
+	 */
+	SOLDERMASK = 'SOLDERMASK',
+	/**
+	 * 丝印层，元件标识和文字
+	 * @remarks 白色油墨，用于标识元件位置、方向和极性
+	 */
+	SILKSCREEN = 'SILKSCREEN',
+	/**
+	 * 焊膏层，定义SMT元件焊接区域
+	 * @remarks 用于锡膏印刷，定义焊盘上的焊膏区域
+	 */
+	SOLDERPASTE = 'SOLDERPASTE',
+	/**
+	 * 焊膏掩膜层
+	 * @remarks 定义焊膏应用区域，通常与焊膏层互补
+	 */
+	PASTEMASK = 'PASTEMASK',
+	/**
+	 * 胶层，用于元件固定
+	 * @remarks 用于SMT元件的底部填充或加固
+	 */
+	GLUE = 'GLUE',
+	/**
+	 * 胶掩膜层
+	 * @remarks 定义胶层应用区域，通常与胶层互补
+	 */
+	GLUEMASK = 'GLUEMASK',
+	/**
+	 * 嵌入式电容介质层
+	 * @remarks 用于制造嵌入式去耦电容的特殊介质材料
+	 */
+	EMBEDDED_CAP_DIELECTRIC = 'EMBEDDED_CAP_DIELECTRIC',
+	/**
+	 * 嵌入式电阻层
+	 * @remarks 用于制造嵌入式电阻的特殊材料层
+	 */
+	EMBEDDED_RESISTOR = 'EMBEDDED_RESISTOR',
+	/**
+	 * 通用层
+	 * @remarks 未指定具体用途的通用层，可用于特殊应用
+	 */
+	GENERIC = 'GENERIC',
+	/**
+	 * 其他类型层
+	 * @remarks 不属于上述类别的特殊层类型
+	 */
+	OTHER = 'OTHER',
+}
 
 /**
  * PCB层定义
@@ -111,12 +152,8 @@ export interface ECADLayerStackup {
 	id: string;
 	/** 堆叠名称，用于其他元素引用 */
 	name: string;
-	/** 按堆叠顺序排列的层列表，从底部到顶部 */
-	layers: string[];
-	/** 堆叠总厚度 */
-	thickness: number;
-	/** 引用名称，用于AssembleToName属性引用 */
-	referenceName: string;
+	/** 按堆叠顺序排列的层ID列表，从底部到顶部 */
+	layerIds: string[];
 }
 
 /**

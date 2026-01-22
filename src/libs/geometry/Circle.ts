@@ -1,7 +1,18 @@
+import { Arc } from './Arc';
 import { BBox2 } from './BBox2';
 import { Geometry2D, GeometryType } from './Geometry2D';
 import { Matrix3 } from './Matrix3';
 import { Vector2 } from './Vector2';
+
+// 添加类型定义
+export type CircleApproximationStrategy =
+	| 'min' // 使用最小半径
+	| 'max' // 使用最大半径
+	| 'average' // 使用平均半径
+	| 'geometricMean' // 使用几何平均数
+	| 'harmonicMean' // 使用调和平均数
+	| 'areaEquivalent' // 使用面积等效半径
+	| 'perimeterEquivalent'; // 使用周长等效半径
 
 /** 整圆 */
 export class Circle extends Geometry2D {
@@ -16,6 +27,20 @@ export class Circle extends Geometry2D {
 		super();
 		this.center = center;
 		this.radius = Math.abs(radius); // 确保半径为正数
+	}
+
+	/**
+	 * 从Arc创建Circle
+	 * 如果Arc是完整的圆，直接转换；否则使用平均半径
+	 */
+	static fromArc(arc: Arc, strategy: CircleApproximationStrategy = 'average'): Circle {
+		if (arc.isFullCircle && arc.isCircularArc) {
+			// 完整的圆，直接使用半径
+			return new Circle(arc.center.clone(), arc.radiusX);
+		} else {
+			// 非完整圆或椭圆，使用近似策略
+			return arc.getCircleApproximation(strategy);
+		}
 	}
 
 	/**

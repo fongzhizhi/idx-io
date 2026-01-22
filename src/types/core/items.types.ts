@@ -5,7 +5,7 @@
 
 import {
 	EDMDObject,
-	EDMName,
+	EDMDName,
 	EDMDTransformation,
 	EDMDLengthProperty,
 	EDMDUserSimpleProperty,
@@ -31,7 +31,7 @@ export interface EDMDItemSingle extends EDMDObject {
 	/** 项目唯一标识符 */
 	Identifier?: EDMDIdentifier;
 	/** 包名称（用于可重用封装，如元件封装） */
-	PackageName?: EDMName;
+	PackageName?: EDMDName;
 	/** 形状引用：在简化方式中引用 ShapeElement，传统方式中引用 Stratum 等 */
 	Shape: string;
 	/** 包引脚定义（用于元件引脚位置） */
@@ -72,10 +72,10 @@ export interface EDMPackagePin {
  * REF: Section 4.1.1.1
  */
 export interface EDMDItemInstance extends EDMDObject {
-	/** 引用的项目定义（Item single）id */
+	/** 引用的项目ID */
 	Item: string;
 	/** 实例名称 */
-	InstanceName: EDMName;
+	InstanceName: EDMDName;
 	/** 变换矩阵 */
 	Transformation?: EDMDTransformation;
 	/** Z轴偏移（相对定位，IDXv4.0+） */
@@ -85,7 +85,7 @@ export interface EDMDItemInstance extends EDMDObject {
 	/** 用户自定义属性 */
 	UserProperties?: EDMDUserSimpleProperty[];
 	/** 实例用户区域层名称（用于Other Outline映射到ECAD层） */
-	InstanceUserAreaLayerName?: EDMName;
+	InstanceUserAreaLayerName?: EDMDName;
 }
 
 /**

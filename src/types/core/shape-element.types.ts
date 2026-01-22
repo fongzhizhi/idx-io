@@ -23,7 +23,7 @@ export interface EDMDShapeElement extends EDMDObject {
 // ============= 层定义（传统方式） =============
 
 /**
- * 层定义（传统方式）
+ * 层次定义（传统方式）
  *
  * @remarks
  * 在传统IDX结构中用作"Third Item"，在简化方式中可省略

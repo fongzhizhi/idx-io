@@ -8,5 +8,5 @@ export const DefaultIDXBuildConfig: IDXBuildConfig = {
 	precision: 3,
 	includeNonCollaborative: false,
 	includeHistory: false,
-	systemScope: ''
+	systemScope: '',
 };

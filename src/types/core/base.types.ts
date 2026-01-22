@@ -3,7 +3,7 @@
 // NOTE: 所有IDX类型都扩展自EDMDObject，包含通用属性
 // REF: PSI5_IDXv4.5_Implementation_Guidelines.pdf Section 4
 
-import { StratumSurfaceDesignation, StratumType } from './enums';
+import { LayerPurpose, StratumSurfaceDesignation, StratumType, TechnologyType } from './enums';
 
 // ============= 通用基础接口 =============
 /**
@@ -91,7 +91,7 @@ export interface EDMDIdentifier {
  * @remarks
  * 包含系统范围和对象名称，确保在协作中正确引用
  */
-export interface EDMName {
+export interface EDMDName {
 	/** 系统作用域，定义对象的唯一命名空间 */
 	SystemScope: string;
 	/** 对象名称，在系统作用域内的唯一标识 */
@@ -109,7 +109,7 @@ export interface EDMName {
  * TEST_EXPECT: 正确序列化为XML属性
  */
 export interface EDMDUserSimpleProperty {
-	Key: EDMName;
+	Key: EDMDName;
 	Value: string | number | boolean;
 	IsChanged?: boolean;
 	IsNew?: boolean;
@@ -230,33 +230,9 @@ export interface EDMDHeader {
  * REF: Section 4.1.3
  */
 export interface RoleOnItemInstance {
-	RoleName: EDMName;
+	RoleName: EDMDName;
 	RoleType: 'owner' | 'reviewer' | 'designer';
 	Category: 'Mechanical' | 'Electrical' | 'Both';
 	Function: 'Design' | 'Review' | 'Manufacturing';
 	Context: string; // 引用的ItemInstance ID
-}
-
-// ============= 层技术定义 =============
-
-/**
- * 层技术类型
- *
- * @remarks
- * 定义层的技术特性
- * REF: Section 6.1.2.3
- */
-export interface EDMDStratumTechnology extends EDMDObject {
-	/** 技术类型：Design 或 Documentation */
-	TechnologyType: 'Design' | 'Documentation';
-	/** 层用途 */
-	LayerPurpose:
-		| 'OtherSignal'
-		| 'PowerOrGround'
-		| 'SolderMask'
-		| 'SilkScreen'
-		| 'LandsOnly'
-		| 'SolderPaste'
-		| 'PasteMask'
-		| 'Dielectric';
 }
