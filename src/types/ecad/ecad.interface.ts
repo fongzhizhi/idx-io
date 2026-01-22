@@ -21,10 +21,10 @@ export interface ECADData {
 	/** PCB板定义，包含轮廓、厚度及可能的层堆叠信息 */
 	board: ECADBoard;
 
-	/** 层定义表(layerId -> ECADLayer)(复杂板) */
+	/** 层定义表(layerId -> ECADLayer) */
 	layers?: Record<string, ECADLayer>;
-	/** 层堆叠定义表(stackId -> ECADLayerStackup)(复杂板) */
-	stackups?: ECADLayerStackup;
+	/** 层堆叠定义表(stackId -> ECADLayerStackup) */
+	stackups?: Record<string, ECADLayerStackup>;
 
 	/** 封装库定义列表，包含元件的几何形状和引脚信息 */
 	footprints: ECADFootprint[];
@@ -127,7 +127,7 @@ export enum ECADLayerType {
 export interface ECADLayer {
 	/** 层唯一标识符 */
 	id: string;
-	/** 层名称，在堆叠中必须唯一 */
+	/** 层名称, 必须唯一, 层堆叠引用名 */
 	name: string;
 	/** 层类型，决定其在制造中的用途 */
 	type: ECADLayerType;
