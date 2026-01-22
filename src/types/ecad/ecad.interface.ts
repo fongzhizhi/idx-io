@@ -21,10 +21,10 @@ export interface ECADData {
 	/** PCB板定义，包含轮廓、厚度及可能的层堆叠信息 */
 	board: ECADBoard;
 
-	/** 层定义列表（复杂板） */
-	layers?: ECADLayer[];
-	/** 层堆叠定义列表（复杂板） */
-	stackups?: ECADLayerStackup[];
+	/** 层定义表(layerId -> ECADLayer)(复杂板) */
+	layers?: Record<string, ECADLayer>;
+	/** 层堆叠定义表(stackId -> ECADLayerStackup)(复杂板) */
+	stackups?: ECADLayerStackup;
 
 	/** 封装库定义列表，包含元件的几何形状和引脚信息 */
 	footprints: ECADFootprint[];

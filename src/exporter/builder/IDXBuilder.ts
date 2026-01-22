@@ -61,6 +61,7 @@ import {
 	EDMDItemInstance,
 	EDMDName,
 	UserSimpleProperty,
+    EDMDZBounds,
 } from '../../types/core';
 import { Arc } from '../../libs/geometry/Arc';
 import { Circle } from '../../libs/geometry/Circle';
@@ -94,8 +95,10 @@ export class IDXBuilder {
 	private layerMap = new Map<string, ECADLayer>();
 	/** 层ID映射表(ecadLayerId -> idxLayerId) */
 	private layerIdMap = new Map<string, string>();
-	/** 层堆叠ID映射表(ecadLayerStackId -> idxLayerStackId) */
-	private layerStackupIdMap = new Map<string, string>();
+	/** 层边界表(ecadLayerId -> EDMDZBounds) */
+    private layerBoundsMap = new Map<string, EDMDZBounds>();
+	/** 层堆叠ID映射表(ecadLayerStackId -> refName) */
+	private layerStackupRefNameMap = new Map<string, string>();
 	/** 点集合(pointHash -> CartesianPoint) */
 	private pointMap = new Map<number, CartesianPoint>();
 	/** 几何表(idxId -> EDMDGeometry) */
@@ -155,7 +158,8 @@ export class IDXBuilder {
 		this.idCounterMap.clear();
 		this.layerMap.clear();
 		this.layerIdMap.clear();
-		this.layerStackupIdMap.clear();
+		this.layerBoundsMap.clear();
+		this.layerStackupRefNameMap.clear();
 		this.pointMap.clear();
 		this.geometryMap.clear();
 		this.curveSets = [];
@@ -236,6 +240,35 @@ export class IDXBuilder {
 		};
 		return userProp;
 	}
+
+    /**
+     * 计算全局Z坐标范围
+     * @param layerId 实例所在层
+     * @param bounds 实例边界
+     * @param assembleToName 引用的层名称
+     * @param layerZBoundsMap 层注册表，包含所有层的Z坐标信息
+     */
+    private calculateGlobalZBounds(
+        bounds: EDMDZBounds,
+        assembleToName?: string,
+        layerZBoundsMap?: Map<string, EDMDZBounds>
+    ): EDMDZBounds {
+        // # 判断是否使用了 assembleToName
+        const referenceLayer = assembleToName && layerZBoundsMap?.get(assembleToName);
+
+        // # 使用绝对坐标
+        if (!referenceLayer) {
+            return bounds;
+        }
+        
+        // # 计算相对坐标
+        // REF: 默认使用参考层的上表面作为基准（符合IDX惯例）
+        const refZ = referenceLayer.UpperBound;
+        return {
+            LowerBound: bounds.LowerBound - refZ,
+            UpperBound: bounds.UpperBound - refZ,
+        };
+    }
 
 	// ============= 构建 Header =============
 	/**
@@ -504,22 +537,27 @@ export class IDXBuilder {
 		let nextLowerBound = 0; // Design: 从底面开始, 从 0 开始计算
 		const itemInstances: EDMDItemInstance[] = [];
 		usedLayerdMap.forEach((layer, layerIdxId) => {
-			const { name: layerName, thickness } = layer;
+			const { id: layerId, name: layerName, thickness } = layer;
+
+            const layerBounds: EDMDZBounds = {
+                LowerBound: nextLowerBound,
+                UpperBound: nextLowerBound + thickness,
+            };
 
 			const userProperties: EDMDUserSimpleProperty[] = [];
 			userProperties.push(
 				this.craeteUserSimpleProperty(
 					UserSimpleProperty.LowerBound,
-					nextLowerBound
+					layerBounds.LowerBound
 				)
 			);
-			nextLowerBound += thickness;
 			userProperties.push(
-				this.craeteUserSimpleProperty(
-					UserSimpleProperty.UpperBound,
-					nextLowerBound
+                this.craeteUserSimpleProperty(
+                    UserSimpleProperty.UpperBound,
+					layerBounds.UpperBound
 				)
 			);
+            nextLowerBound == layerBounds.UpperBound;
 
 			const layerInstanceId = this.generateId(IDXBuilderIDPre.ItemInstance);
 			const layerInstance: EDMDItemInstance = {
@@ -529,6 +567,8 @@ export class IDXBuilder {
 				UserProperties: userProperties,
 			};
 			itemInstances.push(layerInstance);
+
+            this.layerBoundsMap.set(layerId, layerBounds);
 		});
 
 		// ## 层堆叠属性
@@ -536,6 +576,7 @@ export class IDXBuilder {
 		const userProperties: EDMDUserSimpleProperty[] = [];
 		userProperties.push(this.craeteUserSimpleProperty(UserSimpleProperty.TotalThickness, totalThickness));
 
+        const layerStackRefName = layerStackName
 		const layerStackupAssembly: EDMDItemAssembly = {
 			Description: `Layer stackup: ${layerIds.length} layers`,
 			...this.getCommonData(layerStackup),
@@ -544,7 +585,7 @@ export class IDXBuilder {
 			ItemType: ItemType.ASSEMBLY,
 			geometryType: GeometryType.LAYER_STACKUP,
 			ItemInstances: itemInstances,
-			ReferenceName: layerStackName,
+			ReferenceName: layerStackRefName,
 			UserProperties: userProperties,
 		};
 
@@ -554,7 +595,7 @@ export class IDXBuilder {
 		}
 
 		this.itemsAssembly.push(layerStackupAssembly);
-		this.layerStackupIdMap.set(layerStackEcadId, layerStackupId);
+		this.layerStackupRefNameMap.set(layerStackEcadId, layerStackRefName);
 	}
 
 	// ------------ 构建几何数据 ------------
@@ -740,18 +781,21 @@ export class IDXBuilder {
 	 * REF: Section 6.1
 	 */
 	private processBoard(board: ECADBoard): void {
-		const useSimplified = this.config.useSimplified;
+        const useSimplified = this.config.useSimplified;
+        const layerStackupRefNameMap = this.layerStackupRefNameMap;
+        const { outline, thickness, stackupId, features, zones, bends } = board;
+        const boardLayerStackRefName = stackupId && layerStackupRefNameMap.get(stackupId);
 
 		// # 处理板轮廓几何
-		const boardShapeId = this.processGeometry(board.outline, true);
+		const boardShapeId = this.processGeometry(outline, true);
 
 		// # 创建曲线集
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
 			ShapeDescriptionType: 'GeometricModel',
-			LowerBound: 0,
-			UpperBound: 1.6, // 默认1.6mm
+			LowerBound: ?,
+			UpperBound: ?,
 			DetailedGeometricModelElements: [boardShapeId],
 		};
 		this.curveSets.push(curveSet);
@@ -805,7 +849,7 @@ export class IDXBuilder {
 
 		this.itemsSingle.push(boardSingle);
 
-		// # 创建板子实例（Item assembly）
+		// # 创建板子装配实例
 		const hasLayerStack = false; // TODO
 		const boardAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
 		const boardAssembly: EDMDItemAssembly = {
@@ -838,6 +882,8 @@ export class IDXBuilder {
 			],
 			AssembleToName,
 		};
+
+        // ## 传统方式建模
 		if (!useSimplified) {
 			delete boardAssembly.geometryType;
 		}

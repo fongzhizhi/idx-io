@@ -2480,7 +2480,7 @@ export interface ECADFootprintGeometry {
             <pdm:ItemInstance>
                 <pdm:InstanceName>
                     <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>MainZone_Instance</foundation:ObjectName>
+                    <foundation:ObjectNameUpperBound>MainZone_Instance</foundation:ObjectName>
                 </pdm:InstanceName>
                 <!-- 引用层堆叠 -->
                 <pdm:AssembleToName>MAIN_4LAYER_STACKUP</pdm:AssembleToName>
@@ -2630,3 +2630,158 @@ IDX使用以下Z轴坐标系：
    - 其他：厚度、材料等通过UserProperty
 
 这样设计的层系统既符合IDXv4.5标准，又足够灵活以支持各种复杂的PCB层叠结构。
+
+## 十三、曲线集上下边界的计算
+
+根据 **PSI5 IDXv4.5 实施指南**，曲线集（`CurveSet2d`）的 `LowerBound` 和 `UpperBound` 计算方式如下：
+
+### 📐 **计算方式与规则**
+
+#### **1. 基本计算规则**
+- `LowerBound` 和 `UpperBound` 定义了曲线在 **Z轴方向的范围**，形成 **2.5D 几何体**（拉伸体）
+- 计算单位为 **毫米（mm）**
+- Z=0 定义为 **板底部安装面**（BOTTOM surface）
+- 正值表示 **向上方向**（远离板底）
+- 负值表示 **向下方向**（朝向板底）
+
+```typescript
+// 示例：一个1.6mm厚的板
+LowerBound = 0      // 板底表面
+UpperBound = 1.6    // 板顶表面
+
+// 示例：板底的阻焊层（负Z值）
+LowerBound = -0.01  // 低于安装面0.01mm
+UpperBound = 0      // 安装面高度
+```
+
+#### **2. 使用 `AssembleToName` 时的计算**
+当项目（Item）使用 `AssembleToName` 引用一个层或表面时，计算变为 **相对值**：
+
+```typescript
+/**
+ * 使用 AssembleToName 时的计算逻辑：
+ * 
+ * 1. 确定参考面（由 AssembleToName 指定）的全局Z坐标
+ * 2. LowerBound/UpperBound 变为相对于该参考面的偏移量
+ * 3. 最终全局坐标 = 参考面Z坐标 + 偏移量
+ */
+interface ZCoordinateCalculation {
+  // 参考面的全局Z坐标（从层定义或板表面获得）
+  referenceZ: number;
+  
+  // 曲线的相对偏移
+  lowerBound: number;  // 相对偏移（可正可负）
+  upperBound: number;  // 相对偏移（可正可负）
+  
+  // 最终全局坐标
+  globalLower = referenceZ + lowerBound;
+  globalUpper = referenceZ + upperBound;
+}
+```
+
+#### **3. 具体示例**
+
+**示例1：板子上下边界计算**
+
+```xml
+<!-- 1. 定义层堆叠（总厚度1.6mm） -->
+<foundation:Item id="STACKUP_PCB" geometryType="LAYER_STACKUP">
+  <pdm:ReferenceName>PCB_STACKUP</pdm:ReferenceName>
+  <!-- 包含多个层实例，总Z范围0-1.6mm -->
+</foundation:Item>
+
+<!-- 2. 板子轮廓引用该层堆叠 -->
+<foundation:Item id="BOARD_OUTLINE" geometryType="BOARD_OUTLINE">
+  <pdm:AssembleToName>PCB_STACKUP</pdm:AssembleToName>
+  <!-- 
+  关键：板子CurveSet2d的LowerBound/UpperBound应该为0
+  因为厚度已经由层堆叠定义，板子轮廓是2D的
+  -->
+</foundation:Item>
+
+<!-- 对应的CurveSet2d -->
+<foundation:CurveSet2d id="BOARD_CURVESET">
+  <d2:LowerBound>0</d2:LowerBound>    <!-- 设为0 -->
+  <d2:UpperBound>0</d2:UpperBound>    <!-- 设为0 -->
+  <!-- 定义板子2D轮廓的几何 -->
+</foundation:CurveSet2d>
+```
+
+**示例2：孔跨越多个层**
+
+```xml
+<!-- 对应的CurveSet2d - 使用绝对坐标 -->
+<foundation:CurveSet2d id="VIA_CURVE_ABS">
+  <d2:LowerBound>0.5</d2:LowerBound>    <!-- 全局Z=0.5mm -->
+  <d2:UpperBound>0.56</d2:UpperBound>    <!-- 全局Z=0.56mm -->
+  <!-- 孔直径等几何定义 -->
+</foundation:CurveSet2d>
+
+<!-- 对应的CurveSet2d - 相对坐标 -->
+<foundation:CurveSet2d id="VIA_CURVE_REL">
+  <!-- 
+  相对于INNER_1_TO_2层堆叠的参考面
+  假设层堆叠INNER_1_TO_2的Z范围：0.50-0.56mm
+  参考面通常取最上表面（0.56mm）
+  -->
+  <d2:LowerBound>-0.06</d2:LowerBound>  <!-- 0.50 - 0.56 = -0.06 -->
+  <d2:UpperBound>0</d2:UpperBound>      <!-- 0.56 - 0.56 = 0 -->
+  <!-- 孔直径0.1mm -->
+</foundation:CurveSet2d>
+```
+
+#### **4. 特殊值处理**
+
+```typescript
+/**
+ * LowerBound/UpperBound 的特殊值语义
+ */
+export enum BoundSpecialValues {
+  /** 未定义下边界：向下无限延伸 */
+  UNDEFINED_LOWER = 'unbounded_bottom',
+  
+  /** 未定义上边界：向上无限延伸 */
+  UNDEFINED_UPPER = 'unbounded_top',
+  
+  /** 值=0且参考面=板底：表示从板底表面开始 */
+  BOARD_BOTTOM_SURFACE = 0,
+  
+  /** 当 UpperBound=LowerBound 时：表示无限薄的面（如铜箔） */
+  ZERO_THICKNESS = 'zero_thickness',
+  
+  /** 负值：在参考面下方 */
+  BELOW_REFERENCE = 'negative',
+  
+  /** 正值：在参考面上方 */
+  ABOVE_REFERENCE = 'positive'
+}
+```
+
+#### **5. 重要注意事项**
+
+1. **参考面选择**：
+   - `AssembleToName` 通常引用 **层的上表面**（`UpperBound`）
+   - 文档中明确：*"Use the surface of the Layer furthest from the center of the board as the reference"*
+
+2. **负值有效性**：
+   - 阻焊层、丝印层等可以在板底表面下方有负值
+   - 但物理层（铜层、介电层）通常应为正值
+
+3. **无限边界**：
+   - 如文档94页所述，未定义的边界表示 **无限延伸**
+   - 常用于禁止区（Keepout）的定义
+
+4. **坐标系一致性**：
+   - 确保所有计算使用相同的单位（毫米）
+   - Z=0 始终是板底安装面
+5. **板子(0,0)的特殊语义**：表示"用AssembleToName引用的实体的厚度拉伸我"
+6. **孔必须指定具体范围**：因为孔是预定义的3D实体
+7. **过孔计算方法**：
+   - 绝对坐标：`LowerBound=0`, `UpperBound=板厚`
+   - 相对坐标：需要选择参考面并计算偏移
+8. **设计建议**：
+   - 板子：总是使用AssembleToName + (0,0)
+   - 孔/过孔：优先使用AssembleToName实现自适应设计
+   - 参考面选择：建议统一使用**上表面**（TOP）作为参考
+
+这些规则在文档的 **第21-22页（4.1.1节）** 和 **第94-95页（6.5节）** 有详细说明。

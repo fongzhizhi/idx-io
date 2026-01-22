@@ -177,13 +177,17 @@ export interface EDMDLine extends EDMDBaseGeometry {
  * REF: Section 7.1
  * XML: <foundation:CurveSet2d xsi:type="d2:EDMDCurveSet2d">
  */
-export interface EDMDCurveSet2D extends EDMDObject {
+export interface EDMDCurveSet2D extends EDMDObject, EDMDZBounds {
 	/** 形状描述类型，通常为 GeometricModel */
 	ShapeDescriptionType: 'GeometricModel' | 'DocumentationModel';
+	/** 引用的几何元素id列表 */
+	DetailedGeometricModelElements: string[];
+}
+
+/**Z轴边界(坐标)  */
+export interface EDMDZBounds {
 	/** Z轴下边界，定义曲线起始高度 */
 	LowerBound: EDMDLengthProperty;
 	/** Z轴上边界，定义曲线结束高度 */
 	UpperBound: EDMDLengthProperty;
-	/** 引用的几何元素id列表 */
-	DetailedGeometricModelElements: string[];
 }
