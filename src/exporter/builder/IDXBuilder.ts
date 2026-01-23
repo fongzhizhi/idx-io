@@ -352,37 +352,40 @@ export class IDXBuilder {
 	 * 处理所有 ECAD 实体并构建 IDX 数据体。
 	 */
 	private buildBody(ecadData: ECADData): EDMDDataSetBody {
+		const {includeNonCollaborative} = this.config;
+		const {layers, stackups, board, footprints, components, holes, constraints, nonCollaborative} = ecadData;
+
 		// # 处理层和层堆叠
-		if (ecadData.layers && ecadData.stackups) {
-			this.processLayersAndStackups(ecadData.layers, ecadData.stackups);
+		if (layers && stackups) {
+			this.processLayersAndStackups(layers, stackups);
 		}
 
 		// # 处理板子
-		this.processBoard(ecadData.board);
+		this.processBoard(board);
 
 		// # 处理封装
-		ecadData.footprints.forEach(footprint => {
+		footprints.forEach(footprint => {
 			this.processFootprint(footprint);
 		});
 
 		// # 处理元件实例
-		ecadData.components.forEach(component => {
+		components.forEach(component => {
 			this.processComponent(component);
 		});
 
 		// # 处理孔和过孔
-		ecadData.holes.forEach(hole => {
+		holes.forEach(hole => {
 			this.processHole(hole);
 		});
 
 		// # 处理禁布区
-		ecadData.constraints.forEach(constraint => {
+		constraints.forEach(constraint => {
 			this.processConstraint(constraint);
 		});
 
 		// # 处理非协作数据（可选）
-		if (this.config.includeNonCollaborative && ecadData.nonCollaborative) {
-			this.processNonCollaborativeData(ecadData.nonCollaborative);
+		if (this.config.includeNonCollaborative && nonCollaborative) {
+			this.processNonCollaborativeData(nonCollaborative);
 		}
 
 		// # 返回完整数据集
@@ -837,7 +840,6 @@ export class IDXBuilder {
 	 */
 	private processBoard(board: ECADBoard): void {
 		const useSimplified = this.config.useSimplified;
-		const layerStackMap = this.layerStackMap;
 		const { name: boardName, outline, thickness, stackupId, features, zones, bends } = board;
 		this.boardLayerStackId = stackupId;
 		const assemblyToName = this.getLayerStackName(stackupId);
@@ -849,7 +851,7 @@ export class IDXBuilder {
 		// # 处理板轮廓几何
 		const boardShapeId = this.processGeometry(outline, true);
 
-		// # 创建曲线集
+		// # 创建曲线集 
 		// ## 计算Z轴边界
 		const boardZBounds: EDMDZBounds = {
 			LowerBound: 0,
@@ -895,13 +897,13 @@ export class IDXBuilder {
 			id: boardSingleId,
 			Name: 'PCB Board',
 			Description: 'Main PCB board',
+			Identifier: this.createIdentifier('BOARD'),
 			...this.getCommonData(board),
 			ItemType: ItemType.SINGLE,
-			Identifier: board.identifier || this.createIdentifier('BOARD'),
 			Shape: shapeElementId,
 		};
 
-		// ## 使用传统方式建模，需要设置 Shape 为 Stratum
+		// ## 传统方式建模
 		if (!useSimplified) {
 			boardSingle.Shape = this.createBoardStratum(shapeElementId);
 		}
@@ -940,14 +942,10 @@ export class IDXBuilder {
 		this.itemsAssembly.push(boardAssembly);
 
 		// # 处理层区域（刚柔结合板）
-		if (board.zones) {
-			this.processLayerZones(board.zones);
-		}
+		zones && this.processLayerZones(zones);
 
 		// # 处理弯曲区域（柔性板）
-		if (board.bends) {
-			this.processBends(board.bends);
-		}
+		bends && this.processBends(bends);
 	}
 
 	/**
@@ -1073,6 +1071,7 @@ export class IDXBuilder {
 		// TODO: 实现柔性板中的弯曲区域
 	}
 
+	// ------------ 构建封装 ------------
 	/**
 	 * 处理封装
 	 *
@@ -1080,10 +1079,12 @@ export class IDXBuilder {
 	 * REF: Section 6.2
 	 */
 	private processFootprint(footprint: ECADFootprint): void {
-		// 1. 处理封装轮廓几何
+		const {packageName, geometry, pins, thermalProperties, valueProperties} = footprint;
+		
+		// # 处理封装轮廓几何
 		const outlineShapeId = this.processGeometry(footprint.geometry.outline, 'FOOTPRINT_OUTLINE');
 
-		// 2. 创建曲线集（封装高度通常为0，表示2D轮廓）
+		// # 创建曲线集（封装高度通常为0，表示2D轮廓）
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
@@ -1094,7 +1095,7 @@ export class IDXBuilder {
 		};
 		this.curveSets.push(curveSet);
 
-		// 3. 创建形状元素
+		// # 创建形状元素
 		const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
 		const shapeElement: EDMDShapeElement = {
 			id: shapeElementId,
@@ -1103,8 +1104,7 @@ export class IDXBuilder {
 			DefiningShape: curveSetId,
 		};
 		this.shapeElements.push(shapeElement);
-
-		// 4. 处理引脚
+		// ## 处理引脚
 		const pinElements = footprint.pins
 			.map(pin => {
 				if (pin.geometry) {
@@ -1124,7 +1124,7 @@ export class IDXBuilder {
 			})
 			.filter(pin => pin !== null);
 
-		// 5. 创建封装项目定义（Item single）
+		// ## 创建封装定义
 		const footprintSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
 		const footprintSingle: EDMDItemSingle = {
 			id: footprintSingleId,
@@ -1184,6 +1184,7 @@ export class IDXBuilder {
 		}
 	}
 
+	// ------------ 构建元件 ------------
 	/**
 	 * 处理元件实例
 	 *
@@ -1285,8 +1286,8 @@ export class IDXBuilder {
 		};
 
 		// 3. 处理3D模型引用
-		if (component.model3d) {
-			const model3dId = this.processModel3D(component.model3d);
+		if (component.model3dId) {
+			const model3dId = this.processModel3D(component.model3dId);
 			// 将3D模型关联到元件
 			// 这里需要更新对应的Item single
 		}
@@ -1294,6 +1295,42 @@ export class IDXBuilder {
 		this.itemsAssembly.push(componentAssembly);
 	}
 
+	/**
+	 * 处理3D模型
+	 */
+	private processModel3D(model: ECADModel3D): string {
+		const modelId = this.generateId(IDXBuilderIDPre.Model);
+		const idxModel: EDMDModel3D = {
+			id: modelId,
+			ModelIdentifier: model.identifier,
+			MCADFormat: this.convertModelFormat(model.format),
+			...(model.version && { ModelVersion: model.version }),
+			...(model.location && { ModelLocation: model.location }),
+			...(model.transformation && { Transformation: model.transformation }),
+		};
+
+		this.models3D.push(idxModel);
+		return modelId;
+	}
+
+	/**
+	 * 转换模型格式
+	 */
+	private convertModelFormat(format: ECADModel3D['format']): EDMDModel3D['MCADFormat'] {
+		const mapping: Record<ECADModel3D['format'], EDMDModel3D['MCADFormat']> = {
+			STEP: 'STEP',
+			STL: 'STL',
+			IGES: 'Catia', // IGES通常与Catia关联
+			PARASOLID: 'SolidEdge',
+			SOLIDWORKS: 'SolidWorks',
+			NX: 'NX',
+			CATIA: 'Catia',
+		};
+
+		return mapping[format] || 'STEP';
+	}
+
+	// ------------ 构建孔 ------------
 	/**
 	 * 处理孔和过孔
 	 *
@@ -1418,6 +1455,7 @@ export class IDXBuilder {
 		this.itemsAssembly.push(holeAssembly);
 	}
 
+	// ------------ 构建禁止区 ------------
 	/**
 	 * 处理禁布区/保持区
 	 *
@@ -1510,6 +1548,7 @@ export class IDXBuilder {
 		this.itemsAssembly.push(constraintAssembly);
 	}
 
+	// ------------ 构建非协作数据 ------------
 	/**
 	 * 处理非协作数据
 	 */
@@ -1762,23 +1801,6 @@ export class IDXBuilder {
 		this.itemsSingle.push(silkscreenSingle);
 	}
 
-	/**
-	 * 处理3D模型
-	 */
-	private processModel3D(model: ECADModel3D): string {
-		const modelId = this.generateId(IDXBuilderIDPre.Model);
-		const idxModel: EDMDModel3D = {
-			id: modelId,
-			ModelIdentifier: model.identifier,
-			MCADFormat: this.convertModelFormat(model.format),
-			...(model.version && { ModelVersion: model.version }),
-			...(model.location && { ModelLocation: model.location }),
-			...(model.transformation && { Transformation: model.transformation }),
-		};
-
-		this.models3D.push(idxModel);
-		return modelId;
-	}
 
 	/**
 	 * 创建2D变换
@@ -1803,20 +1825,6 @@ export class IDXBuilder {
 	}
 
 	/**
-	 * 获取区域类型的geometryType
-	 */
-	private getZoneGeometryType(zoneType: 'RIGID' | 'FLEXIBLE' | 'STIFFENER'): string {
-		switch (zoneType) {
-			case 'FLEXIBLE':
-				return 'BOARD_AREA_FLEXIBLE';
-			case 'STIFFENER':
-				return 'BOARD_AREA_STIFFENER';
-			default:
-				return 'BOARD_AREA_RIGID';
-		}
-	}
-
-	/**
 	 * 获取约束类型的geometryType
 	 */
 	private getConstraintGeometryType(type: 'KEEPOUT' | 'KEEPIN', purpose: ECADConstraintPurpose): string {
@@ -1838,44 +1846,6 @@ export class IDXBuilder {
 			default:
 				return `${prefix}_OTHER`;
 		}
-	}
-
-	/**
-	 * 转换模型格式
-	 */
-	private convertModelFormat(format: ECADModel3D['format']): EDMDModel3D['MCADFormat'] {
-		const mapping: Record<ECADModel3D['format'], EDMDModel3D['MCADFormat']> = {
-			STEP: 'STEP',
-			STL: 'STL',
-			IGES: 'Catia', // IGES通常与Catia关联
-			PARASOLID: 'SolidEdge',
-			SOLIDWORKS: 'SolidWorks',
-			NX: 'NX',
-			CATIA: 'Catia',
-		};
-
-		return mapping[format] || 'STEP';
-	}
-
-	/**
-	 * 组装数据体
-	 */
-	private assembleBody(): EDMDDataSetBody {
-		const Body: EDMDDataSetBody = {};
-
-		// 只包含非空的数组
-		if (this.pointMap.length > 0) Body.Points = this.pointMap;
-		if (this.geometryMap.length > 0) Body.Geometries = this.geometryMap;
-		if (this.curveSets.length > 0) Body.CurveSets = this.curveSets;
-		if (this.shapeElements.length > 0) Body.ShapeElements = this.shapeElements;
-		if (this.stratumTechnologies.length > 0) Body.StratumTechnologies = this.stratumTechnologies;
-		if (this.strata.length > 0) Body.Strata = this.strata;
-		if (this.models3D.length > 0) Body.Models3D = this.models3D;
-		if (this.itemsSingle.length > 0) Body.ItemsSingle = this.itemsSingle;
-		if (this.itemsAssembly.length > 0) Body.ItemsAssembly = this.itemsAssembly;
-		if (this.histories.length > 0) Body.Histories = this.histories;
-
-		return Body;
 	}
 
 	// ============= 构建 ProcessInstruction =============

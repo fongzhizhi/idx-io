@@ -2790,3 +2790,430 @@ export enum BoundSpecialValues {
 
 TODO
 
+## 十五、元件建模
+
+### 📦 **封装（Package）vs 元件（Component）概念**
+
+```typescript
+/**
+ * 封装 vs 元件的区别：
+ */
+interface PackageVsComponent {
+  // 封装（Package）：物理形式，无3D模型
+  package: {
+    definition: '2D轮廓 + 引脚位置',
+    contains: '引脚几何、焊盘形状、丝印等',
+    analogy: 'PCB上的"脚印"'
+  };
+  
+  // 元件（Component）：具体实例，有3D模型
+  component: {
+    definition: '封装 + 3D模型 + 电特性',
+    contains: '封装引用、3D模型、热属性、电属性等',
+    analogy: '实际安装在PCB上的零件'
+  };
+}
+```
+
+## 🎯 **完整案例：0805电阻**
+
+#### **1. 封装定义（Package）**
+```xml
+<!-- 0805电阻封装定义 -->
+<foundation:Item id="PKG_RES_0805" geometryType="PACKAGE">
+    <foundation:Name>RESISTOR_0805</foundation:Name>
+    <foundation:Description>0805 Resistor Package</foundation:Description>
+    <pdm:ItemType>single</pdm:ItemType>
+    
+    <!-- 封装标识符 -->
+    <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:Number>PKG-0805-RES</foundation:Number>
+        <foundation:Version>1</foundation:Version>
+        <foundation:Revision>0</foundation:Revision>
+        <foundation:Sequence>0</foundation:Sequence>
+    </pdm:Identifier>
+    
+    <!-- 封装名称（用于库引用） -->
+    <pdm:PackageName xsi:type="foundation:EDMDName">
+        <foundation:SystemScope>LIBRARY</foundation:SystemScope>
+        <foundation:ObjectName>0805</foundation:ObjectName>
+    </pdm:PackageName>
+    
+    <!-- ============ 引脚定义 ============ -->
+    
+    <!-- 引脚1 -->
+    <pdm:PackagePin pinNumber="1" primary="true">
+        <!-- 引脚位置（相对封装原点） -->
+        <d2:Point>
+            <foundation:CartesianPoint id="PIN1_POS" xsi:type="d2:EDMDCartesianPoint">
+                <d2:X xsi:type="property:EDMDLengthProperty">
+                    <property:Value>-0.95</property:Value>  <!-- -0.95mm -->
+                </d2:X>
+                <d2:Y xsi:type="property:EDMDLengthProperty">
+                    <property:Value>0</property:Value>
+                </d2:Y>
+            </foundation:CartesianPoint>
+        </d2:Point>
+        
+        <!-- 引脚形状（矩形焊盘） -->
+        <pdm:Shape>PIN1_SHAPE</pdm:Shape>
+    </pdm:PackagePin>
+    
+    <!-- 引脚2 -->
+    <pdm:PackagePin pinNumber="2" primary="false">
+        <d2:Point>
+            <foundation:CartesianPoint id="PIN2_POS" xsi:type="d2:EDMDCartesianPoint">
+                <d2:X xsi:type="property:EDMDLengthProperty">
+                    <property:Value>0.95</property:Value>  <!-- 0.95mm -->
+                </d2:X>
+                <d2:Y xsi:type="property:EDMDLengthProperty">
+                    <property:Value>0</property:Value>
+                </d2:Y>
+            </foundation:CartesianPoint>
+        </d2:Point>
+        <pdm:Shape>PIN2_SHAPE</pdm:Shape>
+    </pdm:PackagePin>
+    
+    <!-- ============ 封装外形几何 ============ -->
+    
+    <!-- 封装本体形状（矩形） -->
+    <pdm:Shape>PKG_BODY_SHAPE</pdm:Shape>
+    
+</foundation:Item>
+```
+
+#### **2. 引脚形状定义**
+```xml
+<!-- 引脚1形状：1.3mm x 1.5mm矩形 -->
+<foundation:CurveSet2d id="PIN1_CURVE" xsi:type="d2:EDMDCurveSet2d">
+    <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+    <d2:LowerBound xsi:type="property:EDMDLengthProperty">
+        <property:Value>0</property:Value>
+    </d2:LowerBound>
+    <d2:UpperBound xsi:type="property:EDMDLengthProperty">
+        <property:Value>0.1</property:Value>  <!-- 焊盘高度0.1mm -->
+    </d2:UpperBound>
+    
+    <!-- 矩形定义（围绕引脚位置） -->
+    <d2:DetailedGeometricModelElement>PIN1_RECT</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+
+<foundation:PolyLine id="PIN1_RECT" xsi:type="d2:EDMDPolyLine">
+    <!-- 以引脚中心为原点，创建矩形 -->
+    <d2:Point>
+        <foundation:CartesianPoint id="PIN1_PT1">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.65</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.75</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="PIN1_PT2">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>0.65</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.75</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="PIN1_PT3">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>0.65</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>0.75</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="PIN1_PT4">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.65</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>0.75</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="PIN1_PT5">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.65</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.75</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+</foundation:PolyLine>
+
+<foundation:ShapeElement id="PIN1_SHAPE" xsi:type="pdm:EDMDShapeElement">
+    <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+    <pdm:Inverted>false</pdm:Inverted>
+    <pdm:DefiningShape>PIN1_CURVE</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- 引脚2形状（与引脚1相同，可以复用或独立定义） -->
+<foundation:ShapeElement id="PIN2_SHAPE" xsi:type="pdm:EDMDShapeElement">
+    <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+    <pdm:Inverted>false</pdm:Inverted>
+    <pdm:DefiningShape>PIN1_CURVE</pdm:DefiningShape>
+</foundation:ShapeElement>
+```
+
+#### **3. 封装本体形状**
+```xml
+<!-- 封装本体形状：2.0mm x 1.25mm x 0.5mm -->
+<foundation:CurveSet2d id="BODY_CURVE" xsi:type="d2:EDMDCurveSet2d">
+    <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+    <d2:LowerBound xsi:type="property:EDMDLengthProperty">
+        <property:Value>0</property:Value>
+    </d2:LowerBound>
+    <d2:UpperBound xsi:type="property:EDMDLengthProperty">
+        <property:Value>0.5</property:Value>  <!-- 封装高度0.5mm -->
+    </d2:UpperBound>
+    
+    <!-- 矩形定义 -->
+    <d2:DetailedGeometricModelElement>BODY_RECT</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+
+<foundation:PolyLine id="BODY_RECT" xsi:type="d2:EDMDPolyLine">
+    <!-- 封装外形 -->
+    <d2:Point>
+        <foundation:CartesianPoint id="BODY_PT1">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>-1.0</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.625</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="BODY_PT2">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>1.0</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.625</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="BODY_PT3">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>1.0</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>0.625</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="BODY_PT4">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>-1.0</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>0.625</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+    <d2:Point>
+        <foundation:CartesianPoint id="BODY_PT5">
+            <d2:X xsi:type="property:EDMDLengthProperty">
+                <property:Value>-1.0</property:Value>
+            </d2:X>
+            <d2:Y xsi:type="property:EDMDLengthProperty">
+                <property:Value>-0.625</property:Value>
+            </d2:Y>
+        </foundation:CartesianPoint>
+    </d2:Point>
+</foundation:PolyLine>
+
+<foundation:ShapeElement id="PKG_BODY_SHAPE" xsi:type="pdm:EDMDShapeElement">
+    <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+    <pdm:Inverted>false</pdm:Inverted>
+    <pdm:DefiningShape>BODY_CURVE</pdm:DefiningShape>
+</foundation:ShapeElement>
+```
+
+#### **4. 元件定义（Component）包含3D模型**
+```xml
+<!-- 具体电阻元件：10KΩ 0805 -->
+<foundation:Item id="COMP_10K_0805" geometryType="COMPONENT">
+    <foundation:Name>10K_0805_RESISTOR</foundation:Name>
+    <foundation:Description>10K Ohm 0805 Resistor</foundation:Description>
+    <pdm:ItemType>single</pdm:ItemType>
+    
+    <!-- 元件标识符 -->
+    <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:Number>COMP-10K-0805</foundation:Number>
+        <foundation:Version>1</foundation:Version>
+        <foundation:Revision>0</foundation:Revision>
+        <foundation:Sequence>0</foundation:Sequence>
+    </pdm:Identifier>
+    
+    <!-- 引用封装 -->
+    <pdm:PackageName xsi:type="foundation:EDMDName">
+        <foundation:SystemScope>LIBRARY</foundation:SystemScope>
+        <foundation:ObjectName>0805</foundation:ObjectName>
+    </pdm:PackageName>
+    
+    <!-- ============ 电特性属性 ============ -->
+    
+    <!-- 电阻值 -->
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+        <property:Key xsi:type="foundation:EDMDName">
+            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+            <foundation:ObjectName>RESISTANCE</foundation:ObjectName>
+        </property:Key>
+        <property:Value>10000</property:Value>  <!-- 10KΩ -->
+    </foundation:UserProperty>
+    
+    <!-- 容差 -->
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+        <property:Key xsi:type="foundation:EDMDName">
+            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+            <foundation:ObjectName>TOLERANCE</foundation:ObjectName>
+        </property:Key>
+        <property:Value>1</property:Value>  <!-- 1% -->
+    </foundation:UserProperty>
+    
+    <!-- 功率 -->
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+        <property:Key xsi:type="foundation:EDMDName">
+            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+            <foundation:ObjectName>POWER_MAX</foundation:ObjectName>
+        </property:Key>
+        <property:Value>0.125</property:Value>  <!-- 1/8W -->
+    </foundation:UserProperty>
+    
+    <!-- ============ 3D模型信息 ============ -->
+    
+    <!-- 关键：3D模型关联到元件，而不是封装 -->
+    <pdm:EDMD3DModel>MODEL_3D_0805_RESISTOR</pdm:EDMD3DModel>
+    
+    <!-- 引用封装形状（2D轮廓） -->
+    <pdm:Shape>PKG_BODY_SHAPE</pdm:Shape>
+    
+</foundation:Item>
+```
+
+#### **5. 3D模型定义**
+
+```xml
+<!-- 3D模型信息 -->
+<foundation:Model3D id="MODEL_3D_0805_RESISTOR">
+    <pdm:ModelIdentifier>Resistor_0805.step</pdm:ModelIdentifier>
+    <pdm:ModelVersion>1.0</pdm:ModelVersion>
+    
+    <!-- 模型位置（相对路径） -->
+    <pdm:ModelLocation>/3D_Models/Passives/Resistors/</pdm:ModelLocation>
+    
+    <!-- 文件格式 -->
+    <pdm:MCADFormat>STEP</pdm:MCADFormat>
+    <pdm:MCADFormatVersion>AP214</pdm:MCADFormatVersion>
+    
+    <!-- 变换矩阵（用于对齐3D模型与2D封装） -->
+    <pdm:Transformation xsi:type="pdm:EDMDTransformation">
+        <pdm:TransformationType>d3</pdm:TransformationType>
+        <!-- 单位矩阵 -->
+        <pdm:xx>1.0</pdm:xx>
+        <pdm:xy>0.0</pdm:xy>
+        <pdm:xz>0.0</pdm:xz>
+        <pdm:yx>0.0</pdm:yx>
+        <pdm:yy>1.0</pdm:yy>
+        <pdm:yz>0.0</pdm:yz>
+        <pdm:zx>0.0</pdm:zx>
+        <pdm:zy>0.0</pdm:zy>
+        <pdm:zz>1.0</pdm:zz>
+        <!-- 偏移：如果3D模型原点不在封装中心 -->
+        <pdm:tx xsi:type="property:EDMDLengthProperty">
+            <property:Value>0.0</property:Value>
+        </pdm:tx>
+        <pdm:ty xsi:type="property:EDMDLengthProperty">
+            <property:Value>0.0</property:Value>
+        </pdm:ty>
+        <pdm:tz xsi:type="property:EDMDLengthProperty">
+            <property:Value>0.25</property:Value>  <!-- 向上偏移0.25mm -->
+        </pdm:tz>
+    </pdm:Transformation>
+    
+    <!-- 可选：变换参考（如坐标系名称） -->
+    <pdm:TransformationReference>CSYS_0805_CENTER</pdm:TransformationReference>
+</foundation:Model3D>
+```
+
+#### **6. 元件实例（安装在PCB上）**
+```xml
+<!-- PCB上的电阻实例 -->
+<foundation:Item id="INST_R1" geometryType="COMPONENT">
+    <foundation:Name>R1</foundation:Name>
+    <foundation:Description>10K Resistor R1</foundation:Description>
+    <pdm:ItemType>assembly</pdm:ItemType>
+    
+    <!-- 实例标识符 -->
+    <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:Number>INST-R1</foundation:Number>
+        <foundation:Version>1</foundation:Version>
+        <foundation:Revision>0</foundation:Revision>
+        <foundation:Sequence>0</foundation:Sequence>
+    </pdm:Identifier>
+    
+    <!-- 实例属性 -->
+    <pdm:ItemInstance xsi:type="pdm:EDMDItemInstance">
+        <!-- 引用元件定义 -->
+        <pdm:Item>COMP_10K_0805</pdm:Item>
+        
+        <!-- 参考标志符 -->
+        <pdm:InstanceName xsi:type="foundation:EDMDName">
+            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+            <foundation:ObjectName>R1</foundation:ObjectName>
+        </pdm:InstanceName>
+        
+        <!-- 可选：零件编号 -->
+        <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+            <property:Key xsi:type="foundation:EDMDName">
+                <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+                <foundation:ObjectName>PARTNUM</foundation:ObjectName>
+            </property:Key>
+            <property:Value>RC0805FR-0710KL</property:Value>
+        </foundation:UserProperty>
+        
+        <!-- 位置和方向变换 -->
+        <pdm:Transformation xsi:type="pdm:EDMDTransformation">
+            <pdm:TransformationType>d2</pdm:TransformationType>
+            <!-- 旋转45度 -->
+            <pdm:xx>0.7071</pdm:xx>  <!-- cos(45°) -->
+            <pdm:xy>0.7071</pdm:xy>  <!-- sin(45°) -->
+            <pdm:yx>-0.7071</pdm:yx> <!-- -sin(45°) -->
+            <pdm:yy>0.7071</pdm:yy>  <!-- cos(45°) -->
+            <!-- 位置：X=50mm, Y=30mm -->
+            <pdm:tx xsi:type="property:EDMDLengthProperty">
+                <property:Value>50.0</property:Value>
+            </pdm:tx>
+            <pdm:ty xsi:type="property:EDMDLengthProperty">
+                <property:Value>30.0</property:Value>
+            </pdm:ty>
+        </pdm:Transformation>
+    </pdm:ItemInstance>
+    
+    <!-- 装配到板子顶面 -->
+    <pdm:AssembleToName>TOP_SURFACE</pdm:AssembleToName>
+    
+    <!-- 可选：Z偏移 -->
+    <pdm:ItemInstance zOffset="0.05">  <!-- 离板面0.05mm -->
+        <!-- ... -->
+    </pdm:ItemInstance>
+</foundation:Item>
+```
+

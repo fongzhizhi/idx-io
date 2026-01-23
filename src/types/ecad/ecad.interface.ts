@@ -26,8 +26,10 @@ export interface ECADData {
 	/** 层堆叠定义表(stackId -> ECADLayerStackup) */
 	stackups?: Record<string, ECADLayerStackup>;
 
-	/** 封装库定义列表，包含元件的几何形状和引脚信息 */
-	footprints: ECADFootprint[];
+	/** 3D模型表(modelId -> ECADModel3D) */
+	models: Record<string, ECADModel3D>;
+	/** 封装库表(footprintName -> ECADFootprint) */
+	footprints: Record<string, ECADFootprint>;
 
 	/** 放置在板上的元件实例列表 */
 	components: ECADComponent[];
@@ -309,6 +311,26 @@ export interface ECADMillingPath {
 }
 
 /**
+ * 3D模型引用
+ *
+ * @remarks
+ * 引用外部3D模型文件，用于元件的精确几何表示。
+ * REF: Section 6.2.1.3
+ */
+export interface ECADModel3D {
+	/** 模型标识符（文件名或数据库ID） */
+	identifier: string;
+	/** 模型文件格式 */
+	format: 'STEP' | 'STL' | 'IGES' | 'PARASOLID' | 'SOLIDWORKS' | 'NX' | 'CATIA';
+	/** 模型版本/配置（可选） */
+	version?: string;
+	/** 模型文件位置（相对路径，可选） */
+	location?: string;
+	/** 对齐变换矩阵（可选），用于将模型与封装对齐 */
+	transformation?: EDMDTransformation3D;
+}
+
+/**
  * 封装（元件封装）定义
  *
  * @remarks
@@ -326,6 +348,8 @@ export interface ECADFootprint extends ECADObject {
 	thermalProperties?: ECADThermalProperties;
 	/** 电气值属性（可选） */
 	valueProperties?: ECADValueProperties;
+	/** 3D模型ID */
+	model3dId?: string;
 }
 
 /**
@@ -422,8 +446,8 @@ export interface ECADComponent extends ECADObject {
 	/** Z轴偏移（可选），定义相对于参考面的偏移量 */
 	zOffset?: number;
 
-	/** 3D模型引用（可选），用于更精确的机械分析 */
-	model3d?: ECADModel3D;
+	/** 3D模型ID（可选） */
+	model3dId?: string;
 
 	/** 元件值（可选），如"10k"、"0.1uF"、"74HC00" */
 	value?: string;
@@ -445,26 +469,6 @@ export interface ECADTransformation2D {
 	rotation: number;
 	/** 镜像标志（可选），true表示镜像（常用于底层元件） */
 	mirror?: boolean;
-}
-
-/**
- * 3D模型引用
- *
- * @remarks
- * 引用外部3D模型文件，用于元件的精确几何表示。
- * REF: Section 6.2.1.3
- */
-export interface ECADModel3D {
-	/** 模型标识符（文件名或数据库ID） */
-	identifier: string;
-	/** 模型文件格式 */
-	format: 'STEP' | 'STL' | 'IGES' | 'PARASOLID' | 'SOLIDWORKS' | 'NX' | 'CATIA';
-	/** 模型版本/配置（可选） */
-	version?: string;
-	/** 模型文件位置（相对路径，可选） */
-	location?: string;
-	/** 对齐变换矩阵（可选），用于将模型与封装对齐 */
-	transformation?: EDMDTransformation3D;
 }
 
 /**
