@@ -32,6 +32,9 @@
   },
   "keywords": [
     "idx",
+    "ecad",
+    "mcad",
+    "edmd",
     "protocol",
     "import",
     "export",
@@ -40,6 +43,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "fast-xml-parser": "^5.3.3",
     "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {
