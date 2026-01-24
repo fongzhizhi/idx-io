@@ -1,4 +1,5 @@
 import { Matrix3 } from './Matrix3';
+import { Rect } from './Rect';
 import { Vector2 } from './Vector2';
 
 /** 边界框 */
@@ -175,5 +176,11 @@ export class BBox2 implements IBoundingBox {
 	 */
 	clone(): BBox2 {
 		return new BBox2(this.minX, this.minY, this.maxX, this.maxY);
+	}
+
+	/** 转为矩形 */
+	toRect() {
+		const leftBottom = new Vector2(this.minX, this.minY);
+		return new Rect(leftBottom, this.width, this.height);
 	}
 }

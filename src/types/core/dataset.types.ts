@@ -163,13 +163,36 @@ export interface EDMDModel3D extends EDMDObject {
 	/** 模型位置（相对路径） */
 	ModelLocation?: string;
 	/** MCAD文件格式 */
-	MCADFormat: 'SolidWorks' | 'NX' | 'Catia' | 'STEP' | 'STL' | 'Inventor' | 'Fusion' | 'SolidEdge';
+	MCADFormat: MCADModelFormat;
 	/** MCAD格式版本 */
 	MCADFormatVersion?: string;
 	/** 变换矩阵（用于对齐） */
 	Transformation?: EDMDTransformation;
 	/** 变换参考（坐标系名称） */
 	TransformationReference?: string;
+}
+
+/**
+ * MCAD支持的模型格式
+ * @ref 根据IDX指南第78页，建议使用以下标准名称
+ */
+export enum MCADModelFormat {
+	/** Dassault SolidWorks */
+	SolidWorks = 'SolidWorks',
+	/** Siemens NX */
+	NX = 'NX',
+	/** Dassault CATIA */
+	Catia = 'Catia',
+	/** 中性STEP格式 */
+	STEP = 'STEP',
+	/** 网格STL格式 */
+	STL = 'STL',
+	/** Autodesk Inventor */
+	Inventor = 'Inventor',
+	/** Autodesk Fusion 360 */
+	Fusion = 'Fusion',
+	/** Siemens Solid Edge */
+	SolidEdge = 'SolidEdge',
 }
 
 /**

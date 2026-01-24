@@ -22,6 +22,9 @@ import {
 	ECADLayerType,
 	ECADModel3D,
 	ECADObject,
+	ECADModelFormat,
+	ECADTransformation2D,
+	ECADHoleType,
 } from '../../types/ecad/ecad.interface';
 import {
 	EDMDDataSet,
@@ -64,6 +67,8 @@ import {
 	EDMDZBounds,
 	StratumType,
 	StratumSurfaceDesignation,
+	MCADModelFormat,
+	EDMPackagePin,
 } from '../../types/core';
 import { Arc } from '../../libs/geometry/Arc';
 import { Circle } from '../../libs/geometry/Circle';
@@ -93,6 +98,8 @@ export class IDXBuilder {
 	// ------------ 构建过程中的中间数据 ------------
 	/** ID计数器表(idPre -> counter) */
 	private idCounterMap = new Map<IDXBuilderIDPre, number>();
+	/** 标识符Number计数器表(idNumberPre -> counter) */
+	private idNumberCounterMap = new Map<string, number>();
 
 	/** 层信息表(ecadLayerId -> ECADLayer) */
 	private layerMap = new Map<string, ECADLayer>();
@@ -107,17 +114,29 @@ export class IDXBuilder {
 	/** 板子层堆叠ID */
 	private boardLayerStackId: string | undefined;
 
+	/** 3D模型ID表(modelId -> IdxModelId) */
+	private model3DIdMap = new Map<string, string>();
+	/** 封装表(packageName -> FootprintSingle) */
+	private footprintSingleMap = new Map<string, EDMDItemSingle>();
+
 	/** 点集合(pointHash -> CartesianPoint) */
 	private pointMap = new Map<number, CartesianPoint>();
 	/** 几何表(idxId -> EDMDGeometry) */
 	private geometryMap = new Map<string, EDMDGeometry>();
+	/** 曲线集集合 */
 	private curveSets: EDMDCurveSet2D[] = [];
+
+	/** 形状元素集合 */
 	private shapeElements: EDMDShapeElement[] = [];
+	/** 形状层次集合(传统方式建模) */
 	private strata: EDMDStratum[] = [];
-	private models3D: EDMDModel3D[] = [];
+
+	/** 项目定义集合 */
 	private itemsSingle: EDMDItemSingle[] = [];
+	/** 项目装配集合 */
 	private itemsAssembly: EDMDItemAssembly[] = [];
 
+	/** 历史记录集合 */
 	private histories: EDMDHistory[] = [];
 
 	/** IDX 模型构建器 */
@@ -165,6 +184,7 @@ export class IDXBuilder {
 	 */
 	private resetState(): void {
 		this.idCounterMap.clear();
+		this.idNumberCounterMap.clear();
 
 		this.layerMap.clear();
 		this.layerStackMap.clear();
@@ -173,12 +193,16 @@ export class IDXBuilder {
 		this.layerStackThicknessMap.clear();
 		this.boardLayerStackId = '';
 
+		this.model3DIdMap.clear();
+		this.footprintSingleMap.clear();
+
 		this.pointMap.clear();
 		this.geometryMap.clear();
 		this.curveSets = [];
+
 		this.shapeElements = [];
 		this.strata = [];
-		this.models3D = [];
+
 		this.itemsSingle = [];
 		this.itemsAssembly = [];
 
@@ -201,12 +225,27 @@ export class IDXBuilder {
 	}
 
 	/**
+	 * 生成唯一标识符Number
+	 */
+	private generateIdentifierNumber(prefix: string): string {
+		const idNumberCounterMap = this.idNumberCounterMap;
+		if (!idNumberCounterMap.has(prefix)) {
+			idNumberCounterMap.set(prefix, 0);
+		}
+		const nextIdCounter = (idNumberCounterMap.get(prefix) || 0) + 1;
+
+		idNumberCounterMap.set(prefix, nextIdCounter);
+
+		return `${prefix}_${nextIdCounter}`;
+	}
+
+	/**
 	 * 创建标识符
 	 */
-	private createIdentifier(baseName: string): EDMDIdentifier {
+	private createIdentifier(prefix: string): EDMDIdentifier {
 		return {
 			SystemScope: this.config.systemScope,
-			Number: `${baseName}_${this.idCounterMap++}`,
+			Number: this.generateIdentifierNumber(prefix),
 			Version: 1,
 			Revision: 0,
 			Sequence: 0,
@@ -217,34 +256,35 @@ export class IDXBuilder {
 	 * 提取公共属性
 	 */
 	private getCommonData(ecadObj: ECADObject): Partial<EDMDItemAssembly> {
+		const { name, description, isAttrChanged, identifier, baseLine, userProperties, roles } = ecadObj;
 		const itemBaseData: Partial<EDMDItemAssembly> = {};
 
-		if (ecadObj.name) {
-			itemBaseData.Name = ecadObj.name;
+		if (name) {
+			itemBaseData.Name = name;
 		}
 
-		if (ecadObj.description) {
-			itemBaseData.Description = ecadObj.description;
+		if (description) {
+			itemBaseData.Description = description;
 		}
 
-		if (isValidBool(ecadObj.isAttrChanged)) {
-			itemBaseData.IsAttributeChanged = ecadObj.isAttrChanged;
+		if (isValidBool(isAttrChanged)) {
+			itemBaseData.IsAttributeChanged = isAttrChanged;
 		}
 
-		if (ecadObj.identifier) {
-			itemBaseData.Identifier = ecadObj.identifier;
+		if (identifier) {
+			itemBaseData.Identifier = identifier;
 		}
 
-		if (isValidBool(ecadObj.baseLine)) {
-			itemBaseData.BaseLine = ecadObj.baseLine;
+		if (isValidBool(baseLine)) {
+			itemBaseData.BaseLine = baseLine;
 		}
 
-		if (ecadObj.userProperties) {
-			itemBaseData.UserProperties = ecadObj.userProperties;
+		if (userProperties) {
+			itemBaseData.UserProperties = userProperties;
 		}
 
-		if (ecadObj.roles) {
-			itemBaseData.Roles = ecadObj.roles;
+		if (roles) {
+			itemBaseData.Roles = roles;
 		}
 
 		return itemBaseData;
@@ -279,7 +319,7 @@ export class IDXBuilder {
 	}
 
 	/** 获取层边界 */
-	private getLayerBounds(layerId: string, layerStackId) {
+	private getLayerBounds(layerId: string, layerStackId?: string) {
 		if (!layerStackId) {
 			layerStackId = this.boardLayerStackId;
 		}
@@ -322,6 +362,31 @@ export class IDXBuilder {
 		};
 	}
 
+	/**
+	 * 创建2D变换
+	 */
+	private createTransformation2D(transformation: ECADTransformation2D): EDMDTransformation {
+		const { position, rotation, mirror } = transformation;
+		const { x, y } = position;
+
+		const cos = Math.cos(rotation);
+		const sin = Math.sin(rotation);
+
+		// 如果镜像，调整变换矩阵
+		const xx = mirror ? -cos : cos;
+		const xy = mirror ? sin : -sin;
+
+		return {
+			TransformationType: 'd2',
+			xx: xx,
+			xy: xy,
+			yx: sin,
+			yy: cos,
+			tx: x,
+			ty: y,
+		};
+	}
+
 	// ============= 构建 Header =============
 	/**
 	 * 构建头部信息
@@ -352,8 +417,18 @@ export class IDXBuilder {
 	 * 处理所有 ECAD 实体并构建 IDX 数据体。
 	 */
 	private buildBody(ecadData: ECADData): EDMDDataSetBody {
-		const {includeNonCollaborative} = this.config;
-		const {layers, stackups, board, footprints, components, holes, constraints, nonCollaborative} = ecadData;
+		const { includeNonCollaborative } = this.config;
+		const {
+			layers,
+			stackups,
+			board,
+			models,
+			footprints,
+			components,
+			holes,
+			constraints,
+			nonCollaborative,
+		} = ecadData;
 
 		// # 处理层和层堆叠
 		if (layers && stackups) {
@@ -363,8 +438,13 @@ export class IDXBuilder {
 		// # 处理板子
 		this.processBoard(board);
 
+		// # 处理3D模型
+		iterateObject(models, model3D => {
+			this.processModel3D(model3D);
+		});
+
 		// # 处理封装
-		footprints.forEach(footprint => {
+		iterateObject(footprints, footprint => {
 			this.processFootprint(footprint);
 		});
 
@@ -384,7 +464,7 @@ export class IDXBuilder {
 		});
 
 		// # 处理非协作数据（可选）
-		if (this.config.includeNonCollaborative && nonCollaborative) {
+		if (includeNonCollaborative && nonCollaborative) {
 			this.processNonCollaborativeData(nonCollaborative);
 		}
 
@@ -415,7 +495,7 @@ export class IDXBuilder {
 	 * 处理单个物理层
 	 */
 	private processLayer(layer: ECADLayer): void {
-		const useSimplified = this.config.useSimplified;
+		const { useSimplified } = this.config;
 		const {
 			id: layerId,
 			name: layerName,
@@ -584,7 +664,7 @@ export class IDXBuilder {
 		if (hasValidLayer || usedLayerdMap.size == 0) {
 			return;
 		}
-		const useSimplified = this.config.useSimplified;
+		const { useSimplified } = this.config;
 
 		// # 创建层堆叠装配
 		const boundsMap = new Map<string, EDMDZBounds>();
@@ -839,7 +919,7 @@ export class IDXBuilder {
 	 * REF: Section 6.1
 	 */
 	private processBoard(board: ECADBoard): void {
-		const useSimplified = this.config.useSimplified;
+		const { useSimplified } = this.config;
 		const { name: boardName, outline, thickness, stackupId, features, zones, bends } = board;
 		this.boardLayerStackId = stackupId;
 		const assemblyToName = this.getLayerStackName(stackupId);
@@ -851,7 +931,7 @@ export class IDXBuilder {
 		// # 处理板轮廓几何
 		const boardShapeId = this.processGeometry(outline, true);
 
-		// # 创建曲线集 
+		// # 创建曲线集
 		// ## 计算Z轴边界
 		const boardZBounds: EDMDZBounds = {
 			LowerBound: 0,
@@ -917,7 +997,10 @@ export class IDXBuilder {
 			id: boardInstanceId,
 			Item: boardSingleId,
 			InstanceName: this.createEDMDName(boardName || 'Board'),
-			Transformation: this.createTransformation2D(Vector2.ORIGIN, 0, false),
+			Transformation: this.createTransformation2D({
+				position: Vector2.ORIGIN,
+				rotation: 0,
+			}),
 		};
 
 		const boardAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
@@ -1071,6 +1154,81 @@ export class IDXBuilder {
 		// TODO: 实现柔性板中的弯曲区域
 	}
 
+	// ------------ 构建3D模型 ------------
+	/**
+	 * 处理3D模型
+	 */
+	private processModel3D(model3D: ECADModel3D): string {
+		const { identifier, format, version, location, transformation } = model3D;
+
+		const modelId = this.generateId(IDXBuilderIDPre.Model);
+		const idxModel: EDMDModel3D = {
+			id: modelId,
+			ModelIdentifier: identifier,
+			MCADFormat: this.convertModelFormat(format),
+		};
+		if (version) {
+			idxModel.ModelVersion = version;
+		}
+		if (location) {
+			idxModel.ModelLocation = location;
+		}
+		if (transformation) {
+			idxModel.Transformation = transformation;
+		}
+
+		this.model3DIdMap.set(identifier, modelId);
+		return modelId;
+	}
+
+	/**
+	 * ECAD到MCAD模型格式转换器
+	 * @param ecadFormat ECAD格式
+	 * @param targetMCAD 目标MCAD系统（可选）
+	 * @returns MCAD支持的格式
+	 */
+	private convertModelFormat(ecadFormat: ECADModelFormat, targetMCAD?: MCADModelFormat): MCADModelFormat {
+		switch (ecadFormat) {
+			case ECADModelFormat.STEP:
+				return MCADModelFormat.STEP;
+
+			case ECADModelFormat.STL:
+				return MCADModelFormat.STL;
+
+			case ECADModelFormat.IGES:
+				// IGES转STEP更可靠
+				return MCADModelFormat.STEP;
+
+			case ECADModelFormat.PARASOLID:
+				// Parasolid是Siemens的格式
+				if (
+					targetMCAD ===
+						MCADModelFormat.NX ||
+					targetMCAD ===
+						MCADModelFormat.SolidEdge
+				) {
+					return MCADModelFormat.NX; // NX支持Parasolid
+				}
+				return MCADModelFormat.STEP;
+
+			case ECADModelFormat.SOLIDWORKS:
+				if (targetMCAD === MCADModelFormat.SolidWorks) {
+					return MCADModelFormat.SolidWorks;
+				}
+				return MCADModelFormat.STEP;
+
+			case ECADModelFormat.NX:
+				return MCADModelFormat.NX;
+
+			case ECADModelFormat.CATIA:
+				return MCADModelFormat.Catia;
+
+			default:
+				// 默认转为STEP（最通用的中性格式）
+				return MCADModelFormat.STEP;
+		}
+	}
+
 	// ------------ 构建封装 ------------
 	/**
 	 * 处理封装
@@ -1079,19 +1237,20 @@ export class IDXBuilder {
 	 * REF: Section 6.2
 	 */
 	private processFootprint(footprint: ECADFootprint): void {
-		const {packageName, geometry, pins, thermalProperties, valueProperties} = footprint;
-		
+		const { useSimplified } = this.config;
+		const { packageName, geometry, pins, thermalProperties, valueProperties } = footprint;
+
 		// # 处理封装轮廓几何
-		const outlineShapeId = this.processGeometry(footprint.geometry.outline, 'FOOTPRINT_OUTLINE');
+		const outlineShapeId = this.processGeometry(geometry.outline, true);
 
 		// # 创建曲线集（封装高度通常为0，表示2D轮廓）
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
 			ShapeDescriptionType: 'GeometricModel',
-			LowerBound: { Value: 0 },
-			UpperBound: { Value: 0 },
-			DetailedGeometricModelElement: outlineShapeId,
+			LowerBound: 0,
+			UpperBound: 0,
+			DetailedGeometricModelElements: [outlineShapeId],
 		};
 		this.curveSets.push(curveSet);
 
@@ -1099,89 +1258,47 @@ export class IDXBuilder {
 		const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
 		const shapeElement: EDMDShapeElement = {
 			id: shapeElementId,
-			ShapeElementType: 'FeatureShapeElement',
+			ShapeElementType: ShapeElementType.FeatureShapeElement,
 			Inverted: false,
 			DefiningShape: curveSetId,
 		};
 		this.shapeElements.push(shapeElement);
-		// ## 处理引脚
-		const pinElements = footprint.pins
-			.map(pin => {
-				if (pin.geometry) {
-					const pinShapeId =
-						this.processGeometry(
-							pin.geometry,
-							'PIN'
-						);
-					return {
-						pinNumber: pin.pinNumber,
-						primary: pin.primary,
-						position: pin.position,
-						shapeId: pinShapeId,
-					};
-				}
-				return null;
-			})
-			.filter(pin => pin !== null);
 
-		// ## 创建封装定义
+		// # 处理引脚
+		const packagePins: EDMPackagePin[] = [];
+		iterateArr(pins, pin => {
+			const { pinNumber, primary, position, geometry } = pin;
+
+			const packagePin: EDMPackagePin = {
+				pinNumber,
+				primary,
+				Point: this.createPoint(position),
+			};
+
+			if (geometry) {
+				const pinShapeId = this.processGeometry(geometry);
+				packagePin.Shape = pinShapeId;
+			}
+
+			packagePins.push(packagePin);
+		});
+
+		// # 创建封装定义
 		const footprintSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
 		const footprintSingle: EDMDItemSingle = {
-			id: footprintSingleId,
-			Name: footprint.name || footprint.packageName,
-			Description: footprint.description || `Footprint: ${footprint.packageName}`,
-			ItemType: 'single',
-			Identifier:
-				footprint.identifier ||
-				this.createIdentifier(
-					`FOOTPRINT_${footprint.packageName}`
-				),
-			PackageName: {
-				SystemScope: this.config.systemScope,
-				ObjectName: footprint.packageName,
-			},
-			Shape: shapeElementId,
-			BaseLine: footprint.baseLine !== false,
+			Name: packageName,
+			Description: `Footprint: ${packageName}`,
+			Identifier: this.createIdentifier(`FOOTPRINT_${packageName}`),
 			...this.getCommonData(footprint),
+			id: footprintSingleId,
+			ItemType: ItemType.SINGLE,
+			PackageName: this.createEDMDName(packageName),
+			Shape: shapeElementId,
+			PackagePins: packagePins,
 		};
-
-		// 添加引脚信息（IDXv4.0简化方式）
-		if (pinElements.length > 0 && this.config.useSimplifiedFormat) {
-			// 这里可以添加PackagePin属性
-		}
 
 		this.itemsSingle.push(footprintSingle);
-
-		// 6. 创建封装实例（Item assembly） - 封装本身通常不需要实例，由元件实例引用
-		// 这里我们创建封装实例以便于组织
-		const footprintAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
-		const footprintAssembly: EDMDItemAssembly = {
-			id: footprintAssemblyId,
-			Name: footprint.name || footprint.packageName,
-			ItemType: 'assembly',
-			geometryType: 'COMPONENT', // 封装本质上是组件定义
-			ItemInstance: [
-				{
-					id: this.generateId(
-						IDXBuilderIDPre.ItemInstance
-					),
-					Item: footprintSingleId,
-					InstanceName: footprint.packageName,
-				},
-			],
-			...this.getCommonData(footprint),
-		};
-
-		this.itemsAssembly.push(footprintAssembly);
-
-		// 保存ID映射
-		if (footprint.identifier) {
-			this.idMap.set(
-				footprint.identifier.SystemScope +
-					footprint.identifier.Number,
-				footprintAssemblyId
-			);
-		}
+		this.footprintSingleMap.set(packageName, footprintSingle);
 	}
 
 	// ------------ 构建元件 ------------
@@ -1192,142 +1309,101 @@ export class IDXBuilder {
 	 * REF: Section 6.2.1
 	 */
 	private processComponent(component: ECADComponent): void {
-		// 1. 找到对应的封装
-		const footprintAssembly = this.itemsAssembly.find(
-			ia =>
-				ia.Name === component.footprintId ||
-				(component.identifier &&
-					this.idMap.has(
-						component
-							.identifier
-							.SystemScope +
-							component
-								.identifier
-								.Number
-					))
-		);
+		const { useSimplified } = this.config;
+		const { transformation, isMechanical, layerId, zOffset, packageName, model3dId, footprintBounds } =
+			component;
+		const assembleToName = this.getLayerName(layerId);
+		const footprintSingle = packageName ? this.footprintSingleMap.get(packageName) : undefined;
+		const boundPackageName = footprintSingle?.PackageName;
+		const boundModelId = model3dId ? this.model3DIdMap.get(model3dId) : undefined;
 
-		if (!footprintAssembly) {
-			console.warn(`Footprint not found for component: ${component.refDes}`);
-			return;
+		let componentShape = footprintSingle?.Shape || '';
+
+		// # 创建元件形状
+		if (!componentShape) {
+			if (!footprintBounds) {
+				console.warn(
+					'Invalid component: need packageName or footprintBounds'
+				);
+				return;
+			}
+			// ## 处理轮廓几何
+			const outlineShapeId = this.processGeometry(footprintBounds.toRect());
+
+			// ## 创建曲线集（封装高度通常为0，表示2D轮廓）
+			const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
+			const curveSet: EDMDCurveSet2D = {
+				id: curveSetId,
+				ShapeDescriptionType: 'GeometricModel',
+				LowerBound: 0,
+				UpperBound: 0,
+				DetailedGeometricModelElements: [outlineShapeId],
+			};
+			this.curveSets.push(curveSet);
+
+			// ## 创建形状元素
+			const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
+			const shapeElement: EDMDShapeElement = {
+				id: shapeElementId,
+				ShapeElementType: ShapeElementType.FeatureShapeElement,
+				Inverted: false,
+				DefiningShape: curveSetId,
+			};
+			this.shapeElements.push(shapeElement);
+
+			// ## 传统方式建模
+			if (!useSimplified) {
+				// TODO: 待实现
+			}
+
+			componentShape = shapeElementId;
 		}
 
-		// 2. 创建元件实例（Item assembly）
-		const componentAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
-		const geometryType = component.refDes.startsWith('M') ? 'COMPONENT_MECHANICAL' : 'COMPONENT';
-
-		const componentAssembly: EDMDItemAssembly = {
-			id: componentAssemblyId,
-			Name: component.name || component.refDes,
-			Description: component.description || `Component: ${component.refDes}`,
-			ItemType: 'assembly',
-			geometryType: geometryType,
-			ItemInstance: [
-				{
-					id: this.generateId(
-						IDXBuilderIDPre.ItemInstance
-					),
-					Item: footprintAssembly.id,
-					InstanceName: component.refDes,
-					Transformation: this.createTransformation2D(
-						component
-							.transformation
-							.position,
-						component
-							.transformation
-							.rotation,
-						component
-							.transformation
-							.mirror
-					),
-					UserProperties: [
-						{
-							Key: {
-								SystemScope: this
-									.config
-									.systemScope,
-								ObjectName: 'REFDES',
-							},
-							Value: component.refDes,
-						},
-						...(component.partNumber
-							? [
-									{
-										Key: {
-											SystemScope: this
-												.config
-												.systemScope,
-											ObjectName: 'PARTNUM',
-										},
-										Value: component.partNumber,
-									},
-								]
-							: []),
-						...(component.value
-							? [
-									{
-										Key: {
-											SystemScope: this
-												.config
-												.systemScope,
-											ObjectName: 'VALUE',
-										},
-										Value: component.value,
-									},
-								]
-							: []),
-					],
-				},
-			],
-			AssembleToName: component.assembleTo,
-			...(component.zOffset !== undefined ? { zOffset: component.zOffset } : {}),
-			BaseLine: component.baseLine !== false,
-			...this.getCommonData(component),
+		// # 创建元件定义
+		const componentSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
+		const componentSingle: EDMDItemSingle = {
+			id: componentSingleId,
+			ItemType: ItemType.SINGLE,
+			Shape: componentShape,
 		};
+		if (boundPackageName) {
+			componentSingle.PackageName = boundPackageName;
+		}
+		if (boundModelId) {
+			componentSingle.EDMD3DModel = boundModelId;
+		}
 
-		// 3. 处理3D模型引用
-		if (component.model3dId) {
-			const model3dId = this.processModel3D(component.model3dId);
-			// 将3D模型关联到元件
-			// 这里需要更新对应的Item single
+		// # 创建元件实例
+		const componentInstanceId = this.generateId(IDXBuilderIDPre.ItemInstance);
+		const componentInstance: EDMDItemInstance = {
+			id: componentInstanceId,
+			Item: componentSingleId,
+			Transformation: this.createTransformation2D(transformation),
+		};
+		if (zOffset) {
+			componentInstance.zOffset = zOffset;
+		}
+
+		// # 创建元件装配
+		const componentAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
+		const geometryType = isMechanical ? GeometryType.COMPONENT_MECHANICAL : GeometryType.COMPONENT;
+		const componentAssembly: EDMDItemAssembly = {
+			...this.getCommonData(component),
+			id: componentAssemblyId,
+			ItemType: ItemType.ASSEMBLY,
+			geometryType,
+			ItemInstances: [componentInstance],
+		};
+		if (assembleToName) {
+			componentAssembly.AssembleToName = assembleToName;
+		}
+
+		// # 传统方式建模
+		if (!useSimplified) {
+			delete componentAssembly.geometryType;
 		}
 
 		this.itemsAssembly.push(componentAssembly);
-	}
-
-	/**
-	 * 处理3D模型
-	 */
-	private processModel3D(model: ECADModel3D): string {
-		const modelId = this.generateId(IDXBuilderIDPre.Model);
-		const idxModel: EDMDModel3D = {
-			id: modelId,
-			ModelIdentifier: model.identifier,
-			MCADFormat: this.convertModelFormat(model.format),
-			...(model.version && { ModelVersion: model.version }),
-			...(model.location && { ModelLocation: model.location }),
-			...(model.transformation && { Transformation: model.transformation }),
-		};
-
-		this.models3D.push(idxModel);
-		return modelId;
-	}
-
-	/**
-	 * 转换模型格式
-	 */
-	private convertModelFormat(format: ECADModel3D['format']): EDMDModel3D['MCADFormat'] {
-		const mapping: Record<ECADModel3D['format'], EDMDModel3D['MCADFormat']> = {
-			STEP: 'STEP',
-			STL: 'STL',
-			IGES: 'Catia', // IGES通常与Catia关联
-			PARASOLID: 'SolidEdge',
-			SOLIDWORKS: 'SolidWorks',
-			NX: 'NX',
-			CATIA: 'Catia',
-		};
-
-		return mapping[format] || 'STEP';
 	}
 
 	// ------------ 构建孔 ------------
@@ -1338,121 +1414,112 @@ export class IDXBuilder {
 	 * REF: Section 6.3
 	 */
 	private processHole(hole: ECADHole): void {
-		// 1. 处理孔几何
-		const holeShapeId = this.processGeometry(hole.geometry, 'HOLE');
+		const { useSimplified } = this.config;
+		const { geometry, type, layerSpan, stackupId, zRange, isMilled, millDiameter, padstackName } = hole;
 
-		// 2. 确定Z范围
-		let lowerBound = 0;
-		let upperBound = 0;
+		// # 处理过孔几何
+		const holeShapeId = this.processGeometry(geometry);
 
-		if (hole.zRange) {
-			lowerBound = hole.zRange.lowerBound || 0;
-			upperBound = hole.zRange.upperBound || 0;
-		} else if (hole.stackupId) {
-			// 从层堆叠计算范围
-			// 这里简化处理
-			upperBound = 1.6; // 默认板厚
+		// # 创建曲线集
+		// ## TODO: 计算孔Z轴边界
+		let lowerBound: number | undefined = 0;
+		let upperBound: number | undefined = 0;
+		if (zRange) {
+			lowerBound = zRange.lowerBound;
+			upperBound = zRange.upperBound;
+		} else if (stackupId) {
+			upperBound = 1.6; // TODO
 		}
 
-		// 3. 创建曲线集
+		// ## 创建曲线集
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
 			ShapeDescriptionType: 'GeometricModel',
-			LowerBound: { Value: lowerBound },
-			UpperBound: { Value: upperBound },
-			DetailedGeometricModelElement: holeShapeId,
+			LowerBound: lowerBound || 0,
+			UpperBound: upperBound || 0,
+			DetailedGeometricModelElements: [holeShapeId],
 		};
 		this.curveSets.push(curveSet);
 
-		// 4. 创建形状元素
+		// # 创建形状元素
 		const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
 		const shapeElement: EDMDShapeElement = {
 			id: shapeElementId,
-			ShapeElementType: hole.isMilled
-				? 'PartMountingFeature'
-				: 'FeatureShapeElement',
-			Inverted: hole.type === 'NPTH' ? false : true, // 非电镀孔为添加材料？需要确认
+			ShapeElementType: isMilled
+				? ShapeElementType.PartMountingFeature
+				: ShapeElementType.FeatureShapeElement,
+			Inverted: type === ECADHoleType.NPTH ? false : true,
 			DefiningShape: curveSetId,
 		};
 		this.shapeElements.push(shapeElement);
 
-		// 5. 确定geometryType
-		let geometryType: string;
-		if (hole.isMilled) {
-			geometryType =
-				hole.type === 'PTH'
-					? 'HOLE_PLATED_MILLED'
-					: 'HOLE_NONPLATED_MILLED';
-		} else {
-			geometryType =
-				hole.type === 'PTH'
-					? 'HOLE_PLATED'
-					: hole.type === 'NPTH'
-						? 'HOLE_NON_PLATED'
-						: hole.type ===
-							  'VIA'
-							? 'VIA'
-							: hole.type ===
-								  'FILLED_VIA'
-								? 'FILLED_VIA'
-								: 'HOLE_PLATED';
-		}
-
-		// 6. 创建孔项目定义（Item single）
+		// # 创建孔项目定义
 		const holeSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
 		const holeSingle: EDMDItemSingle = {
 			id: holeSingleId,
-			Name: hole.name || `Hole ${hole.type}`,
-			Description: hole.description || `${hole.type} hole`,
-			ItemType: 'single',
-			Identifier: hole.identifier || this.createIdentifier(`HOLE_${hole.type}`),
+			ItemType: ItemType.SINGLE,
 			Shape: shapeElementId,
-			BaseLine: hole.baseLine !== false,
-			...this.getCommonData(hole),
 		};
-
-		// 添加焊盘堆叠名称
-		if (hole.padstackName) {
-			holeSingle.PackageName = {
-				SystemScope: this.config.systemScope,
-				ObjectName: hole.padstackName,
-			};
-		}
+		// TODO: 焊盘堆栈待支持
+		// if (padstackName) {
+		// 	holeSingle.PackageName = this.createEDMDName(padstackName);
+		// }
 
 		this.itemsSingle.push(holeSingle);
 
-		// 7. 创建孔实例（Item assembly）
-		const holeAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
-		const holeAssembly: EDMDItemAssembly = {
-			id: holeAssemblyId,
-			Name: hole.name || `Hole ${hole.type}`,
-			ItemType: 'assembly',
-			geometryType: geometryType,
-			ItemInstance: [
-				{
-					id: this.generateId(
-						IDXBuilderIDPre.ItemInstance
-					),
-					Item: holeSingleId,
-					InstanceName:
-						hole.name ||
-						`Hole_${this.idCounterMap}`,
-					Transformation: this.createTransformation2D(
-						{
-							x: 0,
-							y: 0,
-						},
-						0
-					), // 孔的位置在几何中定义
-				},
-			],
-			AssembleToName: hole.stackupId || hole.layerSpan?.startLayer,
-			BaseLine: hole.baseLine !== false,
-			...this.getCommonData(hole),
+		// # 创建孔装配
+		// TODO: 应该使用堆栈和来优化过孔
+		// ## 创建孔实例
+		const instanceId = this.generateId(IDXBuilderIDPre.ItemInstance);
+		const itemInstance: EDMDItemInstance = {
+			id: instanceId,
+			Item: holeSingleId,
 		};
 
+		// ## 孔类型
+		const geometryType = this.convertHoleType(type);
+		const assembleToName = ''; // TODO: 根据创建堆栈来实现
+		const holeAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
+		const holeAssembly: EDMDItemAssembly = {
+			...this.getCommonData(hole),
+			id: holeAssemblyId,
+			ItemType: ItemType.ASSEMBLY,
+			geometryType,
+			ItemInstances: [itemInstance],
+		};
+		// ## 传统方式建模
+		if (!useSimplified) {
+			delete holeAssembly.geometryType;
+			// TODO
+		}
+
 		this.itemsAssembly.push(holeAssembly);
+	}
+
+	/**
+	 * 将ECAD孔类型转换为IDX几何类型
+	 * @param viaType ECAD孔类型
+	 * @returns 对应的IDX几何类型
+	 */
+	private convertHoleType(viaType: ECADHoleType): GeometryType {
+		switch (viaType) {
+			case ECADHoleType.PTH:
+				return GeometryType.HOLE_PLATED;
+			case ECADHoleType.NPTH:
+				return GeometryType.HOLE_NON_PLATED;
+			case ECADHoleType.VIA:
+				return GeometryType.VIA;
+			case ECADHoleType.FILLED_VIA:
+				return GeometryType.FILLED_VIA;
+			case ECADHoleType.BLIND:
+			case ECADHoleType.BURIED:
+				// 盲孔和埋孔在IDX中通常用VIA表示，通过z范围区分
+				return GeometryType.VIA;
+			default:
+				// 默认返回电镀孔
+				return GeometryType.HOLE_PLATED;
+		}
 	}
 
 	// ------------ 构建禁止区 ------------
@@ -1463,371 +1530,70 @@ export class IDXBuilder {
 	 * REF: Section 6.5
 	 */
 	private processConstraint(constraint: ECADConstraintArea): void {
-		// 1. 处理约束几何
-		const constraintShapeId = this.processGeometry(constraint.geometry, 'CONSTRAINT');
+		const { type, purpose, geometry, layerId, zRange } = constraint;
 
-		// 2. 确定Z范围
+		// # 处理约束几何
+		const constraintShapeId = this.processGeometry(geometry);
+
+		// # 创建曲线集
+		// ## 确定Z范围
+		// TODO
 		let lowerBound = constraint.zRange?.lowerBound;
 		let upperBound = constraint.zRange?.upperBound;
 
-		// 3. 创建曲线集
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
 			ShapeDescriptionType: 'GeometricModel',
-			...(lowerBound !== undefined ? { LowerBound: { Value: lowerBound } } : {}),
-			...(upperBound !== undefined ? { UpperBound: { Value: upperBound } } : {}),
-			DetailedGeometricModelElement: constraintShapeId,
+			LowerBound: lowerBound || 0,
+			UpperBound: upperBound || 0,
+			DetailedGeometricModelElements: [constraintShapeId],
 		};
 		this.curveSets.push(curveSet);
 
-		// 4. 创建形状元素
+		// # 创建形状元素
 		const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
 		const shapeElement: EDMDShapeElement = {
 			id: shapeElementId,
-			ShapeElementType: 'FeatureShapeElement',
-			Inverted: false, // 约束区域通常不反转
+			ShapeElementType: ShapeElementType.FeatureShapeElement,
+			Inverted: false,
 			DefiningShape: curveSetId,
 		};
 		this.shapeElements.push(shapeElement);
 
-		// 5. 确定geometryType
-		const geometryType = this.getConstraintGeometryType(constraint.type, constraint.purpose);
-
-		// 6. 创建约束项目定义（Item single）
+		// # 创建约束项目定义
 		const constraintSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
 		const constraintSingle: EDMDItemSingle = {
 			id: constraintSingleId,
-			Name: constraint.name || `${constraint.type} ${constraint.purpose}`,
-			Description:
-				constraint.description ||
-				`${constraint.type} area for ${constraint.purpose}`,
-			ItemType: 'single',
-			Identifier:
-				constraint.identifier ||
-				this.createIdentifier(
-					`${constraint.type}_${constraint.purpose}`
-				),
+			ItemType: ItemType.SINGLE,
 			Shape: shapeElementId,
-			BaseLine: constraint.baseLine !== false,
-			...this.getCommonData(constraint),
 		};
-
 		this.itemsSingle.push(constraintSingle);
 
-		// 7. 创建约束实例（Item assembly）
+		// # 创建约束实例
+		const instanceId = this.generateId(IDXBuilderIDPre.ItemInstance);
+		const itemInstance: EDMDItemInstance = {
+			id: instanceId,
+			Item: constraintSingleId,
+		};
+
+		// # 创建约束装配
+		const geometryType = this.convertConstraintType(constraint.type, constraint.purpose);
 		const constraintAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
 		const constraintAssembly: EDMDItemAssembly = {
-			id: constraintAssemblyId,
-			Name: constraint.name || `${constraint.type} ${constraint.purpose}`,
-			ItemType: 'assembly',
-			geometryType: geometryType,
-			ItemInstance: [
-				{
-					id: this.generateId(
-						IDXBuilderIDPre.ItemInstance
-					),
-					Item: constraintSingleId,
-					InstanceName:
-						constraint.name ||
-						`${constraint.type}_${this.idCounterMap}`,
-					Transformation: this.createTransformation2D(
-						{
-							x: 0,
-							y: 0,
-						},
-						0
-					),
-				},
-			],
-			AssembleToName: constraint.assembleTo,
-			BaseLine: constraint.baseLine !== false,
 			...this.getCommonData(constraint),
+			id: constraintAssemblyId,
+			geometryType,
+			ItemInstance: [itemInstance],
 		};
 
 		this.itemsAssembly.push(constraintAssembly);
 	}
 
-	// ------------ 构建非协作数据 ------------
-	/**
-	 * 处理非协作数据
-	 */
-	private processNonCollaborativeData(data: ECADNonCollaborativeData): void {
-		// # 处理走线
-		if (data.traces) {
-			data.traces.forEach(trace => {
-				this.processTrace(trace);
-			});
-		}
-
-		// # 处理铜皮区域
-		if (data.copperAreas) {
-			data.copperAreas.forEach(area => {
-				this.processCopperArea(area);
-			});
-		}
-
-		// # 处理丝印
-		if (data.silkscreen) {
-			data.silkscreen.forEach(silkscreen => {
-				this.processSilkscreen(silkscreen);
-			});
-		}
-	}
-
-	/**
-	 * 处理走线
-	 */
-	private processTrace(trace: ECADTrace): void {
-		// 走线作为非协作数据，通常不参与ECAD/MCAD协作
-		// 这里可以创建简单的表示
-		const traceShapeId = this.processGeometry(trace.geometry, 'TRACE');
-
-		// 创建曲线集（走线有厚度）
-		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
-		const curveSet: EDMDCurveSet2D = {
-			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
-			LowerBound: { Value: 0 },
-			UpperBound: { Value: 0.035 }, // 典型走线高度
-			DetailedGeometricModelElement: traceShapeId,
-		};
-		this.curveSets.push(curveSet);
-
-		// 创建形状元素
-		const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
-		const shapeElement: EDMDShapeElement = {
-			id: shapeElementId,
-			ShapeElementType: 'FeatureShapeElement',
-			Inverted: false,
-			DefiningShape: curveSetId,
-		};
-		this.shapeElements.push(shapeElement);
-
-		// 创建层技术（用于标识走线层）
-		const technologyId = TODO; // 获取层ID
-
-		// 创建Stratum
-		const stratumId = this.generateId(IDXBuilderIDPre.Stratum);
-		const stratum: EDMDStratum = {
-			id: stratumId,
-			ShapeElement: shapeElementId,
-			StratumTechnology: technologyId,
-			StratumType: 'DesignLayerStratum',
-		};
-		this.strata.push(stratum);
-
-		// 创建走线项目
-		const traceSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
-		const traceSingle: EDMDItemSingle = {
-			id: traceSingleId,
-			Name: `Trace ${trace.netName || ''}`,
-			ItemType: 'single',
-			Shape: stratumId,
-			UserProperties: [
-				{
-					Key: {
-						SystemScope: this
-							.config
-							.systemScope,
-						ObjectName: 'SIDE',
-					},
-					Value: trace.layer.includes(
-						'TOP'
-					)
-						? 'TOP'
-						: 'BOTTOM',
-				},
-				...(trace.netName
-					? [
-							{
-								Key: {
-									SystemScope: this
-										.config
-										.systemScope,
-									ObjectName: 'NET',
-								},
-								Value: trace.netName,
-							},
-						]
-					: []),
-			],
-		};
-		this.itemsSingle.push(traceSingle);
-	}
-
-	/**
-	 * 处理铜皮区域
-	 */
-	private processCopperArea(area: ECADCopperArea): void {
-		const areaShapeId = this.processGeometry(area.geometry, 'COPPER_AREA');
-
-		// 创建曲线集
-		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
-		const curveSet: EDMDCurveSet2D = {
-			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
-			LowerBound: { Value: 0 },
-			UpperBound: { Value: 0.035 }, // 典型铜厚
-			DetailedGeometricModelElement: areaShapeId,
-		};
-		this.curveSets.push(curveSet);
-
-		// 创建形状元素
-		const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
-		const shapeElement: EDMDShapeElement = {
-			id: shapeElementId,
-			ShapeElementType: 'FeatureShapeElement',
-			Inverted: false,
-			DefiningShape: curveSetId,
-		};
-		this.shapeElements.push(shapeElement);
-
-		// 创建层技术
-		const technologyId = TODO;
-
-		// 创建Stratum
-		const stratumId = this.generateId(IDXBuilderIDPre.Stratum);
-		const stratum: EDMDStratum = {
-			id: stratumId,
-			ShapeElement: shapeElementId,
-			StratumTechnology: technologyId,
-			StratumType: 'DesignLayerStratum',
-		};
-		this.strata.push(stratum);
-
-		// 创建铜皮项目
-		const areaSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
-		const areaSingle: EDMDItemSingle = {
-			id: areaSingleId,
-			Name: `Copper Area`,
-			ItemType: 'single',
-			Shape: stratumId,
-			UserProperties: [
-				{
-					Key: {
-						SystemScope: this
-							.config
-							.systemScope,
-						ObjectName: 'SIDE',
-					},
-					Value: area.layer.includes(
-						'TOP'
-					)
-						? 'TOP'
-						: 'BOTTOM',
-				},
-			],
-		};
-		this.itemsSingle.push(areaSingle);
-	}
-
-	/**
-	 * 处理丝印
-	 */
-	private processSilkscreen(silkscreen: ECADSilkscreen): void {
-		const silkscreenShapeId = this.processGeometry(silkscreen.geometry, 'SILKSCREEN');
-
-		// 创建曲线集（丝印很薄）
-		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
-		const curveSet: EDMDCurveSet2D = {
-			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
-			LowerBound: { Value: 0 },
-			UpperBound: { Value: 0.01 }, // 典型丝印厚度
-			DetailedGeometricModelElement: silkscreenShapeId,
-		};
-		this.curveSets.push(curveSet);
-
-		// 创建形状元素
-		const shapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
-		const shapeElement: EDMDShapeElement = {
-			id: shapeElementId,
-			ShapeElementType: 'FeatureShapeElement',
-			Inverted: false,
-			DefiningShape: curveSetId,
-		};
-		this.shapeElements.push(shapeElement);
-
-		// 创建层技术
-		const technologyId = TODO;
-
-		// 创建Stratum
-		const stratumId = this.generateId(IDXBuilderIDPre.Stratum);
-		const stratum: EDMDStratum = {
-			id: stratumId,
-			ShapeElement: shapeElementId,
-			StratumTechnology: technologyId,
-			StratumType: 'DesignLayerStratum',
-		};
-		this.strata.push(stratum);
-
-		// 创建丝印项目
-		const silkscreenSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
-		const silkscreenSingle: EDMDItemSingle = {
-			id: silkscreenSingleId,
-			Name: `Silkscreen ${silkscreen.text || ''}`,
-			ItemType: 'single',
-			Shape: stratumId,
-			UserProperties: [
-				{
-					Key: {
-						SystemScope: this
-							.config
-							.systemScope,
-						ObjectName: 'SIDE',
-					},
-					Value: silkscreen.layer.includes(
-						'TOP'
-					)
-						? 'TOP'
-						: 'BOTTOM',
-				},
-				...(silkscreen.text
-					? [
-							{
-								Key: {
-									SystemScope: this
-										.config
-										.systemScope,
-									ObjectName: 'TEXT',
-								},
-								Value: silkscreen.text,
-							},
-						]
-					: []),
-			],
-		};
-		this.itemsSingle.push(silkscreenSingle);
-	}
-
-
-	/**
-	 * 创建2D变换
-	 */
-	private createTransformation2D(position: Vector2, rotation: number, mirror?: boolean): EDMDTransformation {
-		const cos = Math.cos(rotation);
-		const sin = Math.sin(rotation);
-
-		// 如果镜像，调整变换矩阵
-		const xx = mirror ? -cos : cos;
-		const xy = mirror ? sin : -sin;
-
-		return {
-			TransformationType: 'd2',
-			xx: xx,
-			xy: xy,
-			yx: sin,
-			yy: cos,
-			tx: { Value: position.x },
-			ty: { Value: position.y },
-		};
-	}
-
 	/**
 	 * 获取约束类型的geometryType
 	 */
-	private getConstraintGeometryType(type: 'KEEPOUT' | 'KEEPIN', purpose: ECADConstraintPurpose): string {
+	private convertConstraintType(type: 'KEEPOUT' | 'KEEPIN', purpose: ECADConstraintPurpose): string {
 		const prefix = type === 'KEEPOUT' ? 'KEEPOUT_AREA' : 'KEEPIN_AREA';
 
 		switch (purpose) {
@@ -1848,15 +1614,62 @@ export class IDXBuilder {
 		}
 	}
 
+	// ------------ 构建非协作数据 ------------
+	/**
+	 * 处理非协作数据
+	 */
+	private processNonCollaborativeData(data: ECADNonCollaborativeData): void {
+		const { traces, copperAreas, silkscreens } = data;
+
+		// # 处理走线
+		iterateArr(traces, trace => {
+			this.processTrace(trace);
+		});
+
+		// # 处理铜皮区域
+		iterateArr(copperAreas, area => {
+			this.processCopperArea(area);
+		});
+
+		// # 处理丝印
+		iterateArr(silkscreens, silkscreen => {
+			this.processSilkscreen(silkscreen);
+		});
+	}
+
+	/**
+	 * 处理走线
+	 */
+	private processTrace(trace: ECADTrace): void {
+		// TODO
+	}
+
+	/**
+	 * 处理铜皮区域
+	 */
+	private processCopperArea(area: ECADCopperArea): void {
+		// TODO
+	}
+
+	/**
+	 * 处理丝印
+	 */
+	private processSilkscreen(silkscreen: ECADSilkscreen): void {
+		// TODO
+	}
+
 	// ============= 构建 ProcessInstruction =============
 	/**
 	 * 构建处理指令
 	 */
 	private buildProcessInstruction(metadata: ECADMeta): EDMDProcessInstruction {
+		const { designName, revision, creator, timestamps, globalUnit, description, projectId } = metadata;
+		const { name: creatorName } = creator;
+
 		const instruction: EDMDProcessInstructionSendInformation = {
 			type: IDXComputationalTag.SendInformation,
-			Actor: metadata.creator.name,
-			Description: `Baseline for design: ${metadata.designName}`,
+			Actor: creatorName,
+			Description: designName,
 		};
 
 		return instruction;

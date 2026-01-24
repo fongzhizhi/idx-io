@@ -1,4 +1,5 @@
 import { Arc } from '../../libs/geometry/Arc';
+import { BBox2 } from '../../libs/geometry/BBox2';
 import { Circle } from '../../libs/geometry/Circle';
 import { Line } from '../../libs/geometry/Line';
 import { Polyline } from '../../libs/geometry/Polyline';
@@ -321,13 +322,31 @@ export interface ECADModel3D {
 	/** 模型标识符（文件名或数据库ID） */
 	identifier: string;
 	/** 模型文件格式 */
-	format: 'STEP' | 'STL' | 'IGES' | 'PARASOLID' | 'SOLIDWORKS' | 'NX' | 'CATIA';
+	format: ECADModelFormat;
 	/** 模型版本/配置（可选） */
 	version?: string;
 	/** 模型文件位置（相对路径，可选） */
 	location?: string;
 	/** 对齐变换矩阵（可选），用于将模型与封装对齐 */
 	transformation?: EDMDTransformation3D;
+}
+
+/** ECAD模型格式 */
+export enum ECADModelFormat {
+	/** STEP AP203/AP214 - 最常用的3D数据交换格式 */
+	STEP = 'STEP',
+	/** STL - 网格数据 */
+	STL = 'STL',
+	/** IGES - 较旧的交换格式 */
+	IGES = 'IGES',
+	/** Parasolid XT - Siemens几何核心 */
+	PARASOLID = 'PARASOLID',
+	/** SolidWorks原生格式（某些ECAD支持直接输出） */
+	SOLIDWORKS = 'SOLIDWORKS',
+	/** Siemens NX原生格式 */
+	NX = 'NX',
+	/** Dassault CATIA原生格式 */
+	CATIA = 'CATIA',
 }
 
 /**
@@ -383,8 +402,6 @@ export interface ECADPin {
 	position: Vector2;
 	/** 引脚几何形状（可选），定义焊盘形状 */
 	geometry?: ECADClosedGeometry;
-	/** 网络名称（可选），用于电气连接信息 */
-	netName?: string;
 }
 
 /**
@@ -433,26 +450,22 @@ export interface ECADValueProperties {
  * 每个实例引用一个封装定义，并具有特定的位置和方向。
  */
 export interface ECADComponent extends ECADObject {
-	/** 元件位号（如"R1"、"C5"、"U3"） */
-	refDes: string;
-	/** 引用的封装ID */
-	footprintId: string;
-
 	/** 2D变换信息，定义元件在板上的位置和方向 */
 	transformation: ECADTransformation2D;
+	/** 是否为机械元件(可选, 默认否) */
+	isMechanical?: boolean;
 
-	/** 装配参考（层或层堆叠名称），定义元件在Z轴的位置 */
-	assembleTo: string;
+	/** 层ID */
+	layerId: string;
 	/** Z轴偏移（可选），定义相对于参考面的偏移量 */
 	zOffset?: number;
 
-	/** 3D模型ID（可选） */
+	/** 关联的封装名（可选） */
+	packageName?: string;
+	/** 关联的3D模型ID（可选） */
 	model3dId?: string;
-
-	/** 元件值（可选），如"10k"、"0.1uF"、"74HC00" */
-	value?: string;
-	/** 元件料号（可选） */
-	partNumber?: string;
+	/** 封装边界(可选)，未关联封装时, 作为元件的形状来源 */
+	footprintBounds: BBox2;
 }
 
 /**
@@ -486,9 +499,9 @@ export interface ECADHole extends ECADObject {
 
 	/** 层跨度定义方式一：指定起始和结束层 */
 	layerSpan?: {
-		/** 起始层ID或名称 */
+		/** 起始层ID */
 		startLayer: string;
-		/** 结束层ID或名称 */
+		/** 结束层ID */
 		endLayer: string;
 	};
 
@@ -512,19 +525,20 @@ export interface ECADHole extends ECADObject {
  * @remarks
  * 定义不同类型的钻孔和过孔。
  */
-export type ECADHoleType =
+export enum ECADHoleType {
 	/** 电镀通孔 */
-	| 'PTH'
+	PTH = 'PTH',
 	/** 非电镀通孔 */
-	| 'NPTH'
+	NPTH = 'NPTH',
 	/** 过孔（电镀，用于层间连接） */
-	| 'VIA'
+	VIA = 'VIA',
 	/** 填充过孔 */
-	| 'FILLED_VIA'
+	FILLED_VIA = 'FILLED_VIA',
 	/** 盲孔（从外层到内层） */
-	| 'BLIND'
+	BLIND = 'BLIND',
 	/** 埋孔（内层到内层） */
-	| 'BURIED';
+	BURIED = 'BURIED',
+}
 
 /**
  * 约束区域定义
@@ -542,8 +556,8 @@ export interface ECADConstraintArea extends ECADObject {
 	purpose: ECADConstraintPurpose;
 	/** 约束区域几何形状（闭合轮廓） */
 	geometry: ECADClosedGeometry;
-	/** 装配参考（层或层堆叠名称，可选） */
-	assembleTo?: string;
+	/** 层ID */
+	layerId?: string;
 	/** Z轴范围（可选），定义约束在垂直方向上的作用范围 */
 	zRange?: ECADZRange;
 }
@@ -596,7 +610,7 @@ export interface ECADNonCollaborativeData {
 	/** 铜皮区域列表（可选） */
 	copperAreas?: ECADCopperArea[];
 	/** 丝印图形列表（可选） */
-	silkscreen?: ECADSilkscreen[];
+	silkscreens?: ECADSilkscreen[];
 }
 
 /**

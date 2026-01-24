@@ -34,7 +34,7 @@ export interface EDMDItemSingle extends EDMDObject {
 	PackageName?: EDMDName;
 	/** 形状引用：在简化方式中引用 ShapeElement，传统方式中引用 Stratum 等 */
 	Shape: string;
-	/** 包引脚定义（用于元件引脚位置） */
+	/** 包引脚定义（用于封装引脚位置） */
 	PackagePins?: EDMPackagePin[];
 	/** 3D模型引用（可选） */
 	EDMD3DModel?: string;
@@ -54,9 +54,9 @@ export interface EDMDItemSingle extends EDMDObject {
 export interface EDMPackagePin {
 	/** 引脚编号 */
 	pinNumber: string;
-	/** 是否为主引脚（引脚1） */
+	/** 是否为主引脚 */
 	primary: boolean;
-	/** 引脚位置点，引用 CartesianPoint 的 id */
+	/** 引脚位置点引用 */
 	Point: string;
 	/** 引脚形状引用 */
 	Shape?: string;
@@ -75,7 +75,7 @@ export interface EDMDItemInstance extends EDMDObject {
 	/** 引用的项目ID */
 	Item: string;
 	/** 实例名称 */
-	InstanceName: EDMDName;
+	InstanceName?: EDMDName;
 	/** 变换矩阵 */
 	Transformation?: EDMDTransformation;
 	/** Z轴偏移（相对定位，IDXv4.0+） */
@@ -89,7 +89,7 @@ export interface EDMDItemInstance extends EDMDObject {
 }
 
 /**
- * 项目实例集合（ItemType="assembly"）
+ * 项目装配（ItemType="assembly"）
  *
  * @remarks
  * 表示项目的一个或多个实例，包含几何类型和实例列表
