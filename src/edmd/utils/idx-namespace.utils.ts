@@ -8,7 +8,7 @@ import {
 	IDXAdministrationTag,
 	IDXTag,
 	IDXXSITag,
-} from '../../types/core/namespace.types';
+} from '../../types/edmd/namespace.types';
 import { hasOwnProperty } from '../../utils/object.utils';
 
 // ------------ 数据缓存 ------------

@@ -1,15 +1,12 @@
-# IDXv4.5 建模指南梳理
----
+# IDXv4.5 建模指南
 
 ## IDX简介
-
-好的，这是一个关于**IDX**的全面介绍。它不仅是一个文件格式，更是电子与机械设计领域协作的**核心协议和语言**。
 
 ### 🎯 本质定义
 
 **IDX** 是一种由 **prostep ivip** 国际协会制定的、基于XML的**开放数据交换标准**，全称为 **“ECAD/MCAD Collaboration”**。它的核心使命是**在电子设计自动化（ECAD）系统和机械设计自动化（MCAD）系统之间，实现印刷电路板（PCB）设计数据的无缝、精确和双向协作**。
 
-简单来说，IDX就是**ECAD（如Altium Designer, Cadence Allegro）和MCAD（如SolidWorks, Siemens NX, PTC Creo）都能理解的一种“普通话”**，让电气工程师和机械工程师可以基于同一份数据讨论设计问题。
+**IDX协议** 是以 **EDMD** 数据模型为基础，在 **ECAD**（电气方）与 **MCAD**（机械方）之间实现PCB设计协作的标准化框架，是一种基于XML的标准数据格式与通信协议。
 
 ### 🌟 核心特性与设计理念
 
@@ -58,15 +55,20 @@
 *   **供应链协作**：将包含精确3D模型的PCB设计数据传递给外壳供应商或模具制造商。
 *   **自动化流程**：集成到PLM/PDM或CI/CD流程中，实现设计检查的自动化。
 
-### 总结
 
-**IDX不是一个简单的“导出文件”，而是一套用于ECAD与MCAD间进行精准、高效、双向设计对话的完整协议和数据语言。** 它通过标准化的模型、智能的相对定位和流程化的变更管理，将两个传统上孤立的设计领域紧密连接起来，是现代复杂电子产品实现“机电一体化”设计的基石技术。
 
-您正在开发的 **IDXporter** 项目，正是将这套强大的协作语言赋予您EDA软件的关键桥梁，意义重大。
+根据《ECAD/MCAD Collaboration Implementation Guidelines v4.5》，以下是IDX建模的重点内容总结，特别是**传统方法（Traditional）**与**推荐方法（Simplified，基于geometryType）**的对比。
 
-## 一、IDX 数据结构概览
+## IDX建模核心架构
 
-所有IDX文件都是XML格式，根元素为`EDMDDataSet`：
+IDX使用 **EDMDDataSet** 作为根结构，包含：
+- **Header**：元数据（创建者、单位、时间戳等）
+- **Body**：所有项目（Item）及其几何形状的定义
+- **ProcessInstruction**：消息类型（SendInformation、SendChanges等）
+
+**核心建模单元是 `EDMDItem`**，分为：
+- `assembly` 类型：表示实例（如一个具体的元件放置）
+- `single` 类型：表示定义（如元件封装定义）
 
 ```xml
 <foundation:EDMDDataSet xmlns:foundation="..." xmlns:pdm="..." xmlns:d2="...">
@@ -87,542 +89,62 @@
 </foundation:EDMDDataSet>
 ```
 
----
+## 传统方法 vs. 推荐方法（IDXv4.0+）
 
-## 二、关键ECAD特征建模（第6章重点）
+IDXv4.0 引入了 **`geometryType` 属性**，显著简化了建模结构。
 
-### 1. PCB板建模
+| 方面             | 传统方法（Traditional）                                      | 推荐方法（Simplified）                                       |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **识别项目类型** | 通过多层嵌套的对象类型判断（如 `EDMDKeepOut`、`EDMDInterStratumFeature`） | 在顶层 `EDMDItem` 上使用 `geometryType` 属性（如 `KEEPOUT_AREA_ROUTE`） |
+| **结构复杂度**   | 多层嵌套：Item → 特定对象（如 KeepOut） → ShapeElement → CurveSet2D → 几何元素 | 扁平化：Item（带 geometryType）→ ShapeElement → CurveSet2D → 几何元素 |
+| **可读性**       | 较低，需深入XML层级判断类型                                  | 高，顶层属性直接说明类型                                     |
+| **文件大小**     | 较大，因多层对象和冗余标签                                   | 较小，省去中间对象层                                         |
+| **向后兼容**     | 兼容所有IDX版本                                              | 仅IDXv4.0+支持                                               |
+| **未来兼容性**   | 未来版本可能弃用                                             | 推荐使用，为未来版本优化                                     |
 
-**IDXv4.5简化方法（推荐）：使用`geometryType`属性**
+## 重要建模要点
 
-```xml
-<!-- 简单板（无层定义） -->
-<foundation:Item id="BOARD_1" geometryType="BOARD_OUTLINE">
-  <foundation:Name>MainBoard</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  <pdm:ItemInstance>
-    <pdm:InstanceName>
-      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-      <foundation:ObjectName>BoardOutline_001</foundation:ObjectName>
-    </pdm:InstanceName>
-    <!-- 板厚属性 -->
-    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-      <property:Key>
-        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-        <foundation:ObjectName>THICKNESS</foundation:ObjectName>
-      </property:Key>
-      <property:Value>1.6</property:Value>
-    </foundation:UserProperty>
-  </pdm:ItemInstance>
-</foundation:Item>
+### 几何形状标识（2.5D）
 
-<!-- 板形状定义（矩形示例） -->
-<foundation:ShapeElement id="BOARD_SHAPE">
-  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-  <pdm:DefiningShape>BOARD_CURVESET</pdm:DefiningShape>
-  <pdm:Inverted>false</pdm:Inverted>
-</foundation:ShapeElement>
+两种方法在几何表示上一致：
 
-<foundation:CurveSet2d id="BOARD_CURVESET" xsi:type="d2:EDMDCurveSet2d">
-  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
-  <d2:UpperBound><property:Value>1.6</property:Value></d2:UpperBound>
-  <d2:DetailedGeometricModelElement>BOARD_POLYLINE</d2:DetailedGeometricModelElement>
-</foundation:CurveSet2d>
+- 使用 **`EDMDCurveSet2D`** 定义二维轮廓 + Z轴范围（LowerBound/UpperBound）
+- 支持多种曲线类型：PolyLine、Arc、Circle、BSpline、Ellipse 等
+- 可通过 **`Inverted`** 属性实现布尔减运算（如切孔）
 
-<foundation:PolyLine id="BOARD_POLYLINE" xsi:type="d2:EDMDPolyLine">
-  <d2:Point>PT1</d2:Point>
-  <d2:Point>PT2</d2:Point>
-  <d2:Point>PT3</d2:Point>
-  <d2:Point>PT4</d2:Point>
-  <d2:Point>PT1</d2:Point> <!-- 闭合 -->
-</foundation:PolyLine>
-```
+### 板层堆叠（Layer Stackup）
 
-### 2. 电子组件建模
+- 使用 `geometryType="LAYER_STACKUP"`
+- 定义物理层（如信号层、阻焊层、丝印层）及其Z轴位置
+- 支持多区域不同堆叠（如刚柔结合板）
 
-**电气组件：**
-```xml
-<!-- 组件实例（位置A1） -->
-<foundation:Item id="COMP_INST_1" geometryType="COMPONENT">
-  <foundation:Name>U1</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  <pdm:ItemInstance>
-    <pdm:InstanceName>
-      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-      <foundation:ObjectName>U1</foundation:ObjectName>
-    </pdm:InstanceName>
-    
-    <!-- 元件属性 -->
-    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-      <property:Key><foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-        <foundation:ObjectName>REFDES</foundation:ObjectName>
-      </property:Key>
-      <property:Value>U1</property:Value>
-    </foundation:UserProperty>
-    
-    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-      <property:Key><foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-        <foundation:ObjectName>PARTNUM</foundation.ObjectName>
-      </property:Key>
-      <property:Value>STM32F407</property:Value>
-    </foundation:UserProperty>
-    
-    <!-- 位置变换（2D变换） -->
-    <pdm:Transformation>
-      <pdm:TransformationType>d2</pdm:TransformationType>
-      <pdm:xx>1.0</pdm:xx><pdm:xy>0.0</pdm:xy>
-      <pdm:yx>0.0</pdm:yx><pdm:yy>1.0</pdm:yy>
-      <pdm:tx><property:Value>25.4</property:Value></pdm:tx>
-      <pdm:ty><property:Value>15.2</property:Value></pdm:ty>
-    </pdm:Transformation>
-    
-    <!-- 引用组件定义 -->
-    <pdm:Item>COMP_DEF_QFP64</pdm:Item>
-  </pdm:ItemInstance>
-  
-  <!-- 安装在顶层 -->
-  <pdm:AssembleToName>TOP</pdm:AssembleToName>
-</foundation:Item>
+### 元件引脚与热属性
+- IDXv4.0+ 支持在 `EDMDItem` 中定义 `PackagePin`
+- 可添加热属性（如 `POWER_OPR`、`THERM_COND`）作为用户属性
 
-<!-- 组件定义 -->
-<foundation:Item id="COMP_DEF_QFP64">
-  <foundation:Name>QFP64_Package</foundation:Name>
-  <pdm:ItemType>single</pdm:ItemType>
-  <pdm:PackageName>
-    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-    <foundation:ObjectName>QFP64_10X10</foundation:ObjectName>
-  </pdm:PackageName>
-  <pdm:Shape>COMP_SHAPE_QFP64</pdm:Shape>
-  
-  <!-- 引脚定义（IDXv4.5新增） -->
-  <pdm:PackagePin pinNumber="1" primary="true">
-    <d2:Point>PIN1_PT</d2:Point>
-    <pdm:Shape>PIN_SHAPE_1</pdm:Shape>
-  </pdm:PackagePin>
-</foundation:Item>
-```
+### 非协作项目标记
+- 在 `ItemInstance` 上通过 `RoleOnItemInstance` 标记所有权
+- 用于防止对方系统修改特定项目
 
-**机械组件：**
-```xml
-<foundation:Item id="MECH_COMP_INST" geometryType="COMPONENT_MECHANICAL">
-  <!-- 与电气组件类似，但通常没有电气属性 -->
-</foundation:Item>
-```
+### 文件与压缩
+- 标准文件后缀：`.idx`
+- 压缩文件后缀：`.idz`（推荐使用 DEFLATE 算法）
 
-### 3. 孔建模
+### 总结建议
 
-**金属化孔（PTH）：**
-```xml
-<foundation:Item id="PTH_1" geometryType="HOLE_PLATED">
-  <foundation:Name>MH1</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  <pdm:ItemInstance>
-    <pdm:InstanceName>
-      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-      <foundation:ObjectName>MH1</foundation:ObjectName>
-    </pdm:InstanceName>
-    
-    <!-- 位置 -->
-    <pdm:Transformation>
-      <pdm:TransformationType>d2</pdm:TransformationType>
-      <pdm:xx>1.0</pdm:xx><pdm:xy>0.0</pdm:xy>
-      <pdm:yx>0.0</pdm:yx><pdm:yy>1.0</pdm:yy>
-      <pdm:tx><property:Value>50.0</property:Value></pdm:tx>
-      <pdm:ty><property:Value>30.0</property:Value></pdm:ty>
-    </pdm:Transformation>
-    
-    <pdm:Item>HOLE_DEF_3MM</pdm:Item>
-  </pdm:ItemInstance>
-</foundation:Item>
+| 场景           | 推荐做法                                                     |
+| -------------- | ------------------------------------------------------------ |
+| **新项目开发** | 一律使用 **推荐方法（geometryType）**，结构清晰且未来兼容    |
+| **旧系统兼容** | 可暂时使用传统方法，但建议逐步迁移                           |
+| **复杂板型**   | 结合板层堆叠、柔性区、弯曲区域建模                           |
+| **协作流程**   | 使用 `SendInformation` 发基线，`SendChanges` 发变更与响应    |
+| **文件管理**   | 使用 `.idz` 压缩以减少文件大小，遵循命名约定（如 `Cellphone_baseline_00.idz`） |
 
-<!-- 孔定义（圆形） -->
-<foundation:Item id="HOLE_DEF_3MM">
-  <foundation:Name>3mm_Plated_Hole</foundation:Name>
-  <pdm:ItemType>single</pdm:ItemType>
-  <pdm:Shape>HOLE_SHAPE_3MM</pdm:Shape>
-</foundation:Item>
+若实施IDX接口，**强烈建议直接采用IDXv4.0+的推荐方法**，以减少解析复杂度、提高可维护性，并为未来版本升级做好准备。
 
-<foundation:ShapeElement id="HOLE_SHAPE_3MM">
-  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-  <pdm:DefiningShape>HOLE_CURVESET</pdm:DefiningShape>
-  <pdm:Inverted>true</pdm:Inverted> <!-- 孔是切除材料 -->
-</foundation:ShapeElement>
+## geometryType类型参考
 
-<foundation:CurveSet2d id="HOLE_CURVESET" xsi:type="d2:EDMDCurveSet2d">
-  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
-  <d2:UpperBound><property:Value>1.6</property:Value></d2:UpperBound>
-  <d2:DetailedGeometricModelElement>HOLE_CIRCLE</d2:DetailedGeometricModelElement>
-</foundation:CurveSet2d>
-
-<foundation:CircleCenter id="HOLE_CIRCLE" xsi:type="d2:EDMDCircleCenter">
-  <d2:CenterPoint>
-    <d2:X><property:Value>0</property:Value></d2:X>
-    <d2:Y><property:Value>0</property:Value></d2:Y>
-  </d2:CenterPoint>
-  <d2:Diameter><property:Value>3.0</property:Value></d2:Diameter>
-</foundation:CircleCenter>
-```
-
-**非金属化孔（NPTH）：**
-```xml
-<foundation:Item id="NPTH_1" geometryType="HOLE_NON_PLATED">
-  <!-- 与PTH类似，geometryType不同 -->
-</foundation:Item>
-```
-
-### 4. 禁止区与保留区
-
-**组件禁止区：**
-```xml
-<foundation:Item id="KEEPOUT_1" geometryType="KEEPOUT_AREA_COMPONENT">
-  <foundation:Name>NoComponentArea</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  <pdm:ItemInstance>
-    <pdm:InstanceName>
-      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-      <foundation:ObjectName>KO1</foundation:ObjectName>
-    </pdm:InstanceName>
-    <pdm:Item>KEEPOUT_DEF</pdm:Item>
-  </pdm:ItemInstance>
-  <pdm:AssembleToName>TOP</pdm:AssembleToName>
-</foundation:Item>
-
-<!-- Z轴范围：从板表面向上10mm -->
-<foundation:CurveSet2d id="KO_CURVESET" xsi:type="d2:EDMDCurveSet2d">
-  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
-  <d2:UpperBound><property:Value>10.0</property:Value></d2:UpperBound>
-  <!-- 形状定义 -->
-</foundation:CurveSet2d>
-```
-
-**布线禁止区：**
-```xml
-<foundation:Item id="ROUTE_KO" geometryType="KEEPOUT_AREA_ROUTE">
-  <!-- 类似组件禁止区 -->
-</foundation:Item>
-```
-
-**保留区（必须放置区域）：**
-```xml
-<foundation:Item id="KEEPIN_1" geometryType="KEEPIN_AREA_COMPONENT">
-  <!-- 与禁止区类似，逻辑相反 -->
-</foundation:Item>
-```
-
-### 5. 铣削切口
-
-**非金属化铣削切口：**
-```xml
-<foundation:Item id="MILLED_CUTOUT" geometryType="HOLE_NONPLATED_MILLED">
-  <foundation:Name>Slot1</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  <pdm:ItemInstance>
-    <pdm:InstanceName>
-      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-      <foundation:ObjectName>MILLED_SLOT</foundation:ObjectName>
-    </pdm:InstanceName>
-    <pdm:Item>MILLED_DEF</pdm:Item>
-  </pdm:ItemInstance>
-</foundation:Item>
-
-<!-- 铣削路径定义 -->
-<foundation:PolyLine id="MILLED_PATH" xsi:type="d2:EDMDPolyLine">
-  <d2:Thickness><property:Value>2.0</property:Value></d2:Thickness>
-  <d2:Point>PT_S1</d2:Point>
-  <d2:Point>PT_S2</d2:Point>
-  <d2:Point>PT_S3</d2:Point>
-</foundation:PolyLine>
-```
-
----
-
-## 三、几何形状表示（第7章重点）
-
-### 1. 2.5D几何基础
-
-所有形状通过`CurveSet2d`定义，包含：
-- `LowerBound`/`UpperBound`：Z轴范围
-- `DetailedGeometricModelElement`：2D轮廓曲线
-
-```xml
-<foundation:CurveSet2d id="SHAPE_1" xsi:type="d2:EDMDCurveSet2d">
-  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>  <!-- Z起点 -->
-  <d2:UpperBound><property:Value>2.0</property:Value></d2:UpperBound> <!-- Z终点 -->
-  <d2:DetailedGeometricModelElement>POLYLINE_1</d2:DetailedGeometricModelElement>
-</foundation:CurveSet2d>
-```
-
-### 2. 支持的曲线类型
-
-#### a) 多段线（最常用）
-```xml
-<foundation:PolyLine id="POLYLINE_1" xsi:type="d2:EDMDPolyLine">
-  <!-- 可选：线宽（用于铣削路径） -->
-  <d2:Thickness><property:Value>0.0</property:Value></d2:Thickness>
-  
-  <!-- 点序列（必须闭合形成区域） -->
-  <d2:Point>PT_1</d2:Point>
-  <d2:Point>PT_2</d2:Point>
-  <d2:Point>PT_3</d2:Point>
-  <d2:Point>PT_4</d2:Point>
-  <d2:Point>PT_1</d2:Point> <!-- 闭合 -->
-</foundation:PolyLine>
-
-<!-- 点定义 -->
-<foundation:CartesianPoint id="PT_1" xsi:type="d2:EDMDCartesianPoint">
-  <d2:X><property:Value>0.0</property:Value></d2:X>
-  <d2:Y><property:Value>0.0</property:Value></d2:Y>
-</foundation:CartesianPoint>
-```
-
-#### b) 圆形
-```xml
-<!-- 通过中心点和直径定义 -->
-<foundation:CircleCenter id="CIRCLE_1" xsi:type="d2:EDMDCircleCenter">
-  <d2:CenterPoint>
-    <d2:X><property:Value>10.0</property:Value></d2:X>
-    <d2:Y><property:Value>10.0</property:Value></d2:Y>
-  </d2:CenterPoint>
-  <d2:Diameter><property:Value>5.0</property:Value></d2:Diameter>
-</foundation:CircleCenter>
-
-<!-- 通过三点定义 -->
-<foundation:Circle3Point id="CIRCLE_2" xsi:type="d2:EDMDCircle3Point">
-  <d2:Point1>PT_A</d2:Point1>
-  <d2:Point2>PT_B</d2:Point2>
-  <d2:Point3>PT_C</d2:Point3>
-</foundation:Circle3Point>
-```
-
-#### c) 圆弧
-```xml
-<foundation:Arc id="ARC_1" xsi:type="d2:EDMDArc">
-  <d2:StartPoint>PT_START</d2:StartPoint>
-  <d2:EndPoint>PT_END</d2:EndPoint>
-  <d2:Radius><property:Value>8.0</property:Value></d2:Radius>
-  <d2:IsCCW>true</d2:IsCCW> <!-- true=逆时针 -->
-</foundation:Arc>
-```
-
-#### d) B样条曲线
-```xml
-<foundation:BSplineCurve id="BSPLINE_1" xsi:type="d2:EDMDBSplineCurve">
-  <d2:Degree>3</d2:Degree>
-  <d2:ControlPointsList>
-    <d2:ControlPoint>CP1</d2:ControlPoint>
-    <d2:ControlPoint>CP2</d2:ControlPoint>
-    <d2:ControlPoint>CP3</d2:ControlPoint>
-    <d2:ControlPoint>CP4</d2:ControlPoint>
-  </d2:ControlPointsList>
-  <d2:ClosedCurve>false</d2:ClosedCurve>
-</foundation:BSplineCurve>
-```
-
-#### e) 椭圆
-```xml
-<foundation:Ellipse id="ELLIPSE_1" xsi:type="d2:EDMDEllipse">
-  <d2:CenterPoint>ELLIPSE_CENTER</d2:CenterPoint>
-  <d2:SemiMajor><property:Value>6.0</property:Value></d2:SemiMajor>
-  <d2:SemiMinor><property:Value>3.0</property:Value></d2:SemiMinor>
-  <d2:OrientationAngle><property:Value>30.0</property:Value></d2:OrientationAngle>
-</foundation:Ellipse>
-```
-
-#### f) 复合曲线（多个曲线组合）
-```xml
-<foundation:CompositeCurve id="COMPOSITE_1" xsi:type="d2:EDMDCompositeCurve">
-  <d2:CurveSegment>POLYLINE_SEG1</d2:CurveSegment>
-  <d2:CurveSegment>ARC_SEG1</d2:CurveSegment>
-  <d2:CurveSegment>POLYLINE_SEG2</d2:CurveSegment>
-</foundation:CompositeCurve>
-```
-
-### 3. 布尔运算（CSG构造）
-
-通过`ShapeElement`的`Inverted`属性控制：
-
-```xml
-<!-- 添加材料（默认） -->
-<foundation:ShapeElement id="SHAPE_ADD">
-  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-  <pdm:DefiningShape>CURVESET_ADD</pdm:DefiningShape>
-  <pdm:Inverted>false</pdm:Inverted> <!-- 或省略 -->
-</foundation:ShapeElement>
-
-<!-- 切除材料（孔、切口等） -->
-<foundation:ShapeElement id="SHAPE_CUT">
-  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-  <pdm:DefiningShape>CURVESET_CUT</pdm:DefiningShape>
-  <pdm:Inverted>true</pdm:Inverted>
-</foundation:ShapeElement>
-```
-
-### 4. 外部文件引用（隐式形状）
-
-```xml
-<foundation:Item id="COMPLEX_SHAPE" geometryType="COMPONENT">
-  <pdm:ItemType>single</pdm:ItemType>
-  <!-- 引用外部3D模型 -->
-  <pdm:EDMD3DModel>EXTERNAL_MODEL_1</pdm:EDMD3DModel>
-</foundation:Item>
-
-<foundation:Model3D id="EXTERNAL_MODEL_1">
-  <pdm:ModelIdentifier>capacitor.step</pdm:ModelIdentifier>
-  <pdm:ModelLocation>/models/</pdm:ModelLocation>
-  <pdm:MCADFormat>STEP</pdm:MCADFormat>
-  <pdm:MCADFormatVersion>AP214</pdm:MCADFormatVersion>
-  <!-- 对齐变换（可选） -->
-  <pdm:Transformation>
-    <pdm:TransformationType>d3</pdm:TransformationType>
-    <pdm:tx><property:Value>0.5</property:Value></pdm:tx>
-    <pdm:ty><property:Value>0.5</property:Value></pdm:ty>
-  </pdm:Transformation>
-</foundation:Model3D>
-```
-
-## 四、完整示例：简单PCB板
-
-```xml
-<foundation:EDMDDataSet xmlns:foundation="..." xmlns:pdm="..." xmlns:d2="..." xmlns:property="...">
-  
-  <foundation:Header>
-    <foundation:CreatorCompany>ExampleCorp</foundation:CreatorCompany>
-    <foundation:GlobalUnitLength>UNIT_MM</foundation:GlobalUnitLength>
-    <foundation:CreationDateTime>2024-01-15T14:30:00Z</foundation:CreationDateTime>
-  </foundation:Header>
-  
-  <foundation:Body>
-    <!-- 1. 板定义 -->
-    <foundation:Item id="BOARD_ASSEMBLY" geometryType="BOARD_OUTLINE">
-      <foundation:Name>MainBoard</foundation:Name>
-      <pdm:ItemType>assembly</pdm:ItemType>
-      <pdm:ItemInstance>
-        <pdm:InstanceName>
-          <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-          <foundation:ObjectName>PCB_Assembly</foundation:ObjectName>
-        </pdm:InstanceName>
-        <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-          <property:Key>
-            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-            <foundation:ObjectName>THICKNESS</foundation:ObjectName>
-          </property:Key>
-          <property:Value>1.6</property:Value>
-        </foundation:UserProperty>
-        <pdm:Item>BOARD_SHAPE_ITEM</pdm:Item>
-      </pdm:ItemInstance>
-    </foundation:Item>
-    
-    <!-- 2. 组件 -->
-    <foundation:Item id="COMP_U1" geometryType="COMPONENT">
-      <foundation:Name>U1</foundation:Name>
-      <pdm:ItemType>assembly</pdm:ItemType>
-      <pdm:ItemInstance>
-        <pdm:InstanceName>
-          <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-          <foundation:ObjectName>IC1</foundation:ObjectName>
-        </pdm:InstanceName>
-        <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-          <property:Key>
-            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-            <foundation:ObjectName>REFDES</foundation:ObjectName>
-          </property:Key>
-          <property:Value>U1</property:Value>
-        </foundation:UserProperty>
-        <pdm:Transformation>
-          <pdm:TransformationType>d2</pdm:TransformationType>
-          <pdm:xx>1.0</pdm:xx><pdm:xy>0.0</pdm:xy>
-          <pdm:yx>0.0</pdm:yx><pdm:yy>1.0</pdm:yy>
-          <pdm:tx><property:Value>20.0</property:Value></pdm:tx>
-          <pdm:ty><property:Value>15.0</property:Value></pdm:ty>
-        </pdm:Transformation>
-        <pdm:Item>COMP_DEF_SOIC8</pdm:Item>
-      </pdm:ItemInstance>
-      <pdm:AssembleToName>TOP</pdm:AssembleToName>
-    </foundation:Item>
-    
-    <!-- 3. 安装孔 -->
-    <foundation:Item id="HOLE_M1" geometryType="HOLE_PLATED">
-      <foundation:Name>MH1</foundation:Name>
-      <pdm:ItemType>assembly</pdm:ItemType>
-      <pdm:ItemInstance>
-        <pdm:InstanceName>
-          <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-          <foundation:ObjectName>MountingHole1</foundation:ObjectName>
-        </pdm:InstanceName>
-        <pdm:Transformation>
-          <pdm:TransformationType>d2</pdm:TransformationType>
-          <pdm:xx>1.0</pdm:xx><pdm:xy>0.0</pdm:xy>
-          <pdm:yx>0.0</pdm:yx><pdm:yy>1.0</pdm:yy>
-          <pdm:tx><property:Value>5.0</property:Value></pdm:tx>
-          <pdm:ty><property:Value>5.0</property:Value></pdm:ty>
-        </pdm:Transformation>
-        <pdm:Item>HOLE_DEF_3MM</pdm:Item>
-      </pdm:ItemInstance>
-    </foundation:Item>
-    
-    <!-- 4. 形状定义（简化） -->
-    <foundation:ShapeElement id="BOARD_SHAPE">
-      <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-      <pdm:DefiningShape>BOARD_CURVES</pdm:DefiningShape>
-      <pdm:Inverted>false</pdm:Inverted>
-    </foundation:ShapeElement>
-    
-    <foundation:CurveSet2d id="BOARD_CURVES" xsi:type="d2:EDMDCurveSet2d">
-      <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-      <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
-      <d2:UpperBound><property:Value>1.6</property:Value></d2:UpperBound>
-      <d2:DetailedGeometricModelElement>BOARD_OUTLINE_POLY</d2:DetailedGeometricModelElement>
-    </foundation:CurveSet2d>
-    
-    <!-- 更多形状定义... -->
-  </foundation:Body>
-  
-  <foundation:ProcessInstruction xsi:type="computational:EDMDProcessInstructionSendInformation"/>
-</foundation:EDMDDataSet>
-```
-
----
-
-## 五、建模要点总结
-
-### 1. **IDXv4.5 简化表示法优先**
-- 使用 `geometryType` 属性代替复杂嵌套对象
-- 支持的类型：`BOARD_OUTLINE`, `COMPONENT`, `HOLE_PLATED`, `KEEPOUT_AREA_ROUTE` 等
-
-### 2. **Z轴定位规则**
-- 板底面（BOTTOM）= Z=0
-- 板顶面（TOP）= Z=板厚
-- 使用 `AssembleToName` 相对层定位
-- IDXv4.5新增 `zOffset` 属性精细控制
-
-### 3. **形状建模流程**
-1. 定义 `Item`（使用 `geometryType`）
-2. 定义 `ItemInstance`（包含变换）
-3. 定义 `ShapeElement`（设置 `Inverted`）
-4. 定义 `CurveSet2d`（设置Z范围）
-5. 定义曲线（PolyLine、Circle等）
-
-### 4. **单位与精度**
-- 默认单位：毫米（mm）
-- 角度单位：度（°）
-- 建议精度：0.001mm
-
-### 5. **文件输出**
-- 扩展名：`.idx`（未压缩）或 `.idz`（压缩）
-- 推荐命名：`DesignName_baseline_v1.idx`
-
----
-
-## 六、geometryType 类型参考
-
-根据《PSI5_IDXv4.5_Implementation_Guidelines.pdf》文档，IDXv4.5协议中引入的 `geometryType` 属性用于简化ECAD/MCAD协作中各种特征的描述。以下是文档中提到的所有 `geometryType` 类型及其简要说明，按类别整理：
-
----
-
-### ✅ 一、板级轮廓与区域类型
+### ✅ 板级轮廓与区域类型
 | geometryType           | 描述                       | 对应传统对象（可省略）                      |
 | ---------------------- | -------------------------- | ------------------------------------------- |
 | `BOARD_OUTLINE`        | 板框轮廓（简单板）         | `EDMDStratum`                               |
@@ -630,17 +152,13 @@
 | `BOARD_AREA_STIFFENER` | 加强区域                   | `EDMDFunctionalItemShape`（`Stiffener`）    |
 | `BOARD_AREA_RIGID`     | 刚性区域（默认）           | `EDMDFunctionalItemShape`（`RigidArea`）    |
 
----
-
-### ✅ 二、组件类型
+### ✅ 组件类型
 | geometryType           | 描述                       | 对应传统对象（可省略）                      |
 | ---------------------- | -------------------------- | ------------------------------------------- |
 | `COMPONENT`            | 电气组件（PCB元件）        | `EDMDAssemblyComponent`（`Physical`）       |
 | `COMPONENT_MECHANICAL` | 机械组件（如散热片、支架） | `EDMDAssemblyComponent`（`MechanicalItem`） |
 
----
-
-### ✅ 三、孔与过孔类型
+### ✅ 孔与过孔类型
 | geometryType            | 描述                 | 对应传统对象（可省略）                               |
 | ----------------------- | -------------------- | ---------------------------------------------------- |
 | `HOLE_PLATED`           | 金属化孔（如PTH）    | `EDMDInterStratumFeature`（`PlatedCutout`）          |
@@ -650,9 +168,7 @@
 | `VIA`                   | 过孔（信号孔）       | `EDMDInterStratumFeature`（`Via`）                   |
 | `FILLED_VIA`            | 填充过孔             | `EDMDInterStratumFeature`（`FilledVia`）             |
 
----
-
-### ✅ 四、禁布区（Keepout）类型
+### ✅ 禁布区（Keepout）类型
 | geometryType             | 描述                  | 对应传统对象（可省略）                        |
 | ------------------------ | --------------------- | --------------------------------------------- |
 | `KEEPOUT_AREA_ROUTE`     | 布线禁布区            | `EDMDKeepOut`（`Purpose=Route`）              |
@@ -662,9 +178,7 @@
 | `KEEPOUT_AREA_OTHER`     | 其他禁布区            | `EDMDKeepOut`（`Purpose=Other`）              |
 | `KEEPOUT_AREA_THERMAL`   | 热禁布区（表6中列出） | `EDMDKeepOut`（`Purpose=Thermal`）            |
 
----
-
-### ✅ 五、保留区（Keepin）类型
+### ✅ 保留区（Keepin）类型
 | geometryType            | 描述           | 对应传统对象（可省略）                       |
 | ----------------------- | -------------- | -------------------------------------------- |
 | `KEEPIN_AREA_ROUTE`     | 布线保留区     | `EDMDKeepIn`（`Purpose=Route`）              |
@@ -673,18 +187,14 @@
 | `KEEPIN_AREA_TESTPOINT` | 测试点保留区   | `EDMDKeepIn`（`Purpose=TestPoint`）          |
 | `KEEPIN_AREA_OTHER`     | 其他保留区     | `EDMDKeepIn`（`Purpose=Other`）              |
 
----
-
-### ✅ 六、其他区域类型
+### ✅ 其他区域类型
 | geometryType           | 描述                                   | 对应传统对象（可省略）                            |
 | ---------------------- | -------------------------------------- | ------------------------------------------------- |
 | `PLACEMENT_GROUP_AREA` | 放置组区域（相关组件分组）             | `EDMDFunctionalItemShape`（`PlacementGroupArea`） |
 | `OTHER_OUTLINE`        | 其他轮廓（用户自定义区域，如Logo位置） | `EDMDFunctionalItemShape`（`UserArea`）           |
 | `BEND`                 | 弯曲区域（柔性板弯曲定义）             | `EDMDBend`                                        |
 
----
-
-### ✅ 七、铜层与图形类型
+### ✅ 铜层与图形类型
 | geometryType   | 描述               | 对应传统对象（可省略）                       |
 | -------------- | ------------------ | -------------------------------------------- |
 | `COPPER_PAD`   | 铜焊盘             | `EDMDStratum` + `LayerPurpose=LandsOnly`     |
@@ -693,9 +203,7 @@
 | `SOLDERMASK`   | 阻焊层             | `EDMDStratum` + `LayerPurpose=SolderMask`    |
 | `SILKSCREEN`   | 丝印层             | `EDMDStratum` + `LayerPurpose=Silkscreen`    |
 
----
-
-### ✅ 八、物理层类型（用于层叠结构定义）
+### ✅ 物理层类型（用于层叠结构定义）
 | geometryType                    | 描述                             | 对应传统对象（可省略）        |
 | ------------------------------- | -------------------------------- | ----------------------------- |
 | `LAYER_SOLDERMASK`              | 阻焊层（物理层）                 | 通过 `LayerType` 用户属性定义 |
@@ -713,1925 +221,2637 @@
 | `LAYER_DIELECTRIC`              | 电介质层（绝缘层）               | 同上                          |
 | `LAYER_STACKUP`                 | 层叠结构（多个物理层的堆叠定义） | 无直接对应，为组合对象        |
 
----
+### ✅ 备注说明
 
-### ✅ 九、备注说明
 - **简化方法**：在IDXv4.5中，只要在顶层的 `EDMDItem`（`ItemType="assembly"`）上指定 `geometryType`，即可省略传统的中间对象（如 `EDMDKeepOut`、`EDMDAssemblyComponent` 等），直接引用形状元素（`ShapeElement`）。
 - **向后兼容**：IDXv4.5支持传统方法和简化方法，但**推荐使用简化方法**以减少XML文件大小和复杂度。
 - **文档依据**：以上列表整理自文档第6节（各特征建模）、表4（物理层类型）、表6-7（禁布/保留区类型）、表8（所有项目类型总结）以及第9节（属性术语表）。
 
----
 
-如果需要了解某个具体 `geometryType` 的XML示例或使用场景，请随时提问，我可以从文档中提取对应片段进行解释。
 
-**使用建议**：始终优先使用IDXv4.5的简化表示法（`geometryType`），它更简洁且向前兼容。对于复杂形状，可使用复合曲线或外部3D模型引用。
+## IDX分层构建的建模方案
 
-## 七、对于板子的建模
+### 分层建模思路
 
-板子有四种定义类型：
+分层构建即按照项目建模的数据层次，依次构建：
 
-| geometryType           | 描述                       | 对应传统对象（可省略）                      |
-| ---------------------- | -------------------------- | ------------------------------------------- |
-| `BOARD_OUTLINE`        | 板框轮廓（简单板）         | `EDMDStratum`                               |
-| `BOARD_AREA_FLEXIBLE`  | 柔性区域（在层区域中定义） | `EDMDFunctionalItemShape`（`FlexibleArea`） |
-| `BOARD_AREA_STIFFENER` | 加强区域                   | `EDMDFunctionalItemShape`（`Stiffener`）    |
-| `BOARD_AREA_RIGID`     | 刚性区域（默认）           | `EDMDFunctionalItemShape`（`RigidArea`）    |
-
-本项目只专注让`BOARD_OUTLINE`和`BOARD_AREA_RIGID`两种类型，我根据文档第46-61页详细解释这两种类型的区别和应用场景：
-
-### 📊 **核心区别总结**
-
-| 特性           | `BOARD_OUTLINE` | `BOARD_AREA_RIGID` |
-| -------------- | --------------- | ------------------ |
-| **定义对象**   | 简单板子整体    | 板子内的特定区域   |
-| **层次级别**   | 板子顶级定义    | 板子内部区域定义   |
-| **层堆叠关联** | 无（直接厚度）  | 必须关联层堆叠     |
-| **Z轴参考**    | 绝对Z坐标       | 相对层堆叠         |
-| **典型应用**   | 单层/简单板     | 多层板、刚柔结合板 |
-| **几何形状**   | 整个板子轮廓    | 板子内部某区域轮廓 |
-
-### 📖 **详细解释**
-
-#### **1. BOARD_OUTLINE（简单板子）**
-- **文档参考**：第46-48页
-- **定义**：描述整个PCB板的**外部轮廓和整体厚度**
-- **特点**：
-  - 使用`LowerBound`/`UpperBound`定义绝对Z范围
-  - 通常`LowerBound=0`, `UpperBound=厚度`
-  - **没有**`AssembleToName`属性
-  - 适用于单层板或不需要分层详细信息的板子
-
-**示例结构**：
-```xml
-<foundation:Item geometryType="BOARD_OUTLINE">
-  <!-- 直接定义厚度：0-1.6mm -->
-  <pdm:ItemInstance>
-    <pdm:Item>板子定义</pdm:Item>
-    <!-- 2D变换定义位置 -->
-  </pdm:ItemInstance>
-  <!-- 没有AssembleToName！ -->
-</foundation:Item>
+```txt
+构建所有Points → 所有几何元素Geometry → 所有曲线集CurveSet2D → 所有形状元素ShapeElement -> 所有的传统对象如EDMDStratum(简化建模可忽略) → 所有的物理层和层堆叠（可选）→ 所有的3D模型（可选） → 所有的封装（可选）-> 所有Item定义(Single) -> 所有Item实例与装配(Assembly)
 ```
 
-#### **2. BOARD_AREA_RIGID（刚性区域）**
-
-- **文档参考**：第58-60页
-- **定义**：描述**板子内部的一个区域**，该区域使用特定的层堆叠
-- **特点**：
-  - **必须**通过`AssembleToName`关联到一个层堆叠（Layer Stackup）
-  - 几何形状定义该区域的XY范围
-  - Z范围由关联的层堆叠决定
-  - 用于多层板、刚柔结合板的不同区域
-
-**示例结构**：
-```xml
-<foundation:Item geometryType="BOARD_AREA_RIGID">
-  <pdm:ItemInstance>
-    <pdm:Item>区域定义</pdm:Item>
-  </pdm:ItemInstance>
-  <!-- 关键：关联到层堆叠 -->
-  <pdm:AssembleToName>PRIMARY_STACKUP</pdm:AssembleToName>
-</foundation:Item>
-```
-
-### 🔄 **实际应用场景**
-
-#### **场景1：简单单层板**
-```xml
-<!-- 整个板子就是一个BOARD_OUTLINE -->
-<foundation:Item geometryType="BOARD_OUTLINE">
-  <foundation:Name>SimpleBoard</foundation:Name>
-  <!-- 厚度1.6mm -->
-</foundation:Item>
-```
-
-#### **场景2：多层板（全部刚性）**
-```xml
-<!-- 定义层堆叠 -->
-<foundation:Item geometryType="LAYER_STACKUP" id="MAIN_STACKUP">
-  <pdm:ReferenceName>MAIN_STACKUP</pdm:ReferenceName>
-  <!-- 包含多个层定义 -->
-</foundation:Item>
-
-<!-- 整个板子区域（使用该层堆叠） -->
-<foundation:Item geometryType="BOARD_AREA_RIGID">
-  <foundation:Name>MainBoardArea</foundation:Name>
-  <pdm:AssembleToName>MAIN_STACKUP</pdm:AssembleToName>
-</foundation:Item>
-```
-
-#### **场景3：刚柔结合板**（图25，第50页）
-```xml
-<!-- 刚性区域1 -->
-<foundation:Item geometryType="BOARD_AREA_RIGID">
-  <foundation:Name>RigidArea1</foundation:Name>
-  <pdm:AssembleToName>RIGID_STACKUP</pdm:AssembleToName>
-</foundation:Item>
-
-<!-- 柔性区域 -->
-<foundation:Item geometryType="BOARD_AREA_FLEXIBLE">
-  <foundation:Name>FlexArea</foundation:Name>
-  <pdm:AssembleToName>FLEX_STACKUP</pdm:AssembleToName>
-</foundation:Item>
-
-<!-- 刚性区域2 -->
-<foundation:Item geometryType="BOARD_AREA_RIGID">
-  <foundation:Name>RigidArea2</foundation:Name>
-  <pdm:AssembleToName>RIGID_STACKUP</pdm:AssembleToName>
-</foundation:Item>
-```
-
-### ❓ **常见问题澄清**
-
-#### **Q：有层堆叠信息时，还能用BOARD_OUTLINE吗？**
-**A：可以，但不推荐**。`BOARD_OUTLINE`是旧式简单表示。如果板子有分层，建议使用`BOARD_AREA_RIGID`和相关层定义。
-
-#### **Q：一个板子可以同时有BOARD_OUTLINE和BOARD_AREA_RIGID吗？**
-**A：不可以**。它们是互斥的板子表示方式：
-- `BOARD_OUTLINE`：完整板子的简单表示
-- `BOARD_AREA_RIGID`：板子内部区域的详细表示
-
-#### **Q：如何选择？**
-| 条件                   | 选择                                       |
-| ---------------------- | ------------------------------------------ |
-| 单层板，无详细层信息   | `BOARD_OUTLINE`                            |
-| 多层板，需要详细层信息 | `BOARD_AREA_RIGID` + `LAYER_STACKUP`       |
-| 刚柔结合板             | `BOARD_AREA_RIGID` + `BOARD_AREA_FLEXIBLE` |
-| 有不同厚度区域         | 多个`BOARD_AREA_*`区域                     |
-
-### 📝 **总结**
-
-你的理解**方向正确但需微调**：
-- ✅ `BOARD_OUTLINE`：简单板，无层堆叠
-- ✅ `BOARD_AREA_RIGID`：复杂板的一部分，关联层堆叠
-- ❌ 不是"有`AssembleToName`就是`BOARD_AREA_RIGID`"，而是**需要关联层堆叠时才用`BOARD_AREA_RIGID`**
-
-**简单记忆**：
-
-- **简单板** → `BOARD_OUTLINE`（就像你的demo）
-- **复杂板（有层）** → `BOARD_AREA_RIGID` + `LAYER_STACKUP`
-
-## 八、关于Item的结构
-
-您的问题非常好，这触及了 IDX 协议中**核心数据模型**的设计。让我详细解释。
-
-### 🔍 **传统结构与简化结构的对比**
-
-#### **1. 传统结构（IDXv4.0之前）**
-
-```
-Item(assembly) → Item(single) → "Third Item" → ShapeElement → CurveSet2D → Geometry → Points
-```
-
-这里的 **"Third Item"** 指的是具体描述项目**类型和特性**的**中介对象**：
-
-| 项目类型              | "Third Item" 对象         | 作用                           |
-| --------------------- | ------------------------- | ------------------------------ |
-| **板（Board）**       | `EDMDStratum`             | 定义层类型（如设计层、文档层） |
-| **元件（Component）** | `EDMDAssemblyComponent`   | 定义是电气/机械元件            |
-| **禁布区（Keepout）** | `EDMDKeepOut`             | 定义禁布类型（布线、元件等）   |
-| **保持区（Keepin）**  | `EDMDKeepIn`              | 定义保持类型                   |
-| **钻孔（Hole）**      | `EDMDInterStratumFeature` | 定义孔类型（电镀/非电镀）      |
-| **铣削切口**          | `EDMDInterStratumFeature` | 定义铣削类型                   |
-| **柔性板弯曲**        | `EDMDFunctionalItemShape` | 定义弯曲特性                   |
-
-#### **2. 简化结构（IDXv4.0引入）**
-
-```
-Item(assembly) [geometryType="..."] → Item(single) → ShapeElement → CurveSet2D → Geometry → Points
-```
-
-**"Third Item"被省略了**，它的信息现在由 **`geometryType` 属性**直接表示。
-
----
-
-### 📊 **完整结构链对比**
-
-#### **CurveSet2D 之后的完整结构链：**
-```
-CurveSet2D → DetailedGeometricModelElement → 2D几何曲线 → Points
-```
-具体可以是：
-- **曲线类型**：`PolyLine`、`Arc`、`Circle`、`Ellipse`、`BSplineCurve` 等
-- **曲线参数**：点、半径、角度、控制点等
-- **厚度属性**：`Thickness`（可选，用于走线、铣削路径等）
-
----
-
-### 📝 **案例对比：一个矩形板**
-
-#### **案例1：使用 `geometryType`（简化方式）**
-
-```xml
-<!-- 顶层项目：板轮廓 -->
-<foundation:Item id="ITEM_BOARD_ASSY" geometryType="BOARD_OUTLINE">
-  <foundation:Name>My PCB Board</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  
-  <!-- 实例 -->
-  <pdm:ItemInstance>
-    <pdm:Item>ITEM_BOARD_DEF</pdm:Item>
-    <pdm:InstanceName>BoardInstance1</pdm:InstanceName>
-  </pdm:ItemInstance>
-</foundation:Item>
-
-<!-- 板定义 -->
-<foundation:Item id="ITEM_BOARD_DEF">
-  <foundation:Name>Board Definition</foundation:Name>
-  <pdm:ItemType>single</pdm:ItemType>
-  <!-- 直接引用ShapeElement -->
-  <pdm:Shape>SHAPE_BOARD</pdm:Shape>
-</foundation:Item>
-
-<!-- ShapeElement -->
-<foundation:ShapeElement id="SHAPE_BOARD">
-  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-  <pdm:Inverted>false</pdm:Inverted>
-  <pdm:DefiningShape>CURVESET_BOARD</pdm:DefiningShape>
-</foundation:ShapeElement>
-
-<!-- CurveSet2D -->
-<foundation:CurveSet2d id="CURVESET_BOARD">
-  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound>0</d2:LowerBound>
-  <d2:UpperBound>1.6</d2:UpperBound>
-  <d2:DetailedGeometricModelElement>POLY_BOARD</d2:DetailedGeometricModelElement>
-</foundation:CurveSet2d>
-
-<!-- 矩形轮廓 -->
-<foundation:PolyLine id="POLY_BOARD">
-  <d2:Point>PT1</d2:Point>
-  <d2:Point>PT2</d2:Point>
-  <d2:Point>PT3</d2:Point>
-  <d2:Point>PT4</d2:Point>
-  <d2:Point>PT1</d2:Point>
-</foundation:PolyLine>
-```
-
-#### **案例2：不使用 `geometryType`（传统方式）**
-
-```xml
-<!-- 顶层项目：板轮廓 -->
-<foundation:Item id="ITEM_BOARD_ASSY">
-  <foundation:Name>My PCB Board</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  
-  <!-- 实例 -->
-  <pdm:ItemInstance>
-    <pdm:Item>ITEM_BOARD_DEF</pdm:Item>
-    <pdm:InstanceName>BoardInstance1</pdm:InstanceName>
-  </pdm:ItemInstance>
-</foundation:Item>
-
-<!-- 板定义 -->
-<foundation:Item id="ITEM_BOARD_DEF">
-  <foundation:Name>Board Definition</foundation:Name>
-  <pdm:ItemType>single</pdm:ItemType>
-  <!-- 引用 Stratum 对象，而不是 ShapeElement -->
-  <pdm:Shape>STRATUM_BOARD</pdm:Shape>
-</foundation:Item>
-
-<!-- "Third Item": Stratum 对象 -->
-<foundation:Stratum id="STRATUM_BOARD">
-  <!-- Stratum 引用 ShapeElement -->
-  <pdm:ShapeElement>SHAPE_BOARD</pdm:ShapeElement>
-  <!-- Stratum 提供额外信息 -->
-  <pdm:StratumType>DesignLayerStratum</pdm:StratumType>
-  <pdm:StratumSurfaceDesignation>PrimarySurface</pdm:StratumSurfaceDesignation>
-</foundation:Stratum>
-
-<!-- ShapeElement 及之后的部分相同 -->
-<foundation:ShapeElement id="SHAPE_BOARD">
-  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-  <pdm:Inverted>false</pdm:Inverted>
-  <pdm:DefiningShape>CURVESET_BOARD</pdm:DefiningShape>
-</foundation:ShapeElement>
-
-<!-- CurveSet2D 及之后的部分相同 -->
-<foundation:CurveSet2d id="CURVESET_BOARD">
-  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound>0</d2:LowerBound>
-  <d2:UpperBound>1.6</d2:UpperBound>
-  <d2:DetailedGeometricModelElement>POLY_BOARD</d2:DetailedGeometricModelElement>
-</foundation:CurveSet2d>
-
-<!-- 矩形轮廓 -->
-<foundation:PolyLine id="POLY_BOARD">
-  <d2:Point>PT1</d2:Point>
-  <d2:Point>PT2</d2:Point>
-  <d2:Point>PT3</d2:Point>
-  <d2:Point>PT4</d2:Point>
-  <d2:Point>PT1</d2:Point>
-</foundation:PolyLine>
-```
-
----
-
-### 📊 **对比总结**
-
-| 方面           | **传统方式（无 geometryType）**                            | **简化方式（有 geometryType）**                 |
-| -------------- | ---------------------------------------------------------- | ----------------------------------------------- |
-| **结构链长度** | 6层：Item→Item→Third Item→ShapeElement→CurveSet2D→Geometry | 5层：Item→Item→ShapeElement→CurveSet2D→Geometry |
-| **文件大小**   | 较大（多一层 XML）                                         | 较小（减少约 20-30% XML）                       |
-| **可读性**     | 较差（需要查看 Third Item 才知道项目类型）                 | 较好（直接看到 geometryType）                   |
-| **处理复杂度** | 较高（需要解析 Third Item）                                | 较低（直接读取属性）                            |
-| **向后兼容**   | IDXv3.0 及更早版本支持                                     | 仅 IDXv4.0+ 支持                                |
-
----
-
-### 🧩 **"Third Item" 被省略后的功能保留**
-
-原本由 "Third Item" 提供的功能现在分布在：
-
-1. **`geometryType` 属性**：提供主要类型信息（如 `BOARD_OUTLINE`、`COMPONENT`、`HOLE_PLATED`）
-2. **`ShapeElementType`**：提供形状元素类型（如 `FeatureShapeElement`、`PartMountingFeature`）
-3. **`UserProperty` 自定义属性**：提供额外的特性信息（如 `THICKNESS`、`MATERIAL`）
-
----
-
-### 🔄 **转换关系示例**
-
-| 传统方式                                                     | 简化方式                                |
-| ------------------------------------------------------------ | --------------------------------------- |
-| `EDMDStratum` + `StratumType="DesignLayerStratum"`           | `geometryType="BOARD_OUTLINE"`          |
-| `EDMDAssemblyComponent` + `AssemblyComponentType="Physical"` | `geometryType="COMPONENT"`              |
-| `EDMDKeepOut` + `Purpose="ComponentPlacement"`               | `geometryType="KEEPOUT_AREA_COMPONENT"` |
-| `EDMDInterStratumFeature` + `InterStratumFeatureType="PlatedCutout"` | `geometryType="HOLE_PLATED"`            |
-
----
-
-### 💡 **实际开发建议**
-
-1. **新项目优先使用简化方式**：更简洁、更易维护
-2. **如需兼容旧系统**：可以同时支持两种方式
-3. **转换工具**：开发从传统到简化的转换器，用于处理历史数据
-4. **验证**：确保 `geometryType` 与 `ShapeElementType` 等属性一致
-
-这样设计的主要目的是**减少 XML 嵌套、提高解析效率、降低文件体积**，同时保持向后兼容性。
-
-## 九、构建顺序
-
-根据 **IDXv4.5 协议规范**和最佳实践，构建 IDX 文件有**两种主要方法**。让我详细分析每种方法的优缺点。
-
-### 📊 **两种构建策略对比**
-
-#### **方法1：按层级统一构建（推荐）**
-```
-先构建所有Points → 所有Geometry → 所有CurveSet2D → 所有ShapeElement → 所有Item
-```
-这是**文档示例采用的方式**，也是**最推荐的方法**。
-
-**示例结构：**
-```xml
-<!-- 1. 所有几何点 -->
-<foundation:CartesianPoint id="PT1">...</foundation:CartesianPoint>
-<foundation:CartesianPoint id="PT2">...</foundation:CartesianPoint>
-<foundation:CartesianPoint id="PT3">...</foundation:CartesianPoint>
-<foundation:CartesianPoint id="PT4">...</foundation:CartesianPoint>
-<foundation:CartesianPoint id="PT5">...</foundation:CartesianPoint>
-
-<!-- 2. 所有几何曲线 -->
-<foundation:PolyLine id="POLY_BOARD">...</foundation:PolyLine>
-<foundation:PolyLine id="POLY_COMP1">...</foundation:PolyLine>
-<foundation:Arc id="ARC_CUTOUT">...</foundation:Arc>
-
-<!-- 3. 所有曲线集 -->
-<foundation:CurveSet2d id="CURVESET_BOARD">...</foundation:CurveSet2d>
-<foundation:CurveSet2d id="CURVESET_COMP1">...</foundation:CurveSet2d>
-<foundation:CurveSet2d id="CURVESET_CUTOUT">...</foundation:CurveSet2d>
-
-<!-- 4. 所有形状元素 -->
-<foundation:ShapeElement id="SHAPE_BOARD">...</foundation:ShapeElement>
-<foundation:ShapeElement id="SHAPE_COMP1">...</foundation:ShapeElement>
-<foundation:ShapeElement id="SHAPE_CUTOUT">...</foundation:ShapeElement>
-
-<!-- 5. 所有项目定义（Item single） -->
-<foundation:Item id="ITEM_BOARD_DEF">...</foundation:Item>
-<foundation:Item id="ITEM_COMP1_DEF">...</foundation:Item>
-<foundation:Item id="ITEM_CUTOUT_DEF">...</foundation:Item>
-
-<!-- 6. 所有项目实例（Item assembly） -->
-<foundation:Item id="ITEM_BOARD_ASSY">...</foundation:Item>
-<foundation:Item id="ITEM_COMP1_ASSY">...</foundation:Item>
-<foundation:Item id="ITEM_CUTOUT_ASSY">...</foundation:Item>
-```
-
-#### **方法2：按项目分组构建**
-
-```
-每个项目独立构建：项目1的Points→Geometry→CurveSet2D→ShapeElement→Item
-然后项目2的同样结构...
-```
-
-### ✅ **方法1的优点（按层级构建）**
-
-| 优点                | 说明                                             |
-| ------------------- | ------------------------------------------------ |
-| **符合XML引用顺序** | 先定义后引用，避免XML解析错误                    |
-| **便于重用几何**    | 相同的几何定义（如标准焊盘形状）可被多个项目引用 |
-| **文件结构清晰**    | 逻辑分层，便于阅读和调试                         |
-| **性能优化**        | 一次生成所有同类元素，减少状态切换               |
-| **内存管理**        | 分阶段处理，减少内存占用峰值                     |
-
-### 🎯 **IDX 构建流程示例**
-
-以下是推荐的构建函数设计：
-
-```typescript
-/**
- * IDX 构建器类 - 采用分层构建策略
- */
-class IDXBuilder {
-    // 存储各层元素
-    private points: IDXPoint[] = [];
-    private geometries: IDXGeometry[] = [];
-    private curveSets: IDXCurveSet2D[] = [];
-    private shapeElements: IDXShapeElement[] = [];
-    private itemsSingle: IDXItem[] = [];
-    private itemsAssembly: IDXItem[] = [];
-    
-    /**
-     * 添加一个 PCB 项目到构建器中
-     */
-    addPCBProject(config: PCBConfig): void {
-        // 1. 创建几何点
-        const points = this.createPoints(config.geometry);
-        this.points.push(...points);
-        
-        // 2. 创建几何曲线
-        const geometry = this.createGeometry(points, config.geometryType);
-        this.geometries.push(geometry);
-        
-        // 3. 创建曲线集
-        const curveSet = this.createCurveSet2D(geometry, config.zRange);
-        this.curveSets.push(curveSet);
-        
-        // 4. 创建形状元素
-        const shapeElement = this.createShapeElement(curveSet, config.shapeType);
-        this.shapeElements.push(shapeElement);
-        
-        // 5. 创建项目定义（single）
-        const itemSingle = this.createItemSingle(shapeElement, config);
-        this.itemsSingle.push(itemSingle);
-        
-        // 6. 创建项目实例（assembly）
-        const itemAssembly = this.createItemAssembly(itemSingle, config);
-        this.itemsAssembly.push(itemAssembly);
-    }
-    
-    /**
-     * 生成完整的 IDX XML
-     */
-    build(): string {
-        // 按层级顺序输出
-        return this.generateXML({
-            points: this.points,
-            geometries: this.geometries,
-            curveSets: this.curveSets,
-            shapeElements: this.shapeElements,
-            itemsSingle: this.itemsSingle,
-            itemsAssembly: this.itemsAssembly,
-        });
-    }
-}
-
-/**
- * 分步构建的详细流程
- */
-function createIDXDocument(projects: PCBProject[]): string {
-    // 阶段1：收集所有几何数据
-    const allPoints = projects.flatMap(p => extractPoints(p));
-    const allGeometries = projects.map(p => createGeometryFromPoints(p));
-    
-    // 阶段2：创建 CurveSet2D
-    const allCurveSets = projects.map((p, i) => 
-        createCurveSet2D(allGeometries[i], p.thickness)
-    );
-    
-    // 阶段3：创建 ShapeElement
-    const allShapeElements = projects.map((p, i) => 
-        createShapeElement(allCurveSets[i], p.geometryType)
-    );
-    
-    // 阶段4：创建 Items
-    const allItemsSingle = projects.map((p, i) => 
-        createItemSingle(allShapeElements[i], p.properties)
-    );
-    
-    const allItemsAssembly = projects.map((p, i) => 
-        createItemAssembly(allItemsSingle[i], p.instance)
-    );
-    
-    // 阶段5：组装 XML
-    return assembleXML({
-        points: allPoints,
-        geometries: allGeometries,
-        curveSets: allCurveSets,
-        shapeElements: allShapeElements,
-        itemsSingle: allItemsSingle,
-        itemsAssembly: allItemsAssembly,
-    });
-}
-```
-
-🔄 **构建顺序的完整示例**
-
-#### **代码生成示例：**
-```typescript
-// 1. 首先创建所有点
-const points = [
-    {id: 'PT1', x: 0, y: 0},
-    {id: 'PT2', x: 50, y: 0},
-    {id: 'PT3', x: 50, y: 30},
-    {id: 'PT4', x: 0, y: 30},
-];
-
-// 2. 创建几何（多段线）
-const polyLine = {
-    id: 'POLY_BOARD',
-    points: ['PT1', 'PT2', 'PT3', 'PT4', 'PT1']
-};
-
-// 3. 创建 CurveSet2D
-const curveSet = {
-    id: 'CURVESET_BOARD',
-    lowerBound: 0,
-    upperBound: 1.6,
-    geometry: 'POLY_BOARD'
-};
-
-// 4. 创建 ShapeElement
-const shapeElement = {
-    id: 'SHAPE_BOARD',
-    elementType: 'FeatureShapeElement',
-    definingShape: 'CURVESET_BOARD',
-    inverted: false
-};
-
-// 5. 创建 Item (single)
-const itemSingle = {
-    id: 'ITEM_BOARD_DEF',
-    name: 'Board Definition',
-    itemType: 'single',
-    shape: 'SHAPE_BOARD'
-};
-
-// 6. 创建 Item (assembly)
-const itemAssembly = {
-    id: 'ITEM_BOARD_ASSY',
-    name: 'My PCB',
-    itemType: 'assembly',
-    geometryType: 'BOARD_OUTLINE',
-    itemInstance: {
-        item: 'ITEM_BOARD_DEF',
-        instanceName: 'Board1'
-    }
-};
-```
-
-### 📋 **IDX 文件结构的最佳实践**
-
-1. **必须遵循的顺序**：
-   - 被引用的元素（如 `CartesianPoint`）必须在引用者（如 `PolyLine`）**之前**定义
-   - 否则会导致 XML 解析错误
-
-2. **推荐的层次顺序**（文档示例采用）：
-   ```xml
-   <!-- 1. 点 -->
-   <foundation:CartesianPoint id="..."/>
-   
-   <!-- 2. 几何 -->
-   <foundation:PolyLine id="..."/>
-   <foundation:Arc id="..."/>
-   
-   <!-- 3. 曲线集 -->
-   <foundation:CurveSet2d id="..."/>
-   
-   <!-- 4. 形状元素 -->
-   <foundation:ShapeElement id="..."/>
-   
-   <!-- 5. 项目用途（可选，传统方式） -->
-   <foundation:Stratum id="..."/>
-   
-   <!-- 6. 项目定义 -->
-   <foundation:Item id="..." ItemType="single"/>
-   
-   <!-- 7. 项目实例 -->
-   <foundation:Item id="..." ItemType="assembly"/>
-   ```
-
-3. **命名约定**：
-   - 使用有意义的 ID：`BOARD_OUTLINE`, `COMP_0805_PAD`, `HOLE_3MM`
-   - 保持 ID 唯一性
-   - 考虑使用前缀：`PT_`, `PL_`, `CS_`, `SH_`, `IT_`
-
-4. **性能考虑**：
-   - 对于大型设计（数千个元件），按层级构建可以减少内存碎片
-   - 批量处理同类元素可以提高序列化性能
-
-### 🎯 **结论：推荐按层级构建**
-
-**使用"按层级统一构建"（方法1）** 是**最佳选择**，因为：
-
-1. **符合文档示例**：所有 IDX 示例都采用此方式
-2. **避免引用错误**：确保先定义后引用
-3. **便于代码维护**：清晰的逻辑分层
-4. **支持几何重用**：相同几何定义只存储一次
-5. **便于验证**：可分层验证数据完整性
-
-您的构建器应该采用这种分层方法，这会生成最规范、最易于其他系统解析的 IDX 文件。
-
-## 十、分层构建详解案例参考
-
-### 📊 IDX 分层构建详解
-
-根据 IDXv4.5 协议规范，以下是各层可能的数据元素枚举及示例：
+### 分层构建详解
 
 #### **第1层：点 (Points)**
 
-**可能元素：**
-- `CartesianPoint`：二维笛卡尔坐标点（必须）
-- 可选：`Point`的其他类型（如极坐标点，但IDX主要用CartesianPoint）
+**完整示例**：
 
-**示例：**
 ```xml
-<!-- 矩形板的四个角点 -->
-<foundation:CartesianPoint id="PT1" xsi:type="d2:EDMDCartesianPoint">
-  <d2:X><property:Value>0</property:Value></d2:X>
-  <d2:Y><property:Value>0</property:Value></d2:Y>
-</foundation:CartesianPoint>
-
-<foundation:CartesianPoint id="PT2" xsi:type="d2:EDMDCartesianPoint">
-  <d2:X><property:Value>50</property:Value></d2:X>
-  <d2:Y><property:Value>0</property:Value></d2:Y>
-</foundation:CartesianPoint>
-
-<foundation:CartesianPoint id="PT3" xsi:type="d2:EDMDCartesianPoint">
-  <d2:X><property:Value>50</property:Value></d2:X>
-  <d2:Y><property:Value>30</property:Value></d2:Y>
-</foundation:CartesianPoint>
-
-<foundation:CartesianPoint id="PT4" xsi:type="d2:EDMDCartesianPoint">
-  <d2:X><property:Value>0</property:Value></d2:X>
-  <d2:Y><property:Value>30</property:Value></d2:Y>
+<!-- TEST_CASE: 坐标点定义 -->
+<foundation:CartesianPoint id="PT_001" xsi:type="d2:EDMDCartesianPoint">
+  <!-- X坐标，必须使用 EDMDLengthProperty 类型 -->
+  <d2:X xsi:type="property:EDMDLengthProperty">
+    <property:Value>10.000000</property:Value>
+     <!-- 可选：单位说明，通常由全局 GlobalUnitLength 定义 -->
+    <property:Unit>UNIT_MM</property:Unit>
+  </d2:X>
+  <!-- Y坐标 -->
+  <d2:Y xsi:type="property:EDMDLengthProperty">
+    <property:Value>20.000000</property:Value>
+  </d2:Y>
+  <!-- Z坐标。可选，不常用，2D点没有Z坐标 -->
+  <d2:Y xsi:type="property:EDMDLengthProperty">
+    <property:Value>30.000000</property:Value>
+  </d2:Y>
 </foundation:CartesianPoint>
 ```
 
-#### **第2层：几何 (Geometry)**
+**注意事项**
 
-**可能元素：**
-- `PolyLine`：多段线（最常用）
-- `Arc`：圆弧
-- `Circle3Point`：三点定义的圆
-- `CircleCenter`：圆心和直径定义的圆
-- `Ellipse`：椭圆
-- `Parabola`：抛物线
-- `BSplineCurve`：B样条曲线
-- `CompositeCurve`：复合曲线（组合多种曲线）
-- `Line`：无限直线
-- `OffsetCurve`：偏移曲线
-- `TrimmedCurve`：修剪曲线
+无特殊注意事项。传统建模与优化建模无差异。
 
-**示例：**
+**类型定义**
+
+```ts
+/**
+ * IDX协议中所有对象的基接口
+ *
+ * @remarks
+ * IDX规范中所有对象都包含id和可能的属性变更标记
+ */
+export interface EDMDObject {
+	/** 对象唯一标识符，在上下文中必须唯一 */
+	id: string;
+	/** 标记对象属性是否已变更 */
+	IsAttributeChanged?: boolean;
+	/** 对象名称 */
+	Name?: string;
+	/** 对象描述 */
+	Description?: string;
+	/** 用户自定义属性 */
+	UserProperties?: EDMDUserSimpleProperty[];
+}
+
+/**
+ * 二维笛卡尔坐标点
+ *
+ * @remarks
+ * 用于描述PCB板上的位置，单位由GlobalUnitLength定义
+ * REF: Section 7.1.10
+ */
+export interface CartesianPoint extends EDMDObject {
+	/** X坐标值 */
+	X: number;
+	/** Y坐标值 */
+	Y: number;
+	/** Z坐标值(不常用) */
+	Z?: number;
+}
+```
+
+#### **第2层：几何元素 (Geometry)**
+
+**支持的几何元素列表**：
+
+| 几何元素               | 描述                       | 主要用途               | REF     |
+| ---------------------- | -------------------------- | ---------------------- | ------- |
+| **EDMDPolyLine**       | 多段线（可闭合，可带厚度） | 板轮廓、走线、铣削路径 | 7.1.7   |
+| **EDMDArc**            | 三点式圆弧                 | 圆角、弧形轮廓         | 7.1.1   |
+| **EDMDCircleCenter**   | 圆心+直径式圆              | 安装孔、过孔、圆形焊盘 | 7.1.4   |
+| **EDMDCircle3Point**   | 三点式圆                   | 特殊圆形定义           | 7.1.3   |
+| **EDMDEllipse**        | 椭圆                       | 椭圆形焊盘、特殊轮廓   | 7.1.5   |
+| **EDMDBSplineCurve**   | B样条曲线                  | 复杂自由曲线           | 7.1.2   |
+| **EDMDCompositeCurve** | 复合曲线                   | 组合多种曲线类型       | 7.1.8   |
+| **EDMDLine**           | 无限直线（点+向量）        | 弯曲区域轴线           | 6.1.2.4 |
+
+**完整示例**：
+
 ```xml
-<!-- 多段线（矩形轮廓） -->
-<foundation:PolyLine id="POLY_RECT" xsi:type="d2:EDMDPolyLine">
-  <d2:Point>PT1</d2:Point>
-  <d2:Point>PT2</d2:Point>
-  <d2:Point>PT3</d2:Point>
-  <d2:Point>PT4</d2:Point>
-  <d2:Point>PT1</d2:Point>
+<!-- =========== 1. 多段线 (EDMDPolyLine) =========== -->
+<!-- TEST_CASE: 多段线 - 基本定义 -->
+<foundation:PolyLine id="POLYLINE_001" xsi:type="d2:EDMDPolyLine">
+  <!-- 点序列，引用已定义的CartesianPoint的id（必需） -->
+  <d2:Point>PT_001</d2:Point>
+  <d2:Point>PT_002</d2:Point>
+  <d2:Point>PT_003</d2:Point>
+  <!-- 可选：闭合曲线，重复第一个点 -->
+  <d2:Point>PT_001</d2:Point>
 </foundation:PolyLine>
 
-<!-- 圆弧 -->
-<foundation:Arc id="ARC_CORNER" xsi:type="d2:EDMDArc">
-  <d2:StartPoint>PT_A</d2:StartPoint>
-  <d2:MidPoint>PT_B</d2:MidPoint>
-  <d2:EndPoint>PT_C</d2:EndPoint>
+<!-- TEST_CASE: 多段线 - 带厚度（用于走线或铣削路径） -->
+<foundation:PolyLine id="POLYLINE_TRACE_001" xsi:type="d2:EDMDPolyLine">
+  <!-- 厚度：用于表示走线宽度或铣削刀具直径 -->
+  <d2:Thickness xsi:type="property:EDMDLengthProperty">
+    <property:Value>0.200000</property:Value>
+  </d2:Thickness>
+  <d2:Point>PT_010</d2:Point>
+  <d2:Point>PT_011</d2:Point>
+  <d2:Point>PT_012</d2:Point>
+</foundation:PolyLine>
+
+<!-- =========== 2. 圆弧 (EDMDArc) =========== -->
+<!-- TEST_CASE: 三点式圆弧 -->
+<foundation:Arc id="ARC_001" xsi:type="d2:EDMDArc">
+  <!-- 起点（必需） -->
+  <d2:StartPoint>PT_101</d2:StartPoint>
+  <!-- 中间点（必需） -->
+  <d2:MidPoint>PT_102</d2:MidPoint>
+  <!-- 终点（必需） -->
+  <d2:EndPoint>PT_103</d2:EndPoint>
 </foundation:Arc>
 
-<!-- 圆（圆心式） -->
-<foundation:CircleCenter id="CIRCLE_HOLE" xsi:type="d2:EDMDCircleCenter">
-  <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
-  <d2:Diameter><property:Value>3.2</property:Value></d2:Diameter>
+<!-- =========== 3. 圆心式圆 (EDMDCircleCenter) =========== -->
+<!-- TEST_CASE: 圆心+直径式圆 -->
+<foundation:CircleCenter id="CIRCLE_CENTER_001" xsi:type="d2:EDMDCircleCenter">
+  <!-- 圆心点（必需） -->
+  <d2:CenterPoint>PT_201</d2:CenterPoint>
+  <!-- 直径（必需） -->
+  <d2:Diameter xsi:type="property:EDMDLengthProperty">
+    <property:Value>3.000000</property:Value>
+  </d2:Diameter>
 </foundation:CircleCenter>
 
-<!-- B样条曲线 -->
-<foundation:BSplineCurve id="BSPLINE_CURVE" xsi:type="d2:EDMDBSplineCurve">
-  <d2:ControlPoint>PT_CTRL1</d2:ControlPoint>
-  <d2:ControlPoint>PT_CTRL2</d2:ControlPoint>
-  <d2:ControlPoint>PT_CTRL3</d2:ControlPoint>
-  <d2:Degree>2</d2:Degree>
+<!-- =========== 4. 三点式圆 (EDMDCircle3Point) =========== -->
+<!-- TEST_CASE: 三点式圆 -->
+<foundation:Circle3Point id="CIRCLE_3PT_001" xsi:type="d2:EDMDCircle3Point">
+  <!-- 三个点（必需） -->
+  <d2:Point1>PT_301</d2:Point1>
+  <d2:Point2>PT_302</d2:Point2>
+  <d2:Point3>PT_303</d2:Point3>
+</foundation:Circle3Point>
+
+<!-- =========== 5. 椭圆 (EDMDEllipse) =========== -->
+<!-- TEST_CASE: 椭圆 -->
+<foundation:Ellipse id="ELLIPSE_001" xsi:type="d2:EDMDEllipse">
+  <!-- 中心点（必需） -->
+  <d2:CenterPoint>PT_401</d2:CenterPoint>
+  <!-- 长半轴长度（必需） -->
+  <d2:SemiMajorAxis xsi:type="property:EDMDLengthProperty">
+    <property:Value>5.000000</property:Value>
+  </d2:SemiMajorAxis>
+  <!-- 短半轴长度（必需） -->
+  <d2:SemiMinorAxis xsi:type="property:EDMDLengthProperty">
+    <property:Value>2.500000</property:Value>
+  </d2:SemiMinorAxis>
+</foundation:Ellipse>
+
+<!-- =========== 6. B样条曲线 (EDMDBSplineCurve) =========== -->
+<!-- TEST_CASE: B样条曲线 -->
+<foundation:BSplineCurve id="BSPLINE_001" xsi:type="d2:EDMDBSplineCurve">
+  <!-- 控制点序列（必需） -->
+  <d2:ControlPoint>PT_501</d2:ControlPoint>
+  <d2:ControlPoint>PT_502</d2:ControlPoint>
+  <d2:ControlPoint>PT_503</d2:ControlPoint>
+  <d2:ControlPoint>PT_504</d2:ControlPoint>
+  <!-- 曲线阶数（必需） -->
+  <d2:Degree>3</d2:Degree>
+  <!-- 可选：是否闭合曲线 -->
+  <d2:ClosedCurve>false</d2:ClosedCurve>
+  <!-- 可选：是否自相交 -->
+  <d2:SelfIntersect>false</d2:SelfIntersect>
+  <!-- 可选：曲线形式 -->
+  <d2:CurveForm>uniform</d2:CurveForm>
 </foundation:BSplineCurve>
 
-<!-- 复合曲线（组合多种） -->
-<foundation:CompositeCurve id="COMPOSITE_OUTLINE" xsi:type="d2:EDMDCompositeCurve">
-  <d2:Curve>POLY_SEG1</d2:Curve>
-  <d2:Curve>ARC_SEG1</d2:Curve>
-  <d2:Curve>POLY_SEG2</d2:Curve>
+<!-- =========== 7. 复合曲线 (EDMDCompositeCurve) =========== -->
+<!-- TEST_CASE: 复合曲线（组合多种曲线类型） -->
+<foundation:CompositeCurve id="COMPOSITE_001" xsi:type="d2:EDMDCompositeCurve">
+  <!-- 组成曲线的元素，引用其他几何元素的id（必需） -->
+  <d2:CurveElement>POLYLINE_001</d2:CurveElement>
+  <d2:CurveElement>ARC_001</d2:CurveElement>
+  <d2:CurveElement>BSPLINE_001</d2:CurveElement>
 </foundation:CompositeCurve>
+
+<!-- =========== 8. 直线 (EDMDLine) =========== -->
+<!-- TEST_CASE: 直线（主要用于弯曲区域轴线） -->
+<foundation:Line id="LINE_BEND_001" xsi:type="d2:EDMDLine">
+  <!-- 点（必需）：直线通过的点 -->
+  <d2:Point>PT_601</d2:Point>
+  <!-- 向量（必需）：方向向量 -->
+  <d2:Vector>PT_VEC_001</d2:Vector>
+</foundation:Line>
+```
+
+**注意事项**：
+
+1. **点引用**：所有几何元素中的点必须引用已定义的`CartesianPoint`的ID
+2. **2D几何**：所有几何元素都是二维的，Z轴范围由`CurveSet2D`的`LowerBound`/`UpperBound`定义
+3. **闭合性**：
+   - `PolyLine`通过重复第一个点实现闭合
+   - `BSplineCurve`有明确的`ClosedCurve`属性
+4. **厚度**：仅`PolyLine`支持`Thickness`属性，用于表示走线宽度或铣削路径
+5. **曲线顺序**：`CompositeCurve`中的曲线按顺序连接
+6. **直线用途**：`EDMDLine`主要用于弯曲区域的轴线定义，不是轮廓的一部分
+
+**建模差异**：
+
+- **无差异**：传统建模与优化建模在几何层完全一致
+- **几何层独立**：几何元素的定义与上层结构无关，可被两种建模方式复用
+
+**类型定义**：
+
+```typescript
+// ============= 几何描述类型 =============
+
+/** 几何元素类型 */
+export type EDMDGeometryType =
+	| IDXD2Tag.EDMDPolyLine
+	| IDXD2Tag.EDMDArc
+	| IDXD2Tag.EDMDCircleCenter
+	| IDXD2Tag.EDMDCircle3Point
+	| IDXD2Tag.EDMDEllipse
+	| IDXD2Tag.EDMDBSplineCurve
+	| IDXD2Tag.EDMDCompositeCurve
+	| IDXD2Tag.EDMDLine;
+
+/** 几何元素基础类型(便于判断几何类型) */
+export interface EDMDBaseGeometry extends EDMDObject {
+	/** 几何类型 */
+	type: EDMDGeometryType;
+}
+
+/**
+ * 几何元素联合类型
+ */
+export type EDMDGeometry =
+	| EDMDPolyLine
+	| EDMDArc
+	| EDMDCircleCenter
+	| EDMDCircle3Point
+	| EDMDEllipse
+	| EDMDBSplineCurve
+	| EDMDCompositeCurve
+	| EDMDLine;
+
+/**
+ * 多段线几何元素
+ *
+ * @remarks
+ * 由一系列点连接而成的折线，可闭合
+ * REF: Section 7.1.7
+ * XML: <foundation:PolyLine xsi:type="d2:EDMDPolyLine">
+ */
+export interface EDMDPolyLine extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDPolyLine;
+	/** 点序列，引用 CartesianPoint 的 id */
+	Points: string[];
+	/** 可选厚度，用于表示走线或铣削路径的宽度 */
+	Thickness?: EDMDLengthProperty;
+}
+
+/**
+ * 圆弧几何元素
+ *
+ * @remarks
+ * 由起点、中间点和终点定义的圆弧
+ * REF: Section 7.1.1
+ */
+export interface EDMDArc extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDArc;
+	/** 起点，引用 CartesianPoint 的 id */
+	StartPoint: string;
+	/** 中间点，引用 CartesianPoint 的 id */
+	MidPoint: string;
+	/** 终点，引用 CartesianPoint 的 id */
+	EndPoint: string;
+}
+
+/**
+ * 圆心式圆几何元素
+ *
+ * @remarks
+ * 由圆心点和直径定义的圆
+ * REF: Section 7.1.4
+ */
+export interface EDMDCircleCenter extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDCircleCenter;
+	/** 圆心点，引用 CartesianPoint 的 id */
+	CenterPoint: string;
+	/** 直径 */
+	Diameter: EDMDLengthProperty;
+}
+
+/**
+ * 三点式圆几何元素
+ *
+ * @remarks
+ * 由三个点定义的圆
+ * REF: Section 7.1.3
+ */
+export interface EDMDCircle3Point extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDCircle3Point;
+	/** 点1，引用 CartesianPoint 的 id */
+	Point1: string;
+	/** 点2，引用 CartesianPoint 的 id */
+	Point2: string;
+	/** 点3，引用 CartesianPoint 的 id */
+	Point3: string;
+}
+
+/**
+ * 椭圆几何元素
+ *
+ * @remarks
+ * 由中心点和长短半轴定义的椭圆
+ * REF: Section 7.1.5
+ */
+export interface EDMDEllipse extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDEllipse;
+	/** 中心点，引用 CartesianPoint 的 id */
+	CenterPoint: string;
+	/** 长半轴长度 */
+	SemiMajorAxis: EDMDLengthProperty;
+	/** 短半轴长度 */
+	SemiMinorAxis: EDMDLengthProperty;
+}
+
+/**
+ * B样条曲线几何元素
+ *
+ * @remarks
+ * 参数化曲线，通过控制点、阶数和节点向量定义
+ * REF: Section 7.1.2
+ */
+export interface EDMDBSplineCurve extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDBSplineCurve;
+	/** 控制点序列，引用 CartesianPoint 的 id */
+	ControlPoints: string[];
+	/** 曲线阶数 */
+	Degree: number;
+	/** 是否闭合曲线 */
+	ClosedCurve?: boolean;
+	/** 是否自相交 */
+	SelfIntersect?: boolean;
+	/** 曲线形式 */
+	CurveForm?: string;
+}
+
+/**
+ * 复合曲线几何元素
+ *
+ * @remarks
+ * 由多条曲线组合而成的复杂曲线
+ * REF: Section 7.1.8
+ */
+export interface EDMDCompositeCurve extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDCompositeCurve;
+	/** 组成曲线的元素，引用其他几何元素的 id */
+	Curves: string[];
+}
+
+/**
+ * 直线几何元素
+ *
+ * @remarks
+ * 由点和向量定义的无限长直线
+ * REF: Section 6.1.2.4 (Bend Line)
+ */
+export interface EDMDLine extends EDMDBaseGeometry {
+	type: IDXD2Tag.EDMDLine;
+	/** 起点，引用 CartesianPoint 的 id */
+	Point: string;
+	/** 方向向量，引用 CartesianPoint 的 id */
+	Vector: string;
+}
 ```
 
 #### **第3层：曲线集 (CurveSet2D)**
 
-**可能属性/子元素：**
+**完整示例**：
 
-- `ShapeDescriptionType`：形状描述类型（通常为"GeometricModel"）
-- `LowerBound`：Z轴下边界
-- `UpperBound`：Z轴上边界
-- `DetailedGeometricModelElement`：引用的几何元素（一个或多个）
-- `Thickness`：可选，用于多段线的厚度定义
-
-**示例：**
 ```xml
-<!-- 板的曲线集（厚度1.6mm） -->
-<foundation:CurveSet2d id="CURVESET_BOARD" xsi:type="d2:EDMDCurveSet2d">
+<!-- TEST_CASE: 基本曲线集定义 -->
+<foundation:CurveSet2d id="CURVESET_001" xsi:type="d2:EDMDCurveSet2d">
+  <!-- 形状描述类型（必需）：GeometricModel 或 DocumentationModel -->
   <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
-  <d2:UpperBound><property:Value>1.6</property:Value></d2:UpperBound>
-  <d2:DetailedGeometricModelElement>POLY_RECT</d2:DetailedGeometricModelElement>
+  
+  <!-- Z轴下边界（必需）：定义曲线起始高度 -->
+  <d2:LowerBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>0.000000</property:Value>
+  </d2:LowerBound>
+  
+  <!-- Z轴上边界（必需）：定义曲线结束高度 -->
+  <d2:UpperBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>1.600000</property:Value>
+  </d2:UpperBound>
+  
+  <!-- 引用的几何元素（必需）：可以包含多个几何元素 -->
+  <d2:DetailedGeometricModelElement>POLYLINE_001</d2:DetailedGeometricModelElement>
+  <d2:DetailedGeometricModelElement>ARC_001</d2:DetailedGeometricModelElement>
 </foundation:CurveSet2d>
 
-<!-- 孔的曲线集（贯穿孔，上下边界相同） -->
-<foundation:CurveSet2d id="CURVESET_HOLE" xsi:type="d2:EDMDCurveSet2d">
+<!-- TEST_CASE: 特殊用途曲线集 -->
+<foundation:CurveSet2d id="CURVESET_HOLE_001" xsi:type="d2:EDMDCurveSet2d">
   <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound><property:Value>0</property:Value></d2:LowerBound>
-  <d2:UpperBound><property:Value>0</property:Value></d2:UpperBound>
-  <d2:DetailedGeometricModelElement>CIRCLE_HOLE</d2:DetailedGeometricModelElement>
+  
+  <!-- 特殊情况1：通孔（LowerBound=0, UpperBound=0 表示贯穿整个板厚） -->
+  <d2:LowerBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>0.000000</property:Value>
+  </d2:LowerBound>
+  <d2:UpperBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>0.000000</property:Value>
+  </d2:UpperBound>
+  
+  <!-- 只包含一个圆形几何元素表示孔 -->
+  <d2:DetailedGeometricModelElement>CIRCLE_CENTER_001</d2:DetailedGeometricModelElement>
 </foundation:CurveSet2d>
 
-<!-- 带厚度的多段线（用于走线或铣削路径） -->
-<foundation:CurveSet2d id="CURVESET_TRACE" xsi:type="d2:EDMDCurveSet2d">
+<!-- TEST_CASE: 多层板中的信号层曲线集 -->
+<foundation:CurveSet2d id="CURVESET_SIGNAL_LAYER1" xsi:type="d2:EDMDCurveSet2d">
   <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-  <d2:LowerBound><property:Value>0.035</property:Value></d2:LowerBound>
-  <d2:UpperBound><property:Value>0.035</property:Value></d2:UpperBound>
-  <d2:DetailedGeometricModelElement>POLY_TRACE</d2:DetailedGeometricModelElement>
+  
+  <!-- 在板层堆叠中的特定Z范围（相对于板底面） -->
+  <d2:LowerBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>0.400000</property:Value>
+  </d2:LowerBound>
+  <d2:UpperBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>0.402000</property:Value>
+    <!-- 信号层通常很薄（如0.002mm） -->
+  </d2:UpperBound>
+  
+  <!-- 包含走线和焊盘几何 -->
+  <d2:DetailedGeometricModelElement>POLYLINE_TRACE_001</d2:DetailedGeometricModelElement>
+  <d2:DetailedGeometricModelElement>CIRCLE_CENTER_PAD1</d2:DetailedGeometricModelElement>
+  <d2:DetailedGeometricModelElement>CIRCLE_CENTER_PAD2</d2:DetailedGeometricModelElement>
 </foundation:CurveSet2d>
+
+<!-- TEST_CASE: 表面贴装元件曲线集（无厚度） -->
+<foundation:CurveSet2d id="CURVESET_SMD_PAD" xsi:type="d2:EDMDCurveSet2d">
+  <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
+  
+  <!-- 表面层：UpperBound=LowerBound 表示零厚度 -->
+  <d2:LowerBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>1.600000</property:Value>
+    <!-- 假设板厚1.6mm，元件在板顶面 -->
+  </d2:LowerBound>
+  <d2:UpperBound xsi:type="property:EDMDLengthProperty">
+    <property:Value>1.600000</property:Value>
+  </d2:UpperBound>
+  
+  <!-- 焊盘几何 -->
+  <d2:DetailedGeometricModelElement>POLYLINE_PAD1</d2:DetailedGeometricModelElement>
+</foundation:CurveSet2d>
+```
+
+**注意事项**：
+
+1. **Z轴范围含义**：
+   - `LowerBound`和`UpperBound`定义几何在Z轴的范围
+   - 值为绝对坐标（相对于板底面Z=0）
+   - 当`LowerBound=UpperBound`时表示零厚度平面元素
+
+   更多Z轴计算逻辑可参考“曲线集上下边界计算逻辑”章节。
+   
+2. **通孔表示**：
+   
+   - 使用`LowerBound=0, UpperBound=0`表示贯穿整个板厚
+   - 或者`LowerBound=0, UpperBound=板厚`（如1.6mm）也表示通孔
+   
+3. **几何元素组织**：
+   - 一个`CurveSet2D`可以包含多个几何元素
+   - 所有元素共享相同的Z轴范围
+   - 几何元素应属于同一"层"或相同Z范围
+
+4. **形状描述类型**：
+   - `GeometricModel`：用于实际几何形状（板轮廓、元件等）
+   - `DocumentationModel`：用于文档或注释（较少使用）
+
+5. **引用完整性**：
+   - `DetailedGeometricModelElement`必须引用已定义的几何元素ID
+   - 确保所有引用的几何元素都已正确定义
+
+6. **多层板设计**：
+   - 每个物理层（信号层、阻焊层等）应有独立的`CurveSet2D`
+   - Z轴范围需精确对应层在堆叠中的位置
+
+**建模差异**：
+- **无差异**：传统建模与优化建模在CurveSet2D层完全一致
+- **通用结构**：CurveSet2D是纯几何容器，不涉及对象分类逻辑
+
+**类型定义**：
+
+```typescript
+// ============= 2D曲线集 =============
+
+/**
+ * 2D曲线集
+ *
+ * @remarks
+ * 定义几何元素的Z轴范围，实现2.5D表示
+ * REF: Section 7.1
+ * XML: <foundation:CurveSet2d xsi:type="d2:EDMDCurveSet2d">
+ */
+export interface EDMDCurveSet2D extends EDMDObject, EDMDZBounds {
+	/** 形状描述类型 */
+	ShapeDescriptionType: CurveSet2DShapeDescType;
+	/** 引用的几何元素id列表 */
+	DetailedGeometricModelElements: string[];
+}
+
+/** 2D曲线集形状描述类型 */
+export enum CurveSet2DShapeDescType {
+	/** 几何模型（常用） */
+	GeometricModel = 'GeometricModel',
+	/** 文档模型 */
+	DocumentationModel = 'DocumentationModel',
+}
+
+/**Z轴边界（坐标）  */
+export interface EDMDZBounds {
+	/** Z轴下边界，定义曲线起始高度 */
+	LowerBound: EDMDLengthProperty;
+	/** Z轴上边界，定义曲线结束高度 */
+	UpperBound: EDMDLengthProperty;
+}
 ```
 
 #### **第4层：形状元素 (ShapeElement)**
 
-**可能属性：**
-- `ShapeElementType`：形状元素类型
-  - `FeatureShapeElement`：特征形状元素（最常用）
-  - `PartMountingFeature`：零件安装特征（用于孔等）
-  - `NonFeatureShapeElement`：非特征形状元素
-  - `PartFeature`：零件特征
-  - `ComponentTermination`：元件端子
-- `Inverted`：布尔运算标志（false=添加，true=减去）
-- `DefiningShape`：引用的曲线集
+**完整示例**：
 
-**示例：**
 ```xml
-<!-- 板的形状元素（添加材料） -->
-<foundation:ShapeElement id="SHAPE_BOARD" xsi:type="pdm:EDMDShapeElement">
+<!-- =========== 1. 基本形状元素（添加材料）=========== -->
+<!-- TEST_CASE: 特征形状元素（用于板轮廓、元件等） -->
+<foundation:ShapeElement id="SHAPE_BOARD_OUTLINE" xsi:type="pdm:EDMDShapeElement">
+  <!-- 形状元素类型（必需） -->
   <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+  
+  <!-- 布尔运算标记（必需）：false=添加材料，true=减去材料 -->
   <pdm:Inverted>false</pdm:Inverted>
-  <pdm:DefiningShape>CURVESET_BOARD</pdm:DefiningShape>
-</foundation:ShapeElement>
-
-<!-- 孔的形状元素（减去材料） -->
-<foundation:ShapeElement id="SHAPE_HOLE" xsi:type="pdm:EDMDShapeElement">
-  <pdm:ShapeElementType>PartMountingFeature</pdm:ShapeElementType>
-  <pdm:Inverted>true</pdm:Inverted>
-  <pdm:DefiningShape>CURVESET_HOLE</pdm:DefiningShape>
-</foundation:ShapeElement>
-
-<!-- 走线的形状元素 -->
-<foundation:ShapeElement id="SHAPE_TRACE" xsi:type="pdm:EDMDShapeElement">
-  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-  <pdm:Inverted>false</pdm:Inverted>
-  <pdm:DefiningShape>CURVESET_TRACE</pdm:DefiningShape>
-</foundation:ShapeElement>
-```
-
-#### **第5层：项目用途 (可选，传统方式)**
-
-**可能元素：**
-- `Stratum`：层（用于板轮廓）
-- `AssemblyComponent`：装配组件（用于元件）
-- `KeepOut`：禁布区
-- `KeepIn`：保持区
-- `InterStratumFeature`：层间特征（用于孔、过孔等）
-- `FunctionalItemShape`：功能形状（用于柔性板弯曲等）
-- 在简化方式中，这些被`geometryType`属性替代
-
-**示例：**
-```xml
-<!-- 传统方式：板的层定义 -->
-<foundation:Stratum id="STRATUM_BOARD" xsi:type="pdm:EDMDStratum">
-  <pdm:ShapeElement>SHAPE_BOARD</pdm:ShapeElement>
-  <pdm:StratumType>DesignLayerStratum</pdm:StratumType>
-  <pdm:StratumSurfaceDesignation>PrimarySurface</pdm:StratumSurfaceDesignation>
-</foundation:Stratum>
-
-<!-- 传统方式：禁布区 -->
-<foundation:KeepOut id="KEEPOUT_AREA" xsi:type="pdm:EDMDKeepOut">
-  <pdm:ShapeElement>SHAPE_KEEPOUT</pdm:ShapeElement>
-  <pdm:Purpose>ComponentPlacement</pdm:Purpose>
-</foundation:KeepOut>
-```
-
-#### **第6层：项目定义 (Item single)**
-
-**可能属性：**
-- `ItemType`：必须为"single"
-- `Name`：项目名称
-- `Description`：项目描述
-- `Shape`：引用形状元素或传统方式的项目用途元素
-- `Identifier`：唯一标识符
-- `PackageName`：包名称（用于可重用封装）
-
-**示例：**
-```xml
-<!-- 简化方式：板定义 -->
-<foundation:Item id="ITEM_BOARD_DEF">
-  <foundation:Name>Board Definition</foundation:Name>
-  <foundation:Description>Simple rectangular board</foundation:Description>
-  <pdm:ItemType>single</pdm:ItemType>
-  <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
-    <foundation:SystemScope>IDX-IO</foundation:SystemScope>
-    <foundation:Number>BOARD001</foundation:Number>
-    <foundation:Version>1</foundation:Version>
-  </pdm:Identifier>
-  <pdm:Shape>SHAPE_BOARD</pdm:Shape>
-</foundation:Item>
-
-<!-- 简化方式：孔定义 -->
-<foundation:Item id="ITEM_HOLE_DEF">
-  <foundation:Name>3.2mm Hole</foundation:Name>
-  <pdm:ItemType>single</pdm:ItemType>
-  <pdm:PackageName>
-    <foundation:SystemScope>LIBRARY</foundation:SystemScope>
-    <foundation:ObjectName>HOLE_3.2MM_NP</foundation:ObjectName>
-  </pdm:PackageName>
-  <pdm:Shape>SHAPE_HOLE</pdm:Shape>
-</foundation:Item>
-
-<!-- 传统方式：板定义（引用Stratum） -->
-<foundation:Item id="ITEM_BOARD_DEF_TRAD">
-  <foundation:Name>Board Definition</foundation:Name>
-  <pdm:ItemType>single</pdm:ItemType>
-  <pdm:Shape>STRATUM_BOARD</pdm:Shape>
-</foundation:Item>
-```
-
-#### **第7层：项目实例 (Item assembly)**
-
-**可能属性：**
-- `ItemType`：必须为"assembly"
-- `geometryType`：几何类型（简化方式的关键属性）
-- `Name`：项目名称
-- `ItemInstance`：一个或多个实例
-  - `Item`：引用的项目定义
-  - `InstanceName`：实例名称
-  - `Transformation`：变换矩阵
-  - `zOffset`：Z轴偏移（可选）
-- `AssembleToName`：装配参考名称（可选）
-- `ReferenceName`：参考名称（可选）
-
-**示例：**
-```xml
-<!-- 简化方式：板实例 -->
-<foundation:Item id="ITEM_BOARD_ASSY" geometryType="BOARD_OUTLINE">
-  <foundation:Name>Main PCB Board</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  <pdm:ItemInstance id="INST_BOARD">
-    <pdm:Item>ITEM_BOARD_DEF</pdm:Item>
-    <pdm:InstanceName>Board1</pdm:InstanceName>
-    <pdm:Transformation>
-      <pdm:TransformationType>d2</pdm:TransformationType>
-      <pdm:xx>1</pdm:xx><pdm:xy>0</pdm:xy>
-      <pdm:yx>0</pdm:yx><pdm:yy>1</pdm:yy>
-      <pdm:tx><property:Value>0</property:Value></pdm:tx>
-      <pdm:ty><property:Value>0</property:Value></pdm:ty>
-    </pdm:Transformation>
-  </pdm:ItemInstance>
-</foundation:Item>
-
-<!-- 简化方式：孔实例 -->
-<foundation:Item id="ITEM_HOLE_ASSY" geometryType="HOLE_NON_PLATED">
-  <foundation:Name>Mounting Holes</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
-  <pdm:ItemInstance id="INST_HOLE1">
-    <pdm:Item>ITEM_HOLE_DEF</pdm:Item>
-    <pdm:InstanceName>Hole1</pdm:InstanceName>
-    <pdm:Transformation>
-      <pdm:TransformationType>d2</pdm:TransformationType>
-      <pdm:xx>1</pdm:xx><pdm:xy>0</pdm:xy>
-      <pdm:yx>0</pdm:yx><pdm:yy>1</pdm:yy>
-      <pdm:tx><property:Value>10</property:Value></pdm:tx>
-      <pdm:ty><property:Value>10</property:Value></pdm:ty>
-    </pdm:Transformation>
-  </pdm:ItemInstance>
-  <pdm:ItemInstance id="INST_HOLE2">
-    <pdm:Item>ITEM_HOLE_DEF</pdm:Item>
-    <pdm:InstanceName>Hole2</pdm:InstanceName>
-    <pdm:Transformation>
-      <pdm:TransformationType>d2</pdm:TransformationType>
-      <pdm:xx>1</pdm:xx><pdm:xy>0</pdm:xy>
-      <pdm:yx>0</pdm:yx><pdm:yy>1</pdm:yy>
-      <pdm:tx><property:Value>40</property:Value></pdm:tx>
-      <pdm:ty><property:Value>10</property:Value></pdm:ty>
-    </pdm:Transformation>
-  </pdm:ItemInstance>
-</foundation:Item>
-
-<!-- 简化方式：元件实例 -->
-<foundation:Item id="ITEM_COMP_ASSY" geometryType="COMPONENT">
-  <foundation:Name>Resistor R1</foundation:Name>
-  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 引用的曲线集ID（必需） -->
+  <pdm:DefiningShape>CURVESET_BOARD_OUTLINE</pdm:DefiningShape>
+  
+  <!-- 可选：用户属性 -->
   <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
     <property:Key>
-      <foundation:SystemScope>ECAD</foundation:SystemScope>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>LAYER</foundation:ObjectName>
+    </property:Key>
+    <property:Value>TOP</property:Value>
+  </foundation:UserProperty>
+</foundation:ShapeElement>
+
+<!-- =========== 2. 切割形状元素（布尔减运算）=========== -->
+<!-- TEST_CASE: 用于切割孔、槽等 -->
+<foundation:ShapeElement id="SHAPE_MOUNTING_HOLE" xsi:type="pdm:EDMDShapeElement">
+  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+  
+  <!-- Inverted=true 表示从主体中减去此形状 -->
+  <pdm:Inverted>true</pdm:Inverted>
+  
+  <pdm:DefiningShape>CURVESET_HOLE_3MM</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- =========== 3. 安装特征形状元素=========== -->
+<!-- TEST_CASE: 用于非电镀孔等安装特征 -->
+<foundation:ShapeElement id="SHAPE_MOUNTING_FEATURE" xsi:type="pdm:EDMDShapeElement">
+  <!-- PartMountingFeature 用于安装孔特征 -->
+  <pdm:ShapeElementType>PartMountingFeature</pdm:ShapeElementType>
+  <pdm:Inverted>false</pdm:Inverted>
+  <pdm:DefiningShape>CURVESET_NPTH_2MM</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- =========== 4. 非特征形状元素=========== -->
+<!-- TEST_CASE: 用于弯曲区域、参考几何等 -->
+<foundation:ShapeElement id="SHAPE_BEND_AREA" xsi:type="pdm:EDMDShapeElement">
+  <!-- NonFeatureShapeElement 用于辅助几何 -->
+  <pdm:ShapeElementType>NonFeatureShapeElement</pdm:ShapeElementType>
+  <pdm:Inverted>false</pdm:Inverted>
+  <pdm:DefiningShape>CURVESET_BEND_ZONE</pdm:DefiningShape>
+</foundation:ShapeElement>
+
+<!-- =========== 5. 复合形状元素（多曲线集）=========== -->
+<!-- TEST_CASE: 包含多个曲线集的复杂形状 -->
+<foundation:ShapeElement id="SHAPE_COMPLEX_CUTOUT" xsi:type="pdm:EDMDShapeElement">
+  <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
+  <pdm:Inverted>true</pdm:Inverted>
+  <!-- 复合形状需要引用复合曲线集 -->
+  <pdm:DefiningShape>CURVESET_COMPOSITE_CUTOUT</pdm:DefiningShape>
+</foundation:ShapeElement>
+```
+
+**注意事项**：
+
+1. **布尔运算规则**：
+   - `Inverted=false`：添加材料（OR操作）
+   - `Inverted=true`：减去材料（NAND操作）
+   - 所有形状元素按`XML`顺序应用布尔运算
+
+2. **形状元素类型选择**：
+
+| ShapeElementType           | 用途         | 常见场景                     |
+| -------------------------- | ------------ | ---------------------------- |
+| **FeatureShapeElement**    | 通用特征形状 | 板轮廓、元件、孔、禁止区域   |
+| **PartMountingFeature**    | 安装特征     | 非电镀安装孔、机械安装点     |
+| **NonFeatureShapeElement** | 非特征几何   | 弯曲区域、参考区域、辅助几何 |
+| **PartFeature**            | 元件特征     | 元件本体（传统方法）         |
+| **ViaTerminal**            | 过孔端子     | 过孔焊盘                     |
+
+3. **引用完整性**：
+   - `DefiningShape`必须引用已定义的`CurveSet2D`的ID
+   - 确保被引用的曲线集包含正确的几何元素
+
+4. **多层板设计**：
+   - 不同板层上的形状元素应使用不同的`CurveSet2D`
+   - 通过Z轴范围区分各层的形状元素
+
+5. **布尔运算顺序**：
+   - XML文档中的顺序决定布尔运算顺序
+   - 先添加主体，再减去切割特征
+
+**建模差异**：
+
+| 对比维度                 | 传统建模                          | 优化建模（IDXv4.0+）                    |
+| ------------------------ | --------------------------------- | --------------------------------------- |
+| **ShapeElementType使用** | 更多依赖特定类型（如PartFeature） | 主要使用通用类型（FeatureShapeElement） |
+| **类型映射**             | 需要与上层对象类型匹配（Table 2） | 简化，主要通过geometryType属性识别      |
+| **复杂度**               | 类型较多，需要精确匹配            | 类型较少，通用性更强                    |
+
+**类型定义**：
+
+```typescript
+/**
+ * 形状元素类型枚举
+ *
+ * @remarks
+ * 根据IDX规范Table 2和实际使用情况定义
+ */
+export type ShapeElementType = 
+  | 'FeatureShapeElement'      // 通用特征形状
+  | 'PartMountingFeature'      // 安装特征
+  | 'NonFeatureShapeElement'   // 非特征几何
+  | 'PartFeature'              // 元件特征（传统方法）
+  | 'ComponentTerminal'        // 元件端子
+  | 'ViaTerminal'              // 过孔端子
+  | 'FeatureShapeElement'      // 特征形状元素（最常用）
+  | 'PartMountingFeature'      // 部件安装特征
+  | 'NonFeatureShapeElement'   // 非特征形状元素
+  | 'ComponentTerminal';       // 元件端子
+
+/**
+ * 形状元素
+ *
+ * @remarks
+ * 连接曲线集和项目定义的中介，支持布尔运算
+ * REF: Section 4.1.2 (Table 2)
+ * XML: <foundation:ShapeElement xsi:type="pdm:EDMDShapeElement">
+ */
+export interface EDMDShapeElement extends EDMDObject {
+  /** XML类型标识 */
+  'xsi:type': 'pdm:EDMDShapeElement';
+  /** 形状元素类型 */
+  ShapeElementType: ShapeElementType;
+  /** 布尔运算标记：false=添加材料，true=减去材料 */
+  Inverted: boolean;
+  /** 引用的曲线集id */
+  DefiningShape: string;
+  /** 可选用户属性 */
+  UserProperties?: EDMDUserSimpleProperty[];
+}
+
+/**
+ * 特殊形状元素：添加材料的形状
+ */
+export interface PositiveShapeElement extends EDMDShapeElement {
+  Inverted: false;
+}
+
+/**
+ * 特殊形状元素：减去材料的形状（切割）
+ */
+export interface NegativeShapeElement extends EDMDShapeElement {
+  Inverted: true;
+}
+
+/**
+ * 复合形状元素（包含多个子形状）
+ *
+ * @remarks
+ * 用于表示需要多个布尔操作组合的复杂形状
+ */
+export interface CompositeShapeElement extends EDMDObject {
+  /** 主形状元素ID */
+  MainShape: string;
+  /** 切割形状元素ID数组（Inverted=true） */
+  CutoutShapes: string[];
+  /** 附加形状元素ID数组（Inverted=false） */
+  AdditionalShapes: string[];
+}
+
+/**
+ * 形状元素管理器
+ *
+ * @remarks
+ * 用于管理IDX文件中的形状元素定义
+ */
+export interface ShapeElementManager {
+  /** 添加形状元素 */
+  addShapeElement(shape: EDMDShapeElement): boolean;
+  
+  /** 根据类型获取形状元素 */
+  getShapeElementsByType(type: ShapeElementType): EDMDShapeElement[];
+  
+  /** 获取引用特定曲线集的形状元素 */
+  getShapeElementsByCurveSet(curveSetId: string): EDMDShapeElement[];
+  
+  /** 获取所有切割形状（Inverted=true） */
+  getCutoutShapes(): NegativeShapeElement[];
+  
+  /** 获取所有添加形状（Inverted=false） */
+  getPositiveShapes(): PositiveShapeElement[];
+}
+```
+
+#### **第5层：传统方式建模的Third Item层次**
+
+**完整示例**：
+
+```xml
+<!-- =========== 1. 板框 (BOARD_OUTLINE) =========== -->
+<!-- TEST_CASE: 传统方式 - 板框定义 -->
+<foundation:Stratum id="STRATUM_BOARD" xsi:type="pdm:EDMDStratum">
+  <!-- 引用的形状元素列表（必需） -->
+  <pdm:ShapeElement>SHAPE_BOARD_OUTER</pdm:ShapeElement>
+  <!-- 可选：切割孔等 -->
+  <pdm:ShapeElement>SHAPE_CUTOUT_1</pdm:ShapeElement>
+  <pdm:ShapeElement>SHAPE_CUTOUT_2</pdm:ShapeElement>
+  
+  <!-- 层类型（必需）：DesignLayerStratum 表示物理设计层 -->
+  <pdm:StratumType>DesignLayerStratum</pdm:StratumType>
+  
+  <!-- 层表面指定（可选）：PrimarySurface 表示主表面（板顶面） -->
+  <pdm:StratumSurfaceDesignation>PrimarySurface</pdm:StratumSurfaceDesignation>
+  
+  <!-- 层技术引用（可选）：用于定义层的特殊属性 -->
+  <pdm:StratumTechnology>STRATUM_TECH_BOARD</pdm:StratumTechnology>
+</foundation:Stratum>
+
+<!-- =========== 2. 组件 (COMPONENT) =========== -->
+<!-- TEST_CASE: 传统方式 - 组件定义 -->
+<foundation:AssemblyComponent id="ASSEMBLY_COMP_001" xsi:type="pdm:EDMDAssemblyComponent">
+  <!-- 引用的形状元素（必需） -->
+  <pdm:ShapeElement>SHAPE_COMP_BODY</pdm:ShapeElement>
+  
+  <!-- 组件类型（必需）：Physical 表示电气组件，MechanicalItem 表示机械组件 -->
+  <pdm:AssemblyComponentType>Physical</pdm:AssemblyComponentType>
+  
+  <!-- 可选：用户属性 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
       <foundation:ObjectName>REFDES</foundation:ObjectName>
     </property:Key>
     <property:Value>R1</property:Value>
   </foundation:UserProperty>
-  <pdm:ItemInstance id="INST_COMP">
-    <pdm:Item>ITEM_COMP_DEF</pdm:Item>
-    <pdm:InstanceName>R1_Instance</pdm:InstanceName>
-    <pdm:Transformation>
-      <pdm:TransformationType>d2</pdm:TransformationType>
-      <pdm:xx>0.707</pdm:xx><pdm:xy>0.707</pdm:xy>
-      <pdm:yx>-0.707</pdm:yx><pdm:yy>0.707</pdm:yy>
-      <pdm:tx><property:Value>25</property:Value></pdm:tx>
-      <pdm:ty><property:Value>15</property:Value></pdm:ty>
-    </pdm:Transformation>
-  </pdm:ItemInstance>
-  <pdm:AssembleToName>TOP_SURFACE</pdm:AssembleToName>
-</foundation:Item>
+</foundation:AssemblyComponent>
+
+<!-- =========== 3. 孔 (HOLE) =========== -->
+<!-- TEST_CASE: 传统方式 - 电镀孔定义 -->
+<foundation:InterStratumFeature id="ISF_PLATED_HOLE_001" xsi:type="pdm:EDMDInterStratumFeature">
+  <!-- 引用的形状元素（必需） -->
+  <pdm:ShapeElement>SHAPE_HOLE_CIRCLE</pdm:ShapeElement>
+  
+  <!-- 跨层特征类型（必需）：PlatedCutout 表示电镀孔，Cutout 表示非电镀孔 -->
+  <pdm:InterStratumFeatureType>PlatedCutout</pdm:InterStratumFeatureType>
+  
+  <!-- 关联的层（必需）：孔所跨越的层 -->
+  <pdm:Stratum>STRATUM_BOARD</pdm:Stratum>
+  
+  <!-- 可选：孔径公差等属性 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>MCADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>TOLERANCE</foundation:ObjectName>
+    </property:Key>
+    <property:Value>±0.05</property:Value>
+  </foundation:UserProperty>
+</foundation:InterStratumFeature>
+
+<!-- =========== 4. 禁布区 (KEEPOUT) =========== -->
+<!-- TEST_CASE: 传统方式 - 布线禁布区定义 -->
+<foundation:KeepOut id="KEEPOUT_ROUTE_001" xsi:type="pdm:EDMDKeepOut">
+  <!-- 引用的形状元素（必需） -->
+  <pdm:ShapeElement>SHAPE_ROUTE_KEEPOUT</pdm:ShapeElement>
+  
+  <!-- 禁布目的（必需）：Route 表示布线禁布，ComponentPlacement 表示元件放置禁布等 -->
+  <pdm:Purpose>Route</pdm:Purpose>
+  
+  <!-- 可选：禁布优先级 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>PRIORITY</foundation:ObjectName>
+    </property:Key>
+    <property:Value>High</property:Value>
+  </foundation:UserProperty>
+</foundation:KeepOut>
+
+<!-- =========== 5. 保留区 (KEEPIN) =========== -->
+<!-- TEST_CASE: 传统方式 - 元件放置保留区定义 -->
+<foundation:KeepIn id="KEEPIN_COMP_001" xsi:type="pdm:EDMDKeepIn">
+  <!-- 引用的形状元素（必需） -->
+  <pdm:ShapeElement>SHAPE_COMP_KEEPIN</pdm:ShapeElement>
+  
+  <!-- 保留目的（必需）：ComponentPlacement 表示元件放置保留 -->
+  <pdm:Purpose>ComponentPlacement</pdm:Purpose>
+  
+  <!-- 可选：最大元件高度限制 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>MCADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>MAX_HEIGHT</foundation:ObjectName>
+    </property:Key>
+    <property:Value>5.0</property:Value>
+  </foundation:UserProperty>
+</foundation:KeepIn>
+
+<!-- =========== 6. 其他区域/功能区 (OTHER_OUTLINE) =========== -->
+<!-- TEST_CASE: 传统方式 - 用户自定义区域 -->
+<foundation:FunctionalItemShape id="FUNC_USER_AREA_001" xsi:type="pdm:EDMDFunctionalItemShape">
+  <!-- 引用的形状元素（必需） -->
+  <pdm:ShapeElement>SHAPE_USER_AREA</pdm:ShapeElement>
+  
+  <!-- 功能类型（必需）：UserArea 表示用户自定义区域 -->
+  <pdm:FunctionalItemShapeType>UserArea</pdm:FunctionalItemShapeType>
+  
+  <!-- 可选：区域名称 -->
+  <foundation:Name>Logo Placement Area</foundation:Name>
+  
+  <!-- 可选：关联的ECAD层 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>ECAD_LAYER</foundation:ObjectName>
+    </property:Key>
+    <property:Value>ETCH_TOP</property:Value>
+  </foundation:UserProperty>
+</foundation:FunctionalItemShape>
+
+<!-- =========== 7. 弯曲区域 (BEND_AREA) =========== -->
+<!-- TEST_CASE: 传统方式 - 柔性板弯曲区域 -->
+<foundation:FunctionalItemShape id="FUNC_FLEX_AREA_001" xsi:type="pdm:EDMDFunctionalItemShape">
+  <pdm:ShapeElement>SHAPE_FLEX_AREA</pdm:ShapeElement>
+  
+  <!-- 功能类型：FlexibleArea 表示柔性区域 -->
+  <pdm:FunctionalItemShapeType>FlexibleArea</pdm:FunctionalItemShapeType>
+  
+  <!-- 可选：弯曲半径限制 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>MCADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>MIN_BEND_RADIUS</foundation:ObjectName>
+    </property:Key>
+    <property:Value>2.0</property:Value>
+  </foundation:UserProperty>
+</foundation:FunctionalItemShape>
+
+<!-- =========== 8. 放置组区域 (PLACEMENT_GROUP) =========== -->
+<!-- TEST_CASE: 传统方式 - 元件放置组 -->
+<foundation:FunctionalItemShape id="FUNC_PLACEMENT_GROUP_001" xsi:type="pdm:EDMDFunctionalItemShape">
+  <pdm:ShapeElement>SHAPE_PLACEMENT_GROUP</pdm:ShapeElement>
+  
+  <!-- 功能类型：PlacementGroupArea 表示元件放置组区域 -->
+  <pdm:FunctionalItemShapeType>PlacementGroupArea</pdm:FunctionalItemShapeType>
+  
+  <foundation:Name>Power Section</foundation:Name>
+  <foundation:Description>Power management components group</foundation:Description>
+</foundation:FunctionalItemShape>
+
+<!-- =========== 9. 物理层 (LAYER) =========== -->
+<!-- TEST_CASE: 传统方式 - 信号层定义 -->
+<foundation:Stratum id="STRATUM_SIGNAL_LAYER1" xsi:type="pdm:EDMDStratum">
+  <pdm:ShapeElement>SHAPE_SIGNAL_TRACES</pdm:ShapeElement>
+  <pdm:StratumType>DesignLayerStratum</pdm:StratumType>
+  
+  <!-- 层技术定义（可选但推荐） -->
+  <pdm:StratumTechnology>STRATUM_TECH_SIGNAL</pdm:StratumTechnology>
+</foundation:Stratum>
+
+<!-- 层技术定义 -->
+<foundation:StratumTechnology id="STRATUM_TECH_SIGNAL" xsi:type="pdm:EDMDStratumTechnology">
+  <!-- 技术类型：Design 表示设计层，Documentation 表示文档层 -->
+  <pdm:TechnologyType>Design</pdm:TechnologyType>
+  
+  <!-- 层用途：OtherSignal 表示信号层 -->
+  <pdm:LayerPurpose>OtherSignal</pdm:LayerPurpose>
+  
+  <!-- 可选：层材料属性 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>MCADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>MATERIAL</foundation:ObjectName>
+    </property:Key>
+    <property:Value>Copper</property:Value>
+  </foundation:UserProperty>
+</foundation:StratumTechnology>
+
+<!-- =========== 10. 铣削切割 (MILLED_CUTOUT) =========== -->
+<!-- TEST_CASE: 传统方式 - 铣削切割定义 -->
+<foundation:InterStratumFeature id="ISF_MILLED_CUT_001" xsi:type="pdm:EDMDInterStratumFeature">
+  <pdm:ShapeElement>SHAPE_MILLED_PATH</pdm:ShapeElement>
+  
+  <!-- 跨层特征类型：MilledCutout 表示非电镀铣削切割 -->
+  <pdm:InterStratumFeatureType>MilledCutout</pdm:InterStratumFeatureType>
+  
+  <pdm:Stratum>STRATUM_BOARD</pdm:Stratum>
+  
+  <!-- 可选：铣削刀具直径 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>MCADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>TOOL_DIAMETER</foundation:ObjectName>
+    </property:Key>
+    <property:Value>2.0</property:Value>
+  </foundation:UserProperty>
+</foundation:InterStratumFeature>
 ```
 
-### 🎯 **构建顺序建议**
+**注意事项**：
 
-在实际代码中，推荐这样的构建流程：
+1. **对象选择**：根据geometryType选择正确的`Third Item`对象：
+   - `BOARD_OUTLINE` → `EDMDStratum`
+   - `COMPONENT` → `EDMDAssemblyComponent`
+   - `HOLE_*` → `EDMDInterStratumFeature`
+   - `KEEPOUT_*` → `EDMDKeepOut`
+   - `KEEPIN_*` → `EDMDKeepIn`
+   - `OTHER_OUTLINE` → `EDMDFunctionalItemShape` (UserArea)
+   - `LAYER_*` → `EDMDStratum` + `EDMDStratumTechnology`
+
+2. **属性匹配**：确保`Third Item`的属性与`geometryType`一致：
+   - 孔的`InterStratumFeatureType`需匹配孔类型
+   - 禁布区的`Purpose`需匹配禁布类型
+   - 功能区的`FunctionalItemShapeType`需匹配区域类型
+
+3. **层技术**：对于物理层，使用`EDMDStratumTechnology`定义层属性
+4. **引用完整性**：Third Item必须引用正确的`ShapeElement`
+
+**类型定义**：
 
 ```typescript
-// 1. 创建所有点
-const points = createPoints([
-    {id: 'PT1', x: 0, y: 0},
-    {id: 'PT2', x: 50, y: 0},
-    {id: 'PT3', x: 50, y: 30},
-    {id: 'PT4', x: 0, y: 30},
-    {id: 'PT_CENTER1', x: 10, y: 10},
-    {id: 'PT_CENTER2', x: 40, y: 10}
-]);
+// ============= 传统方式建模的类型定义 =============
+/**
+ * 传统方式Third Item联合类型
+ */
+export type EDMDThirdItem = 
+  | EDMDStratum
+  | EDMDAssemblyComponent
+  | EDMDInterStratumFeature
+  | EDMDKeepOut
+  | EDMDKeepIn
+  | EDMDFunctionalItemShape;
 
-// 2. 创建所有几何元素
-const geometries = createGeometries([
-    {type: 'PolyLine', id: 'POLY_BOARD', points: ['PT1','PT2','PT3','PT4','PT1']},
-    {type: 'CircleCenter', id: 'CIRCLE_HOLE1', center: 'PT_CENTER1', diameter: 3.2},
-    {type: 'CircleCenter', id: 'CIRCLE_HOLE2', center: 'PT_CENTER2', diameter: 3.2}
-]);
+/** 层类型枚举 */
+export enum StratumType {
+  /** 设计层（物理层） */
+  DesignLayerStratum = 'DesignLayerStratum',
+  /** 文档层（非物理层） */
+  DocumentationLayerStratum = 'DocumentationLayerStratum',
+}
 
-// 3. 创建所有曲线集
-const curveSets = createCurveSets([
-    {id: 'CURVESET_BOARD', geometry: 'POLY_BOARD', lower: 0, upper: 1.6},
-    {id: 'CURVESET_HOLE1', geometry: 'CIRCLE_HOLE1', lower: 0, upper: 0},
-    {id: 'CURVESET_HOLE2', geometry: 'CIRCLE_HOLE2', lower: 0, upper: 0}
-]);
+/** 层表面指定枚举 */
+export enum StratumSurfaceDesignation {
+  /** 主表面（通常为板顶面或底面） */
+  PrimarySurface = 'PrimarySurface',
+  /** 次表面 */
+  SecondarySurface = 'SecondarySurface',
+}
 
-// 4. 创建所有形状元素
-const shapeElements = createShapeElements([
-    {id: 'SHAPE_BOARD', curveSet: 'CURVESET_BOARD', inverted: false},
-    {id: 'SHAPE_HOLE1', curveSet: 'CURVESET_HOLE1', inverted: true},
-    {id: 'SHAPE_HOLE2', curveSet: 'CURVESET_HOLE2', inverted: true}
-]);
+/** 技术类型枚举 */
+export enum TechnologyType {
+  /** 设计技术 */
+  Design = 'Design',
+  /** 文档技术 */
+  Documentation = 'Documentation',
+}
 
-// 5. 创建所有项目定义（single）
-const itemSingles = createItemSingles([
-    {id: 'ITEM_BOARD_DEF', shape: 'SHAPE_BOARD', name: 'Board Definition'},
-    {id: 'ITEM_HOLE_DEF', shape: 'SHAPE_HOLE1', name: 'Hole Definition'}
-]);
+/** 层用途枚举 */
+export enum LayerPurpose {
+  /** 信号层 */
+  OtherSignal = 'OtherSignal',
+  /** 电源/地层 */
+  PowerOrGround = 'PowerOrGround',
+  /** 阻焊层 */
+  SolderMask = 'SolderMask',
+  /** 丝印层 */
+  SilkScreen = 'SilkScreen',
+  /** 焊盘层 */
+  LandsOnly = 'LandsOnly',
+  /** 锡膏层 */
+  SolderPaste = 'SolderPaste',
+  /** 粘合剂层 */
+  Glue = 'Glue',
+  /** 通用层 */
+  GenericLayer = 'GenericLayer',
+  /** 嵌入式电容介质层 */
+  EmbeddedPassiveCapacitorDielectric = 'EmbeddedPassiveCapacitorDielectric',
+  /** 嵌入式电阻层 */
+  EmbeddedPassiveResistor = 'EmbeddedPassiveResistor',
+}
 
-// 6. 创建所有项目实例（assembly）
-const itemAssemblies = createItemAssemblies([
-    {
-        id: 'ITEM_BOARD_ASSY', 
-        geometryType: 'BOARD_OUTLINE',
-        name: 'Main Board',
-        instances: [{item: 'ITEM_BOARD_DEF', name: 'Board1'}]
-    },
-    {
-        id: 'ITEM_HOLES_ASSY',
-        geometryType: 'HOLE_NON_PLATED',
-        name: 'Mounting Holes',
-        instances: [
-            {item: 'ITEM_HOLE_DEF', name: 'Hole1', x: 10, y: 10},
-            {item: 'ITEM_HOLE_DEF', name: 'Hole2', x: 40, y: 10}
-        ]
-    }
-]);
-```
+/** 跨层特征类型枚举 */
+export enum InterStratumFeatureType {
+  /** 非电镀孔 */
+  Cutout = 'Cutout',
+  /** 电镀孔 */
+  PlatedCutout = 'PlatedCutout',
+  /** 铣削切割 */
+  MilledCutout = 'MilledCutout',
+  /** 部分电镀孔 */
+  PartiallyPlatedCutout = 'PartiallyPlatedCutout',
+  /** 过孔 */
+  Via = 'Via',
+  /** 填充过孔 */
+  FilledVia = 'FilledVia',
+  /** 板切割 */
+  BoardCutout = 'BoardCutout',
+}
 
-这样分层构建既符合XML的先定义后引用原则，又便于代码组织和维护。
+/** 禁布/保留目的枚举 */
+export enum KeepConstraintPurpose {
+  /** 布线禁布/保留 */
+  Route = 'Route',
+  /** 元件放置禁布/保留 */
+  ComponentPlacement = 'ComponentPlacement',
+  /** 过孔禁布/保留 */
+  Via = 'Via',
+  /** 测试点禁布/保留 */
+  TestPoint = 'TestPoint',
+  /** 热相关禁布/保留 */
+  Thermal = 'Thermal',
+  /** 通用间距 */
+  GenericClearance = 'GenericClearance',
+  /** 振动相关 */
+  Vibration = 'Vibration',
+  /** 电磁兼容相关 */
+  ElectromagneticCompatibility = 'ElectromagneticCompatibility',
+  /** 其他 */
+  Other = 'Other',
+}
 
-## 十一、IDXv4.5 实体几何详细说明
+/** 功能区类型枚举 */
+export enum FunctionalItemShapeType {
+  /** 用户自定义区域 */
+  UserArea = 'UserArea',
+  /** 元件放置组区域 */
+  PlacementGroupArea = 'PlacementGroupArea',
+  /** 柔性区域 */
+  FlexibleArea = 'FlexibleArea',
+  /** 加强区域 */
+  Stiffener = 'Stiffener',
+  /** 机械组件 */
+  MechanicalItem = 'MechanicalItem',
+}
 
-根据IDXv4.5协议文档，以下是各实体几何的详细说明：
+/** 组件类型枚举 */
+export enum AssemblyComponentType {
+  /** 电气组件 */
+  Physical = 'Physical',
+  /** 机械组件 */
+  MechanicalItem = 'MechanicalItem',
+  /** 装配组组件 */
+  AssemblyGroupComponent = 'AssemblyGroupComponent',
+  /** 层压组件 */
+  LaminateComponent = 'LaminateComponent',
+  /** 热组件 */
+  ThermalComponent = 'ThermalComponent',
+  /** 焊盘堆栈 */
+  Padstack = 'Padstack',
+}
 
-### 📐 **1. 板子（Board）几何**
+/**
+ * 层技术定义
+ *
+ * @remarks
+ * 用于定义层的技术属性
+ * REF: Section 6.1.2.3
+ */
+export interface EDMDStratumTechnology extends EDMDObject {
+  /** 技术类型 */
+  TechnologyType: TechnologyType;
+  /** 层用途 */
+  LayerPurpose: LayerPurpose;
+  /** 可选用户属性 */
+  UserProperties?: EDMDUserSimpleProperty[];
+}
 
-#### **允许的几何类型：**
-```typescript
-// 板子几何可以是：
-export type ECADBoardGeometry = 
-    | ECADPolyline          // 最常用，90%场景
-    | ECADCompositeGeometry // 复杂板形
-    | ECADCurveSet          // 多段曲线组合
-```
+/**
+ * 层定义（传统方式）
+ *
+ * @remarks
+ * 在传统IDX结构中用作"Third Item"，在简化方式中可省略
+ * REF: Section 6.1.2.1
+ */
+export interface EDMDStratum extends EDMDObject {
+  /** 引用的形状元素id列表 */
+  ShapeElements: string[];
+  /** 层类型 */
+  StratumType: StratumType;
+  /** 层表面指定 */
+  StratumSurfaceDesignation?: StratumSurfaceDesignation;
+  /** 层技术引用 */
+  StratumTechnology?: string;
+}
 
-#### **具体限制：**
-- **必须闭合**：形成封闭区域
-- **不能自相交**：多边形边不能相交
-- **方向**：通常外轮廓逆时针，内孔顺时针
-- **最少点数**：至少3个点（三角形）
+/**
+ * 组件定义（传统方式）
+ *
+ * @remarks
+ * 用于定义电气或机械组件
+ * REF: Section 6.2.1.1
+ */
+export interface EDMDAssemblyComponent extends EDMDObject {
+  /** 引用的形状元素 */
+  ShapeElement: string;
+  /** 组件类型 */
+  AssemblyComponentType: AssemblyComponentType;
+  /** 可选用户属性 */
+  UserProperties?: EDMDUserSimpleProperty[];
+}
 
-#### **示例场景：**
-```xml
-<!-- 简单矩形板 -->
-<foundation:PolyLine id="BOARD_OUTLINE">
-  <d2:Point>PT1</d2:Point> <!-- 0,0 -->
-  <d2:Point>PT2</d2:Point> <!-- 100,0 -->
-  <d2:Point>PT3</d2:Point> <!-- 100,60 -->
-  <d2:Point>PT4</d2:Point> <!-- 0,60 -->
-  <d2:Point>PT1</d2:Point> <!-- 闭合 -->
-</foundation:PolyLine>
+/**
+ * 跨层特征定义（传统方式）
+ *
+ * @remarks
+ * 用于定义孔、过孔等跨层特征
+ * REF: Section 6.3.1
+ */
+export interface EDMDInterStratumFeature extends EDMDObject {
+  /** 引用的形状元素 */
+  ShapeElement: string;
+  /** 跨层特征类型 */
+  InterStratumFeatureType: InterStratumFeatureType;
+  /** 关联的层 */
+  Stratum: string;
+  /** 可选用户属性 */
+  UserProperties?: EDMDUserSimpleProperty[];
+}
 
-<!-- 带圆弧的板 -->
-<foundation:CompositeCurve id="BOARD_COMPLEX">
-  <d2:Curve>POLY_SEG1</d2:Curve> <!-- 直线段 -->
-  <d2:Curve>ARC_CORNER</d2:Curve> <!-- 圆弧角 -->
-  <d2:Curve>POLY_SEG2</d2:Curve> <!-- 直线段 -->
-  <d2:Curve>ARC_CORNER2</d2:Curve> <!-- 圆弧角 -->
-</foundation:CompositeCurve>
+/**
+ * 禁布区定义（传统方式）
+ *
+ * @remarks
+ * 用于定义禁止区域
+ * REF: Section 6.5.1.1
+ */
+export interface EDMDKeepOut extends EDMDObject {
+  /** 引用的形状元素 */
+  ShapeElement: string;
+  /** 禁布目的 */
+  Purpose: KeepConstraintPurpose;
+  /** 可选用户属性 */
+  UserProperties?: EDMDUserSimpleProperty[];
+}
 
-<!-- 柔性板（多个区域） -->
-<foundation:CurveSet2d id="FLEX_BOARD_AREA1">
-  <!-- 柔性区域1 -->
-</foundation:CurveSet2d>
-<foundation:CurveSet2d id="FLEX_BOARD_AREA2">
-  <!-- 柔性区域2 -->
-</foundation:CurveSet2d>
-```
+/**
+ * 保留区定义（传统方式）
+ *
+ * @remarks
+ * 用于定义保留区域
+ * REF: Section 6.5.1.1
+ */
+export interface EDMDKeepIn extends EDMDObject {
+  /** 引用的形状元素 */
+  ShapeElement: string;
+  /** 保留目的 */
+  Purpose: KeepConstraintPurpose;
+  /** 可选用户属性 */
+  UserProperties?: EDMDUserSimpleProperty[];
+}
 
-#### **特殊板形支持：**
-- **刚柔结合板**：多个LayerZone，每个有独立几何
-- **阶梯板**：不同区域不同厚度
-- **异形板**：任意复杂轮廓
-- **挖洞板**：通过多个ShapeElement实现
-
-### 🔵 **2. 孔（Hole）几何**
-
-#### **允许的几何类型：**
-```typescript
-export type ECADHoleGeometry =
-    | ECADCircle          // 标准圆形孔（90%）
-    | ECADPolyline        // 异形孔（槽孔、方孔）
-    | ECADCompositeCurve  // 复合孔形
-    | ECADMillingPath     // 铣削路径孔
-```
-
-#### **孔类型与几何对应：**
-
-| 孔类型               | 典型几何           | 是否闭合 | 特殊属性     |
-| -------------------- | ------------------ | -------- | ------------ |
-| **PTH（电镀通孔）**  | Circle             | 必须闭合 | 直径、电镀   |
-| **NPTH（非电镀孔）** | Circle             | 必须闭合 | 直径、无电镀 |
-| **盲孔/埋孔**        | Circle             | 必须闭合 | 起始/结束层  |
-| **过孔（VIA）**      | Circle             | 必须闭合 | 直径、连接层 |
-| **槽孔（Slot）**     | Polyline           | 必须闭合 | 长度、宽度   |
-| **铣削孔**           | Polyline           | 可以开放 | 刀具直径     |
-| **异形孔**           | Polyline/Composite | 必须闭合 | 复杂轮廓     |
-
-#### **示例场景：**
-```xml
-<!-- 标准圆形孔 -->
-<foundation:CircleCenter id="HOLE_3MM">
-  <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
-  <d2:Diameter><property:Value>3.0</property:Value></d2:Diameter>
-</foundation:CircleCenter>
-
-<!-- 槽孔（矩形） -->
-<foundation:PolyLine id="SLOT_HOLE">
-  <d2:Point>PT1</d2:Point> <!-- 0,0 -->
-  <d2:Point>PT2</d2:Point> <!-- 10,0 -->
-  <d2:Point>PT3</d2:Point> <!-- 10,3 -->
-  <d2:Point>PT4</d2:Point> <!-- 0,3 -->
-  <d2:Point>PT1</d2:Point> <!-- 闭合 -->
-</foundation:PolyLine>
-
-<!-- 铣削路径孔 -->
-<foundation:PolyLine id="MILLED_PATH">
-  <d2:Thickness><property:Value>2.0</property:Value></d2:Thickness>
-  <d2:Point>PT_START</d2:Point>
-  <d2:Point>PT_MID</d2:Point>
-  <d2:Point>PT_END</d2:Point>
-  <!-- 开放路径，表示铣刀中心线 -->
-</foundation:PolyLine>
-
-<!-- 复合孔形 -->
-<foundation:CompositeCurve id="COMPLEX_HOLE">
-  <d2:Curve>ARC_SEG1</d2:Curve> <!-- 圆弧段 -->
-  <d2:Curve>LINE_SEG1</d2:Curve> <!-- 直线段 -->
-  <d2:Curve>ARC_SEG2</d2:Curve> <!-- 圆弧段 -->
-  <d2:Curve>LINE_SEG2</d2:Curve> <!-- 直线段 -->
-</foundation:CompositeCurve>
-```
-
-#### **几何限制：**
-- **闭合性**：除铣削路径外都必须闭合
-- **尺寸**：直径/宽度必须大于0
-- **位置**：必须在板子轮廓内（除非是板边孔）
-- **重叠**：孔之间可以重叠形成大孔
-
-### 🧩 **3. 封装（Footprint）几何**
-
-#### **封装几何组成：**
-一个封装由**多个几何元素**组成，包括：
-
-```typescript
-export interface ECADFootprintGeometry {
-    /** 外形轮廓（必须） */
-    outline: ECADPolyline;
-    
-    /** 焊盘几何（必须，至少一个） */
-    pads: ECADPadGeometry[];
-    
-    /** 丝印几何（可选） */
-    silkscreen?: ECADSilkscreenGeometry[];
-    
-    /** 装配几何（可选） */
-    assembly?: ECADAssemblyGeometry[];
-    
-    /** 禁布区（可选） */
-    courtyard?: ECADPolyline;
-    
-    /** 3D模型引用（可选） */
-    model3d?: ECADModel3D;
+/**
+ * 功能区定义（传统方式）
+ *
+ * @remarks
+ * 用于定义用户区域、放置组、柔性区域等功能区
+ * REF: Section 6.6.1.1, 6.7.1.1
+ */
+export interface EDMDFunctionalItemShape extends EDMDObject {
+  /** 引用的形状元素 */
+  ShapeElement: string;
+  /** 功能区类型 */
+  FunctionalItemShapeType: FunctionalItemShapeType;
+  /** 可选用户属性 */
+  UserProperties?: EDMDUserSimpleProperty[];
 }
 ```
 
-#### **各部分几何限制：**
+#### **第6层：物理层和层堆叠 (Layers and Layer Stackups)**
 
-**a) 外形轮廓（Outline）**
-
-- **类型**：Polyline（90%）、CompositeCurve
-- **必须闭合**：形成封闭区域
-- **不能自相交**
-- **最少点数**：至少3点
-- **示例**：
-  ```xml
-  <!-- 0402封装外形 -->
-  <foundation:PolyLine id="OUTLINE_0402">
-    <d2:Point>PT1</d2:Point> <!-- -1.0, -0.5 -->
-    <d2:Point>PT2</d2:Point> <!-- 1.0, -0.5 -->
-    <d2:Point>PT3</d2:Point> <!-- 1.0, 0.5 -->
-    <d2:Point>PT4</d2:Point> <!-- -1.0, 0.5 -->
-    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
-  </foundation:PolyLine>
-  ```
-
-##### **b) 焊盘（Pads）**
-- **类型**：
-  ```typescript
-  export type ECADPadGeometry =
-    | ECADCircle      // 圆形焊盘（过孔、测试点）
-    | ECADPolyline    // 矩形/异形焊盘（SMT焊盘）
-    | ECADRoundedRect // 圆角矩形（特殊处理为Polyline）
-  ```
-- **必须闭合**：形成封闭区域
-- **位置**：相对于封装原点
-- **层关联**：顶层/底层/内层
-- **示例**：
-  ```xml
-  <!-- 圆形焊盘（过孔） -->
-  <foundation:CircleCenter id="PAD_VIA">
-    <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
-    <d2:Diameter><property:Value>0.6</property:Value></d2:Diameter>
-  </foundation:CircleCenter>
-  
-  <!-- 矩形焊盘（SMT） -->
-  <foundation:PolyLine id="PAD_SMT">
-    <d2:Point>PT1</d2:Point> <!-- -0.75, -0.25 -->
-    <d2:Point>PT2</d2:Point> <!-- 0.75, -0.25 -->
-    <d2:Point>PT3</d2:Point> <!-- 0.75, 0.25 -->
-    <d2:Point>PT4</d2:Point> <!-- -0.75, 0.25 -->
-    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
-  </foundation:PolyLine>
-  ```
-
-##### **c) 丝印（Silkscreen）**
-- **类型**：
-  ```typescript
-  export type ECADSilkscreenGeometry =
-    | ECADLine        // 线段（元件框）
-    | ECADArc         // 圆弧（标识）
-    | ECADPolyline    // 多边形（标识）
-    | ECADText        // 文字（元件值、标识）
-    | ECADCircle      // 圆（极性标识）
-  ```
-- **可以开放或闭合**：线段可以是开放的
-- **厚度属性**：定义线宽
-- **示例**：
-  ```xml
-  <!-- 元件外框（线段） -->
-  <foundation:PolyLine id="SILK_OUTLINE">
-    <d2:Thickness><property:Value>0.15</property:Value></d2:Thickness>
-    <d2:Point>PT1</d2:Point>
-    <d2:Point>PT2</d2:Point>
-    <d2:Point>PT3</d2:Point>
-    <d2:Point>PT4</d2:Point>
-    <!-- 可能不闭合（表示U形框） -->
-  </foundation:PolyLine>
-  
-  <!-- 极性标识（圆） -->
-  <foundation:CircleCenter id="SILK_POLARITY">
-    <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
-    <d2:Diameter><property:Value>1.0</property:Value></d2:Diameter>
-  </foundation:CircleCenter>
-  ```
-
-##### **d) 禁布区（Courtyard）**
-- **类型**：闭合区域
-- **必须闭合**：定义元件占用区域
-- **通常在元件轮廓外扩一定距离**
-- **示例**：
-  
-  ```xml
-  <!-- 0402封装的禁布区 -->
-  <foundation:PolyLine id="COURTYARD_0402">
-    <d2:Point>PT1</d2:Point> <!-- -1.2, -0.7 (外扩0.2mm) -->
-    <d2:Point>PT2</d2:Point> <!-- 1.2, -0.7 -->
-    <d2:Point>PT3</d2:Point> <!-- 1.2, 0.7 -->
-    <d2:Point>PT4</d2:Point> <!-- -1.2, 0.7 -->
-    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
-  </foundation:PolyLine>
-  ```
-
-### ⚠️ **4. 禁止区域（Keepout/Keepin）几何**
-
-#### **约束类型与几何对应：**
-
-| 约束类型       | 目的               | 典型几何         | 闭合要求     | 特殊属性   |
-| -------------- | ------------------ | ---------------- | ------------ | ---------- |
-| **区域禁布**   | ComponentPlacement | Polyline, Circle | **必须闭合** | 高度范围   |
-| **路径禁布**   | Route              | Line, Polyline   | **可以开放** | 宽度、网络 |
-| **过孔禁布**   | Via                | Circle, Polyline | **必须闭合** | 层关联     |
-| **测试点禁布** | TestPoint          | Circle           | **必须闭合** | 直径       |
-| **热禁布**     | Thermal            | Polyline         | **必须闭合** | 热参数     |
-| **通用禁布**   | Generic            | 任意几何         | 根据用途     | 自定义     |
-
-#### **详细说明：**
-
-##### **a) 区域禁布（Component/Route/Via等）**
-
-- **几何类型**：Polyline（多边形）、Circle（圆形）、Composite
-- **必须闭合**：定义不可进入的区域
-- **可以有内洞**：通过多个ShapeElement实现
-- **Z轴范围**：可定义作用高度
-- **示例**：
-  ```xml
-  <!-- 矩形禁布区 -->
-  <foundation:PolyLine id="KEEPOUT_RECT">
-    <d2:Point>PT1</d2:Point> <!-- 定义区域边界 -->
-    <d2:Point>PT2</d2:Point>
-    <d2:Point>PT3</d2:Point>
-    <d2:Point>PT4</d2:Point>
-    <d2:Point>PT1</d2:Point> <!-- 闭合 -->
-  </foundation:PolyLine>
-  
-  <!-- 圆形禁布区 -->
-  <foundation:CircleCenter id="KEEPOUT_CIRCLE">
-    <d2:CenterPoint>PT_CENTER</d2:CenterPoint>
-    <d2:Diameter><property:Value>20.0</property:Value></d2:Diameter>
-  </foundation:CircleCenter>
-  ```
-
-##### **b) 路径禁布（布线限制）**
-- **几何类型**：Line（直线）、Polyline（折线）、Arc（圆弧）
-- **可以开放**：定义不可布线的路径
-- **厚度属性**：定义禁布宽度
-- **示例**：
-  ```xml
-  <!-- 直线禁布（高速信号隔离） -->
-  <foundation:Line id="KEEPOUT_LINE">
-    <d2:Point>PT_START</d2:Point>
-    <d2:Vector>PT_END</d2:Vector>
-  </foundation:Line>
-  
-  <!-- 带宽度的路径禁布 -->
-  <foundation:PolyLine id="KEEPOUT_PATH">
-    <d2:Thickness><property:Value>2.0</property:Value></d2:Thickness>
-    <d2:Point>PT1</d2:Point>
-    <d2:Point>PT2</d2:Point>
-    <d2:Point>PT3</d2:Point>
-    <!-- 开放路径 -->
-  </foundation:PolyLine>
-  ```
-
-##### **c) 特殊禁布类型**
-```xml
-<!-- 热禁布区（散热限制） -->
-<foundation:PolyLine id="THERMAL_KEEPOUT">
-  <!-- 定义散热器安装区域 -->
-</foundation:PolyLine>
-
-<!-- 测试点禁布（测试探针区域） -->
-<foundation:CircleCenter id="TESTPOINT_KEEPOUT">
-  <d2:CenterPoint>PT_TEST</d2:CenterPoint>
-  <d2:Diameter><property:Value>2.54</property:Value></d2:Diameter>
-</foundation:CircleCenter>
-
-<!-- 复合禁布（复杂形状） -->
-<foundation:CompositeCurve id="COMPLEX_KEEPOUT">
-  <d2:Curve>POLY_MAIN</d2:Curve>
-  <d2:Curve>ARC_CORNER</d2:Curve>
-  <d2:Curve>POLY_EXTENSION</d2:Curve>
-</foundation:CompositeCurve>
-```
-
-**几何有效性规则总结：**
-
-| 规则           | 板子 | 孔   | 封装轮廓 | 焊盘 | 丝印 | 区域禁布 | 路径禁布 |
-| -------------- | ---- | ---- | -------- | ---- | ---- | -------- | -------- |
-| **必须闭合**   | ✅    | ✅    | ✅        | ✅    | ❌    | ✅        | ❌        |
-| **不能自相交** | ✅    | ✅    | ✅        | ✅    | ✅    | ✅        | ✅        |
-| **最小点数**   | 3    | 3    | 3        | 3    | 2    | 3        | 2        |
-| **厚度属性**   | ❌    | ❌    | ❌        | ❌    | ✅    | ❌        | ✅        |
-| **内洞支持**   | ✅    | ❌    | ❌        | ❌    | ❌    | ✅        | ❌        |
-| **Z轴范围**    | ✅    | ✅    | ✅        | ✅    | ❌    | ✅        | ✅        |
-
-### 🎯 **关键要点：**
-
-1. **板子**：最灵活，支持复杂轮廓和挖洞
-2. **孔**：以圆形为主，但支持任意闭合形状
-3. **封装**：多部分组合，各子部分有不同规则
-4. **禁布区**：根据用途决定几何特性，最灵活的是路径禁布
-
-所有几何最终都通过IDX的**分层结构**（点→几何→曲线集→形状元素）来表示，并通过**Inverted属性**和**CSG布尔运算**实现复杂形状的构造。
-
-## 十二、IDX层和层堆叠定义与示例
-
-根据IDXv4.5协议文档，以下是层和层堆叠的详细定义和示例：
-
-### 🏗️ **层和层堆叠的IDX结构**
-
-#### **1. 简单案例：四层板堆叠**
+**完整示例**：
 
 ```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<foundation:EDMDDataSet 
-    xmlns:foundation="http://prostep.org/EDMD/5.0/foundation" 
-    xmlns:pdm="http://prostep.org/EDMD/5.0/pdm" 
-    xmlns:property="http://prostep.org/EDMD/5.0/property" 
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    
-    <foundation:Header>
-        <!-- 头部信息省略 -->
-    </foundation:Header>
-    
-    <foundation:Body>
-        
-        <!-- ============ 第1步：定义物理层 ============ -->
-        
-        <!-- 顶层阻焊层 -->
-        <foundation:Item id="ITEM_TOP_SOLDERMASK" geometryType="LAYER_SOLDERMASK">
-            <foundation:Name>Top Solder Mask</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>TOP_SOLDERMASK</pdm:ReferenceName>
-            <!-- 用户属性：颜色（自定义扩展） -->
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Color</foundation:ObjectName>
-                </property:Key>
-                <property:Value>#4CAF50</property:Value> <!-- 绿色 -->
-            </foundation:UserProperty>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Thickness</foundation:ObjectName>
-                </property:Key>
-                <property:Value>0.025</property:Value> <!-- 0.025mm -->
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- 顶层信号层 -->
-        <foundation:Item id="ITEM_TOP_SIGNAL" geometryType="LAYER_OTHERSIGNAL">
-            <foundation:Name>Top Signal Layer</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>TOP_SIGNAL</pdm:ReferenceName>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Color</foundation:ObjectName>
-                </property:Key>
-                <property:Value>#FF5722</property:Value> <!-- 橙色 -->
-            </foundation:UserProperty>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>CopperWeight</foundation:ObjectName>
-                </property:Key>
-                <property:Value>1</property:Value> <!-- 1oz -->
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- 内层1（电源层） -->
-        <foundation:Item id="ITEM_POWER" geometryType="LAYER_POWERGROUND">
-            <foundation:Name>Power Plane</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>POWER_PLANE</pdm:ReferenceName>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Color</foundation:ObjectName>
-                </property:Key>
-                <property:Value>#2196F3</property:Value> <!-- 蓝色 -->
-            </foundation:UserProperty>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>NetName</foundation:ObjectName>
-                </property:Key>
-                <property:Value>VCC_3V3</property:Value>
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- 内层2（地层） -->
-        <foundation:Item id="ITEM_GROUND" geometryType="LAYER_POWERGROUND">
-            <foundation:Name>Ground Plane</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>GROUND_PLANE</pdm:ReferenceName>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Color</foundation:ObjectName>
-                </property:Key>
-                <property:Value>#795548</property:Value> <!-- 棕色 -->
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- 底层信号层 -->
-        <foundation:Item id="ITEM_BOTTOM_SIGNAL" geometryType="LAYER_OTHERSIGNAL">
-            <foundation:Name>Bottom Signal Layer</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>BOTTOM_SIGNAL</pdm:ReferenceName>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Color</foundation:ObjectName>
-                </property:Key>
-                <property:Value>#FF9800</property:Value> <!-- 橙色 -->
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- 底层阻焊层 -->
-        <foundation:Item id="ITEM_BOTTOM_SOLDERMASK" geometryType="LAYER_SOLDERMASK">
-            <foundation:Name>Bottom Solder Mask</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>BOTTOM_SOLDERMASK</pdm:ReferenceName>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Color</foundation:ObjectName>
-                </property:Key>
-                <property:Value>#4CAF50</property:Value>
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- 顶层丝印层 -->
-        <foundation:Item id="ITEM_TOP_SILKSCREEN" geometryType="LAYER_SILKSCREEN">
-            <foundation:Name>Top Silkscreen</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>TOP_SILKSCREEN</pdm:ReferenceName>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Color</foundation:ObjectName>
-                </property:Key>
-                <property:Value>#FFFFFF</property:Value> <!-- 白色 -->
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- 介质层（核心材料） -->
-        <foundation:Item id="ITEM_DIELECTRIC1" geometryType="LAYER_DIELECTRIC">
-            <foundation:Name>Core Material FR4</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ReferenceName>CORE_1</pdm:ReferenceName>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Material</foundation:ObjectName>
-                </property:Key>
-                <property:Value>FR4</property:Value>
-            </foundation:UserProperty>
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>DielectricConstant</foundation:ObjectName>
-                </property:Key>
-                <property:Value>4.5</property:Value>
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- ============ 第2步：定义层堆叠 ============ -->
-        
-        <foundation:Item id="ITEM_STACKUP_MAIN" geometryType="LAYER_STACKUP">
-            <foundation:Name>Main 4-Layer Stackup</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            
-            <!-- 第1层：顶层阻焊 -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>TopSolderMask_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <!-- 定义此层在堆叠中的位置（Z范围） -->
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.600</property:Value> <!-- 相对于板底 -->
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.625</property:Value> <!-- 厚度0.025mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_TOP_SOLDERMASK</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第2层：顶层信号层 -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>TopSignal_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.575</property:Value>
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.600</property:Value> <!-- 铜厚0.035mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_TOP_SIGNAL</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第3层：介质层1（顶层铜箔下面的预浸料） -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Prepreg1_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.200</property:Value>
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.575</property:Value> <!-- 厚度0.375mm -->
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LayerType</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>Dielectric</property:Value>
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_DIELECTRIC1</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第4层：内层1（电源层） -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>PowerPlane_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.165</property:Value>
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.200</property:Value> <!-- 铜厚0.035mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_POWER</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第5层：核心介质层 -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Core_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.800</property:Value>
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>1.165</property:Value> <!-- 厚度0.365mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_DIELECTRIC1</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第6层：内层2（地层） -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>GroundPlane_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.765</property:Value>
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.800</property:Value> <!-- 铜厚0.035mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_GROUND</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第7层：介质层2（底层铜箔上面的预浸料） -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Prepreg2_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.035</property:Value>
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.765</property:Value> <!-- 厚度0.730mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_DIELECTRIC1</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第8层：底层信号层 -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>BottomSignal_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.000</property:Value> <!-- 板底 -->
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.035</property:Value> <!-- 铜厚0.035mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_BOTTOM_SIGNAL</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 第9层：底层阻焊 -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>BottomSolderMask_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>LowerBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>-0.025</property:Value> <!-- 板底下方 -->
-                </foundation:UserProperty>
-                <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                    <property:Key>
-                        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                        <foundation:ObjectName>UpperBound</foundation:ObjectName>
-                    </property:Key>
-                    <property:Value>0.000</property:Value> <!-- 厚度0.025mm -->
-                </foundation:UserProperty>
-                <pdm:Item>ITEM_BOTTOM_SOLDERMASK</pdm:Item>
-            </pdm:ItemInstance>
-            
-            <!-- 堆叠的引用名称 -->
-            <pdm:ReferenceName>MAIN_4LAYER_STACKUP</pdm:ReferenceName>
-            
-            <!-- 堆叠总厚度计算 -->
-            <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-                <property:Key>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>TotalThickness</foundation:ObjectName>
-                </property:Key>
-                <property:Value>1.650</property:Value> <!-- 1.65mm -->
-            </foundation:UserProperty>
-        </foundation:Item>
-        
-        <!-- ============ 第3步：定义层区域（Layer Zone） ============ -->
-        <!-- 将堆叠应用到板子的特定区域 -->
-        
-        <foundation:Item id="ITEM_BOARD_ZONE" geometryType="BOARD_AREA_RIGID">
-            <foundation:Name>Main Board Area</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectNameUpperBound>MainZone_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <!-- 引用层堆叠 -->
-                <pdm:AssembleToName>MAIN_4LAYER_STACKUP</pdm:AssembleToName>
-                <!-- 定义区域形状（简化，实际应为Polyline） -->
-                <pdm:Item>ITEM_ZONE_SHAPE</pdm:Item>
-            </pdm:ItemInstance>
-        </foundation:Item>
-        
-        <!-- ============ 第4步：定义板子 ============ -->
-        
-        <foundation:Item id="ITEM_BOARD" geometryType="BOARD_OUTLINE">
-            <foundation:Name>Main PCB Board</foundation:Name>
-            <pdm:ItemType>assembly</pdm:ItemType>
-            <!-- 板子轮廓几何省略 -->
-            <!-- 引用层区域 -->
-            <pdm:ItemInstance>
-                <pdm:InstanceName>
-                    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                    <foundation:ObjectName>Board_Instance</foundation:ObjectName>
-                </pdm:InstanceName>
-                <pdm:Item>ITEM_BOARD_ZONE</pdm:Item>
-            </pdm:ItemInstance>
-        </foundation:Item>
-        
-    </foundation:Body>
-    
-</foundation:EDMDDataSet>
-```
-
-#### 🎨 **层属性的表达方式**
-
-#### **1. 层名称（Layer Name）**
-- **主要方式**：`<foundation:Name>` 元素
-- **引用名称**：`<pdm:ReferenceName>`（用于其他元素引用）
-- **实例名称**：`<pdm:InstanceName>`（在堆叠中的实例）
-
-#### **2. 层类型/用途（Layer Type/Purpose）**
-- **标准方式**：`geometryType` 属性（IDXv4.0+）
-  ```xml
-  geometryType="LAYER_SOLDERMASK"
-  geometryType="LAYER_OTHERSIGNAL"
-  geometryType="LAYER_POWERGROUND"
-  geometryType="LAYER_SILKSCREEN"
-  geometryType="LAYER_DIELECTRIC"
-  ```
-- **传统方式**：UserProperty "LayerType"
-  ```xml
+<!-- =========== 1. 简化方式 - 物理层定义 =========== -->
+<!-- TEST_CASE: 简化方式 - 信号层定义 -->
+<foundation:Item id="ITEM_LAYER_SIGNAL_1" geometryType="LAYER_OTHERSIGNAL" IsAttributeChanged="false">
+  <foundation:Name>Signal Layer 1</foundation:Name>
+  <foundation:Description>Inner signal layer for routing</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  
+  <!-- 形状引用：可以引用走线、焊盘等形状 -->
+  <pdm:Shape>SHAPE_SIGNAL_TRACES_LAYER1</pdm:Shape>
+  
+  <!-- 参考名称：被层堆叠引用 -->
+  <pdm:ReferenceName>SIGNAL_LAYER_1</pdm:ReferenceName>
+  
+  <!-- 可选：定义层在堆叠中的Z轴位置 -->
   <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
     <property:Key>
       <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-      <foundation:ObjectName>LayerType</foundation:ObjectName>
+      <foundation:ObjectName>UpperBound</foundation:ObjectName>
     </property:Key>
-    <property:Value>SolderMask</property:Value>
+    <property:Value>0.600000</property:Value>
   </foundation:UserProperty>
-  ```
-
-#### **3. 层颜色（Layer Color）**
-
-- **非标准属性**：使用UserProperty自定义
-  
-  ```xml
   <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
     <property:Key>
       <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-      <foundation:ObjectName>Color</foundation:ObjectName>
+      <foundation:ObjectName>LowerBound</foundation:ObjectName>
     </property:Key>
-    <!-- 支持格式：十六进制、RGB、颜色名 -->
-    <property:Value>#4CAF50</property:Value>
-    <!-- 或 -->
-    <property:Value>rgb(76, 175, 80)</property:Value>
-    <!-- 或 -->
-    <property:Value>Green</property:Value>
+    <property:Value>0.598000</property:Value>
   </foundation:UserProperty>
-  ```
+</foundation:Item>
 
-**4. 其他层属性**
+<!-- TEST_CASE: 简化方式 - 介质层定义 -->
+<foundation:Item id="ITEM_LAYER_DIELECTRIC_1" geometryType="LAYER_DIELECTRIC" IsAttributeChanged="false">
+  <foundation:Name>Dielectric Layer 1</foundation:Name>
+  <foundation:Description>FR4 dielectric material</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>SHAPE_DIELECTRIC_AREA</pdm:Shape>
+  <pdm:ReferenceName>DIELECTRIC_LAYER_1</pdm:ReferenceName>
+  
+  <!-- 介质层属性 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>MATERIAL</foundation:ObjectName>
+    </property:Key>
+    <property:Value>FR4</property:Value>
+  </foundation:UserProperty>
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>DIELECTRIC_CONSTANT</foundation:ObjectName>
+    </property:Key>
+    <property:Value>4.5</property:Value>
+  </foundation:UserProperty>
+</foundation:Item>
 
-```xml
-<!-- 厚度 -->
-<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-  <property:Key>
-    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-    <foundation:ObjectName>Thickness</foundation:ObjectName>
-  </property:Key>
-  <property:Value>0.035</property:Value> <!-- 单位：毫米 -->
-</foundation:UserProperty>
+<!-- TEST_CASE: 简化方式 - 阻焊层定义 -->
+<foundation:Item id="ITEM_LAYER_SOLDERMASK_TOP" geometryType="LAYER_SOLDERMASK" IsAttributeChanged="false">
+  <foundation:Name>Top Solder Mask</foundation:Name>
+  <foundation:Description>Solder mask on top side</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>SHAPE_SOLDERMASK_TOP</pdm:Shape>
+  <pdm:ReferenceName>TOP_SOLDERMASK</pdm:ReferenceName>
+</foundation:Item>
 
-<!-- 铜厚（盎司） -->
-<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-  <property:Key>
-    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-    <foundation:ObjectName>CopperWeight</foundation:ObjectName>
-  </property:Key>
-  <property:Value>1</property:Value> <!-- 1oz -->
-</foundation:UserProperty>
+<!-- TEST_CASE: 简化方式 - 丝印层定义 -->
+<foundation:Item id="ITEM_LAYER_SILKSCREEN_TOP" geometryType="LAYER_SILKSCREEN" IsAttributeChanged="false">
+  <foundation:Name>Top Silkscreen</foundation:Name>
+  <foundation:Description>Silkscreen printing on top side</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>SHAPE_SILKSCREEN_TOP</pdm:Shape>
+  <pdm:ReferenceName>TOP_SILKSCREEN</pdm:ReferenceName>
+</foundation:Item>
 
-<!-- 材料类型 -->
-<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-  <property:Key>
-    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-    <foundation:ObjectName>Material</foundation:ObjectName>
-  </property:Key>
-  <property:Value>FR4</property:Value>
-</foundation:UserProperty>
+<!-- =========== 2. 简化方式 - 层堆叠定义 =========== -->
+<!-- TEST_CASE: 简化方式 - 层堆叠装配 -->
+<foundation:Item id="ITEM_STACKUP_MAIN" geometryType="LAYER_STACKUP" IsAttributeChanged="false">
+  <foundation:Name>Main Layer Stackup</foundation:Name>
+  <foundation:Description>4-layer PCB stackup</foundation:Description>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 参考名称：被板区域引用 -->
+  <pdm:ReferenceName>MAIN_STACKUP</pdm:ReferenceName>
+  
+  <!-- 层实例：按堆叠顺序从下到上 -->
+  
+  <!-- 底层阻焊 -->
+  <pdm:ItemInstance id="ITEMINST_BOTTOM_SOLDERMASK">
+    <pdm:Item>ITEM_LAYER_SOLDERMASK_BOTTOM</pdm:Item>
+    <pdm:InstanceName>Bottom_SolderMask</pdm:InstanceName>
+    <!-- Z轴范围定义 -->
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>0.000000</property:Value>
+    </foundation:UserProperty>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>-0.010000</property:Value>
+    </foundation:UserProperty>
+  </pdm:ItemInstance>
+  
+  <!-- 底层丝印 -->
+  <pdm:ItemInstance id="ITEMINST_BOTTOM_SILKSCREEN">
+    <pdm:Item>ITEM_LAYER_SILKSCREEN_BOTTOM</pdm:Item>
+    <pdm:InstanceName>Bottom_Silkscreen</pdm:InstanceName>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>-0.010000</property:Value>
+    </foundation:UserProperty>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>-0.015000</property:Value>
+    </foundation:UserProperty>
+  </pdm:ItemInstance>
+  
+  <!-- 底层铜层 -->
+  <pdm:ItemInstance id="ITEMINST_BOTTOM_COPPER">
+    <pdm:Item>ITEM_LAYER_SIGNAL_BOTTOM</pdm:Item>
+    <pdm:InstanceName>Bottom_Copper</pdm:InstanceName>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>0.035000</property:Value>
+    </foundation:UserProperty>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>0.000000</property:Value>
+    </foundation:UserProperty>
+  </pdm:ItemInstance>
+  
+  <!-- 介质层1 -->
+  <pdm:ItemInstance id="ITEMINST_DIELECTRIC_1">
+    <pdm:Item>ITEM_LAYER_DIELECTRIC_1</pdm:Item>
+    <pdm:InstanceName>Dielectric_1</pdm:InstanceName>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>0.600000</property:Value>
+    </foundation:UserProperty>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>0.035000</property:Value>
+    </foundation:UserProperty>
+  </pdm:ItemInstance>
+  
+  <!-- 继续添加更多层... -->
+</foundation:Item>
 
-<!-- 介电常数 -->
-<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-  <property:Key>
-    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-    <foundation:ObjectName>DielectricConstant</foundation:ObjectName>
-  </property:Key>
-  <property:Value>4.5</property:Value>
-</foundation:UserProperty>
+<!-- =========== 3. 传统方式 - 层技术定义 =========== -->
+<!-- TEST_CASE: 传统方式 - 层技术对象 -->
+<foundation:StratumTechnology id="STRATUM_TECH_SIGNAL" xsi:type="pdm:EDMDStratumTechnology">
+  <!-- 技术类型：Design表示设计层，Documentation表示文档层 -->
+  <pdm:TechnologyType>Design</pdm:TechnologyType>
+  
+  <!-- 层用途：定义层的功能 -->
+  <pdm:LayerPurpose>OtherSignal</pdm:LayerPurpose>
+  
+  <!-- 可选：层属性 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>THICKNESS</foundation:ObjectName>
+    </property:Key>
+    <property:Value>0.035</property:Value>
+  </foundation:UserProperty>
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>MATERIAL</foundation:ObjectName>
+    </property:Key>
+    <property:Value>Copper</property:Value>
+  </foundation:UserProperty>
+</foundation:StratumTechnology>
 
-<!-- 网络名称（电源/地层） -->
-<foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-  <property:Key>
-    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-    <foundation:ObjectName>NetName</foundation:ObjectName>
-  </property:Key>
-  <property:Value>VCC_3V3</property:Value>
-</foundation:UserProperty>
+<!-- =========== 4. 传统方式 - 层定义 =========== -->
+<!-- TEST_CASE: 传统方式 - 信号层Stratum对象 -->
+<foundation:Stratum id="STRATUM_SIGNAL_LAYER1" xsi:type="pdm:EDMDStratum">
+  <!-- 形状元素：该层上的走线、焊盘等 -->
+  <pdm:ShapeElement>SHAPE_SIGNAL_TRACES_LAYER1</pdm:ShapeElement>
+  <pdm:ShapeElement>SHAPE_SIGNAL_PADS_LAYER1</pdm:ShapeElement>
+  
+  <!-- 层类型 -->
+  <pdm:StratumType>DesignLayerStratum</pdm:StratumType>
+  
+  <!-- 层技术引用 -->
+  <pdm:StratumTechnology>STRATUM_TECH_SIGNAL</pdm:StratumTechnology>
+</foundation:Stratum>
+
+<!-- =========== 5. 刚柔结合板的多堆叠示例 =========== -->
+<!-- TEST_CASE: 简化方式 - 多个层堆叠用于刚柔结合板 -->
+<foundation:Item id="ITEM_STACKUP_RIGID_AREA" geometryType="LAYER_STACKUP" IsAttributeChanged="false">
+  <foundation:Name>Rigid Area Stackup</foundation:Name>
+  <foundation:Description>Stackup for rigid areas of flex-rigid board</foundation:Description>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  <pdm:ReferenceName>RIGID_STACKUP</pdm:ReferenceName>
+  <!-- 刚性区层实例 -->
+</foundation:Item>
+
+<foundation:Item id="ITEM_STACKUP_FLEX_AREA" geometryType="LAYER_STACKUP" IsAttributeChanged="false">
+  <foundation:Name>Flex Area Stackup</foundation:Name>
+  <foundation:Description>Stackup for flexible areas of flex-rigid board</foundation:Description>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  <pdm:ReferenceName>FLEX_STACKUP</pdm:ReferenceName>
+  <!-- 柔性区层实例（层数较少） -->
+</foundation:Item>
+
+<!-- =========== 6. 板区域引用层堆叠 =========== -->
+<!-- TEST_CASE: 板区域引用特定的层堆叠 -->
+<foundation:Item id="ITEM_BOARD_AREA_RIGID" geometryType="BOARD_AREA_RIGID" IsAttributeChanged="false">
+  <foundation:Name>Rigid Board Area</foundation:Name>
+  <foundation:Description>Rigid area of flex-rigid board</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>SHAPE_RIGID_AREA</pdm:Shape>
+  
+  <!-- 组装到层堆叠：此区域使用刚性堆叠 -->
+  <pdm:AssembleToName>RIGID_STACKUP</pdm:AssembleToName>
+</foundation:Item>
+
+<foundation:Item id="ITEM_BOARD_AREA_FLEX" geometryType="BOARD_AREA_FLEXIBLE" IsAttributeChanged="false">
+  <foundation:Name>Flexible Board Area</foundation:Name>
+  <foundation>Description>Flexible area of flex-rigid board</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>SHAPE_FLEX_AREA</pdm:Shape>
+  
+  <!-- 组装到层堆叠：此区域使用柔性堆叠 -->
+  <pdm:AssembleToName>FLEX_STACKUP</pdm:AssembleToName>
+</foundation:Item>
 ```
 
-### 📊 **层堆叠的Z轴坐标系**
+**注意事项**：
 
-IDX使用以下Z轴坐标系：
-- **Z=0**：板子底面（Bottom）的组件安装面
-- **正Z方向**：从底面指向顶面
-- **负Z值**：可能用于底面下方的层（如底面阻焊）
+1. **Z轴坐标系**：
+   - 使用绝对Z坐标，Z=0通常为板底面
+   - 层堆叠中的层按Z值从小到大排列（从下到上）
+   - 负Z值可用于板底面以下的层（如底面阻焊、丝印）
 
-在示例中：
-- 板底：Z=0
-- 板顶：Z=1.65mm（总厚度）
-- 底面阻焊：Z=-0.025到0（板底下方）
-- 层堆叠从Z=-0.025到Z=1.65
+2. **层类型选择**：
+   - `LAYER_OTHERSIGNAL`: 普通信号层
+   - `LAYER_POWERGROUND`: 电源/地层
+   - `LAYER_SOLDERMASK`: 阻焊层
+   - `LAYER_SILKSCREEN`: 丝印层
+   - `LAYER_DIELECTRIC`: 介质层
+   - `LAYER_SOLDERPASTE`: 锡膏层
 
-### 🎯 **关键概念总结**
+3. **层堆叠装配**：
+   - 使用`geometryType="LAYER_STACKUP"`的Assembly Item
+   - 按从下到上的顺序添加层实例
+   - 每个层实例定义其在该堆叠中的Z轴范围
 
-1. **物理层定义**：每个层是独立的EDMDItem，有geometryType和ReferenceName
-2. **层堆叠定义**：包含多个层实例，定义每个层的Z轴位置
-3. **层区域**：将堆叠应用到板子的特定区域
-4. **属性表达**：
-   - 名称：Name/ReferenceName
-   - 类型：geometryType 或 UserProperty
-   - 颜色：自定义UserProperty
-   - 其他：厚度、材料等通过UserProperty
+4. **刚柔结合板**：
+   - 需要多个不同的层堆叠
+   - 板区域通过`AssembleToName`引用相应的堆叠
+   - 柔性区域通常层数较少，厚度较薄
 
-这样设计的层系统既符合IDXv4.5标准，又足够灵活以支持各种复杂的PCB层叠结构。
+5. **传统方式差异**：
+   - 使用`EDMDStratum`和`EDMDStratumTechnology`对象
+   - 结构较深，但提供更详细的层技术属性
 
-## 十三、曲线集上下边界的计算
+6. **Z范围定义位置**：
+   - 可以在层定义时指定（推荐）
+   - 也可以在层堆叠实例中指定
+   - 确保所有层都有明确的Z范围
+
+**建模差异**：
+
+| 对比维度       | 传统建模                                    | 优化建模（IDXv4.0+）        |
+| -------------- | ------------------------------------------- | --------------------------- |
+| **层定义**     | 使用`EDMDStratum` + `EDMDStratumTechnology` | 使用`Item` + `geometryType` |
+| **层属性**     | 通过`StratumTechnology`的`LayerPurpose`定义 | 通过`geometryType`直接定义  |
+| **结构复杂度** | 较深，多层级                                | 扁平，直接使用Item          |
+| **灵活性**     | 支持复杂的层技术属性                        | 简化，但足够大多数应用      |
+| **推荐场景**   | 需要详细层技术信息                          | 大多数PCB设计               |
+
+**类型定义**：
+
+```typescript
+// ============= 物理层和层堆叠类型 =============
+
+/**
+ * 层技术类型枚举
+ */
+export enum LayerTechnologyType {
+  /** 信号层 */
+  SIGNAL = 'LAYER_OTHERSIGNAL',
+  /** 电源/地层 */
+  POWER_GROUND = 'LAYER_POWERGROUND',
+  /** 阻焊层 */
+  SOLDERMASK = 'LAYER_SOLDERMASK',
+  /** 丝印层 */
+  SILKSCREEN = 'LAYER_SILKSCREEN',
+  /** 介质层 */
+  DIELECTRIC = 'LAYER_DIELECTRIC',
+  /** 锡膏层 */
+  SOLDERPASTE = 'LAYER_SOLDERPASTE',
+  /** 胶层 */
+  GLUE = 'LAYER_GLUE',
+  /** 仅焊盘层 */
+  LANDS_ONLY = 'LAYER_LANDSONLY',
+}
+
+/**
+ * 层定义接口（简化方式）
+ */
+export interface LayerDefinition {
+  /** 层ID */
+  id: string;
+  /** 层类型 */
+  layerType: LayerTechnologyType;
+  /** 层名称 */
+  name: string;
+  /** 层描述 */
+  description?: string;
+  /** 参考名称（被堆叠引用） */
+  referenceName: string;
+  /** Z轴下边界 */
+  lowerBound: number;
+  /** Z轴上边界 */
+  upperBound: number;
+  /** 材料属性 */
+  material?: string;
+  /** 厚度 */
+  thickness?: number;
+  /** 介电常数（介质层） */
+  dielectricConstant?: number;
+}
+
+/**
+ * 层堆叠定义接口
+ */
+export interface LayerStackupDefinition {
+  /** 堆叠ID */
+  id: string;
+  /** 堆叠名称 */
+  name: string;
+  /** 堆叠描述 */
+  description?: string;
+  /** 参考名称（被板区域引用） */
+  referenceName: string;
+  /** 层列表（按从下到上的顺序） */
+  layers: LayerStackupLayer[];
+  /** 总厚度 */
+  totalThickness: number;
+}
+
+/**
+ * 层堆叠中的层定义
+ */
+export interface LayerStackupLayer {
+  /** 层引用名称 */
+  layerReferenceName: string;
+  /** 在此堆叠中的下边界 */
+  lowerBound: number;
+  /** 在此堆叠中的上边界 */
+  upperBound: number;
+  /** 材料（可覆盖层定义） */
+  material?: string;
+  /** 层用途（可覆盖层定义） */
+  layerPurpose?: string;
+}
+```
+
+**总结**：
+物理层和层堆叠是描述PCB层压结构的关键。简化建模使用`geometryType`属性直接标识层类型，并通过层堆叠装配组织层顺序。传统建模则使用更详细的技术对象。对于复杂设计（如刚柔结合板），需要多个层堆叠和相应的板区域定义。正确设置Z轴范围对于3D可视化至关重要。
+
+#### **第7层：3D模型(Model3D)**
+
+**完整示例**：
+
+```xml
+<!-- TEST_CASE: 3D模型定义 -->
+<foundation:Model3D id="MODEL_3D_001" xsi:type="pdm:EDMDModel3D">
+  <!-- 必选：3D模型标识符（文件名、URL或PDM系统ID） -->
+  <pdm:ModelIdentifier>capacitor_0402.step</pdm:ModelIdentifier>
+  <!-- 必选：MCAD格式类型 -->
+  <pdm:MCADFormat>STEP</pdm:MCADFormat>
+    
+  <!-- 可选：模型版本/配置（用于多配置模型文件） -->
+  <pdm:ModelVersion>REV_B</pdm:ModelVersion>
+  <!-- 可选：模型存储位置（相对路径或URL） -->
+  <pdm:ModelLocation>/library/components/</pdm:ModelLocation>
+  <!-- 可选：MCAD格式版本 -->
+  <pdm:MCADFormatVersion>AP214</pdm:MCADFormatVersion>
+  <!-- 可选：对齐变换矩阵（用于调整3D模型与ECAD封装的相对位置） -->
+  <pdm:Transformation xsi:type="pdm:EDMDTransformation">
+    <pdm:TransformationType>d3</pdm:TransformationType>
+    <pdm:xx>1.000000</pdm:xx>
+    <pdm:xy>0.000000</pdm:xy>
+    <pdm:xz>0.000000</pdm:xz>
+    <pdm:yx>0.000000</pdm:yx>
+    <pdm:yy>1.000000</pdm:yy>
+    <pdm:yz>0.000000</pdm:yz>
+    <pdm:zx>0.000000</pdm:zx>
+    <pdm:zy>0.000000</pdm:zy>
+    <pdm:zz>1.000000</pdm:zz>
+    <pdm:tx xsi:type="property:EDMDLengthProperty">
+      <property:Value>0.000000</property:Value>
+    </pdm:tx>
+    <pdm:ty xsi:type="property:EDMDLengthProperty">
+      <property:Value>0.000000</property:Value>
+    </pdm:ty>
+    <pdm:tz xsi:type="property:EDMDLengthProperty">
+      <property:Value>0.000000</property:Value>
+    </pdm:tz>
+  </pdm:Transformation>
+  <!-- 可选：变换参考（替代Transformation，使用MCAD坐标系对齐） -->
+  <pdm:TransformationReference>CSYS_TOP</pdm:TransformationReference>
+</foundation:Model3D>
+
+<!-- 在组件Item中引用3D模型 -->
+<foundation:Item id="CMP_0402_CAP_001">
+  <pdm:ItemType>single</pdm:ItemType>
+  <!-- 标准引用方式（IDXv4.0+） -->
+  <pdm:EDMD3DModel>MODEL_3D_001</pdm:EDMD3DModel>
+  <!-- 其他组件属性 -->
+  <pdm:Shape>SHAPE_0402</pdm:Shape>
+</foundation:Item>
+```
+
+**注意事项**
+
+1. **模型标识**：`ModelIdentifier`可以是文件名、URL或PDM系统ID，接收系统需要知道如何访问该模型
+2. **格式兼容性**：建议使用STEP格式确保跨平台兼容性，也可以使用原生格式（如SolidWorks、NX等）
+3. **坐标系对齐**：
+   - 使用`Transformation`矩阵进行精确的平移/旋转对齐
+   - 或使用`TransformationReference`引用MCAD模型中的坐标系
+   - 如果两者都提供，建议优先使用`TransformationReference`
+4. **模型位置**：`ModelLocation`是相对路径，需要与ECAD/MCAD系统约定的根目录配合使用
+
+**传统建模与优化建模差异**
+
+- **传统建模（IDXv3.0及以前）**：通过自定义`UserProperty`间接引用3D模型，缺乏标准属性命名和结构化数据
+- **优化建模（IDXv4.0+）**：使用标准`Model3D`对象，结构化数据易于解析，支持复杂变换关系和版本控制
+
+**类型定义**
+
+```ts
+/**
+ * 3D模型对象 (IDXv4.0+)
+ *
+ * @remarks
+ * 用于关联外部3D CAD模型到IDX组件
+ * 一个Model3D可以被多个组件引用
+ * REF: Section 6.2.1.3, Page 78-79
+ */
+export interface EDMDModel3D extends EDMDObject {
+  /** 3D模型标识符（必选） - 文件名、URL或PDM系统ID */
+  ModelIdentifier: string;
+  
+  /** MCAD格式类型（必选） */
+  MCADFormat: string;
+  
+  /** 模型版本/配置ID（可选） */
+  ModelVersion?: string;
+  
+  /** 模型存储位置（可选） - 相对路径或URL */
+  ModelLocation?: string;
+  
+  /** MCAD格式版本（可选） */
+  MCADFormatVersion?: string;
+  
+  /** 对齐变换矩阵（可选） */
+  Transformation?: EDMDTransformation;
+  
+  /** 变换参考（可选） - 替代Transformation，使用MCAD坐标系对齐 */
+  TransformationReference?: string;
+}
+
+/**
+ * 组件Item扩展：支持3D模型引用
+ */
+export interface EDMDItemWith3D extends EDMDItem {
+  /** 引用的3D模型（可选） - IDXv4.0+特性 */
+  EDMD3DModel?: string; // 引用Model3D对象的id
+}
+```
+
+#### **第8层：封装(Package)**
+
+**完整示例**：
+
+```xml
+<!-- TEST_CASE: 封装定义（组件级PackageName） -->
+<foundation:Item id="CMP_0402_CAP" xsi:type="pdm:EDMDItem">
+  <!-- 必选：Item类型 -->
+  <pdm:ItemType>single</pdm:ItemType>
+  
+  <!-- 必选：封装名称（PackageName） -->
+  <pdm:PackageName xsi:type="foundation:EDMDName">
+    <foundation:SystemScope>LIBRARY_SYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>CAP_0402_100NF_10V</foundation:ObjectName>
+  </pdm:PackageName>
+  
+  <!-- 可选：封装引脚定义（IDXv4.0+） -->
+  <pdm:PackagePin pinNumber="1" primary="true">
+    <!-- 引脚位置 -->
+    <d2:Point xsi:type="d2:EDMDCartesianPoint">
+      <d2:X xsi:type="property:EDMDLengthProperty">
+        <property:Value>-0.500000</property:Value>
+      </d2:X>
+      <d2:Y xsi:type="property:EDMDLengthProperty">
+        <property:Value>0.000000</property:Value>
+      </d2:Y>
+    </d2:Point>
+    <!-- 引脚形状（可选） -->
+    <pdm:Shape>PIN_SHAPE_RECT_1</pdm:Shape>
+  </pdm:PackagePin>
+  
+  <pdm:PackagePin pinNumber="2" primary="false">
+    <d2:Point xsi:type="d2:EDMDCartesianPoint">
+      <d2:X xsi:type="property:EDMDLengthProperty">
+        <property:Value>0.500000</property:Value>
+      </d2:X>
+      <d2:Y xsi:type="property:EDMDLengthProperty">
+        <property:Value>0.000000</property:Value>
+      </d2:Y>
+    </d2:Point>
+    <pdm:Shape>PIN_SHAPE_RECT_2</pdm:Shape>
+  </pdm:PackagePin>
+  
+  <!-- 可选：封装级别的用户属性 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key xsi:type="foundation:EDMDName">
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>PACKAGE_TYPE</foundation:ObjectName>
+    </property:Key>
+    <property:Value>SMD</property:Value>
+  </foundation:UserProperty>
+  
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key xsi:type="foundation:EDMDName">
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>PACKAGE_HEIGHT</foundation.ObjectName>
+    </property:Key>
+    <property:Value>0.600000</property:Value>
+  </foundation:UserProperty>
+  
+  <!-- 组件形状引用 -->
+  <pdm:Shape>COMP_SHAPE_0402</pdm:Shape>
+</foundation:Item>
+
+<!-- 实例中引用封装（通过Item引用） -->
+<foundation:Item id="INST_C1" xsi:type="pdm:EDMDItem">
+  <pdm:ItemType>assembly</pdm:ItemType>
+  <pdm:ItemInstance>
+    <pdm:Item>CMP_0402_CAP</pdm:Item>  <!-- 引用上面的封装定义 -->
+    <pdm:InstanceName xsi:type="foundation:EDMDName">
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>C1</foundation:ObjectName>
+    </pdm:InstanceName>
+    <!-- 实例变换 -->
+    <pdm:Transformation xsi:type="pdm:EDMDTransformation">
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <pdm:tx>10.000000</pdm:tx>
+      <pdm:ty>20.000000</pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+</foundation:Item>
+```
+
+**注意事项**
+
+1. **封装名称唯一性**：`PackageName`在上下文中应该唯一，用于标识特定封装类型
+2. **引脚定义**：
+   - `pinNumber`：引脚编号，字符串类型，支持字母数字组合（如"A1"、"1"、"PAD1"）
+   - `primary`：标识主引脚（通常是Pin 1），用于3D模型对齐
+   - 引脚位置是相对于封装原点的局部坐标
+3. **封装复用**：同一个封装定义（Item of type single）可以被多个实例引用
+4. **封装与实例分离**：封装定义描述几何和电气特性，实例描述位置和方向
+
+**传统建模与优化建模差异**
+
+- **传统建模**：封装信息主要通过自定义`UserProperty`描述，缺乏标准化的引脚定义
+- **优化建模（IDXv4.0+）**：
+  - 使用标准`PackageName`属性标识封装
+  - 支持结构化`PackagePin`元素定义引脚位置和形状
+  - 支持`primary`属性标识主引脚，便于3D模型对齐
+
+**类型定义**
+
+参考后文“第10层：项目实例和项目装配 (Item Assembly)”章节。
+
+#### **第9层：项目定义 (Item Single)**
+
+**完整示例**：
+
+```xml
+<!-- =========== 1. 板框 (BOARD_OUTLINE) =========== -->
+<!-- TEST_CASE: 简化方式 - 板框定义 -->
+<foundation:Item id="ITEM_BOARD_SINGLE" geometryType="BOARD_OUTLINE" IsAttributeChanged="false">
+  <foundation:Name>PCB Board</foundation:Name>
+  <foundation:Description>Main board outline with cutouts</foundation:Description>
+  <!-- 项目类型：single 表示定义，assembly 表示实例 -->
+  <pdm:ItemType>single</pdm:ItemType>
+  
+  <!-- 项目标识符（可选但推荐）：用于变更追踪 -->
+  <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:Number>BOARD001</foundation:Number>
+    <foundation:Version>1</foundation:Version>
+    <foundation:Revision>0</foundation:Revision>
+    <foundation:Sequence>0</foundation:Sequence>
+  </pdm:Identifier>
+  
+  <!-- 包名称（可选）：用于可重用封装 -->
+  <pdm:PackageName xsi:type="foundation:EDMDName">
+    <foundation:SystemScope>MCADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>BOARD_100x100</foundation:ObjectName>
+  </pdm:PackageName>
+  
+  <!-- 形状引用：简化方式直接引用ShapeElement -->
+  <pdm:Shape>SHAPE_BOARD_OUTLINE</pdm:Shape>
+  
+  <!-- 基线标记（可选）：表示是否为基线项目 -->
+  <pdm:BaseLine>
+    <property:Value>true</property:Value>
+  </pdm:BaseLine>
+</foundation:Item>
+
+<!-- =========== 2. 组件 (COMPONENT) =========== -->
+<!-- TEST_CASE: 简化方式 - 电气组件定义 -->
+<foundation:Item id="ITEM_COMPONENT_SINGLE" geometryType="COMPONENT" IsAttributeChanged="false">
+  <foundation:Name>Resistor 0805</foundation:Name>
+  <foundation:Description>0805 package resistor</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  
+  <!-- 标识符 -->
+  <pdm:Identifier>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:Number>R0805</foundation:Number>
+    <foundation:Version>1</foundation:Version>
+    <foundation:Revision>0</foundation:Revision>
+    <foundation:Sequence>0</foundation:Sequence>
+  </pdm:Identifier>
+  
+  <!-- 包名称：封装名称 -->
+  <pdm:PackageName>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>0805</foundation:ObjectName>
+  </pdm:PackageName>
+  
+  <!-- 引脚定义（可选）：用于3D模型对齐 -->
+  <pdm:PackagePin pinNumber="1" primary="true">
+    <d2:Point>PT_PIN1</d2:Point>
+    <pdm:Shape>SHAPE_PIN1</pdm:Shape>
+  </pdm:PackagePin>
+  <pdm:PackagePin pinNumber="2" primary="false">
+    <d2:Point>PT_PIN2</d2:Point>
+    <pdm:Shape>SHAPE_PIN2</pdm:Shape>
+  </pdm:PackagePin>
+  
+  <!-- 用户属性：元件参数 -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>RESISTANCE</foundation:ObjectName>
+    </property:Key>
+    <property:Value>1000</property:Value>
+  </foundation:UserProperty>
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>TOLERANCE</foundation:ObjectName>
+    </property:Key>
+    <property:Value>5</property:Value>
+  </foundation:UserProperty>
+  
+  <!-- 热属性（可选） -->
+  <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+    <property:Key>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>POWER_MAX</foundation:ObjectName>
+    </property:Key>
+    <property:Value>0.125</property:Value>
+  </foundation:UserProperty>
+  
+  <!-- 形状引用 -->
+  <pdm:Shape>SHAPE_RESISTOR_0805</pdm:Shape>
+  
+  <!-- 3D模型引用（可选） -->
+  <pdm:EDMD3DModel>MODEL_RESISTOR_0805</pdm:EDMD3DModel>
+</foundation:Item>
+
+<!-- =========== 3. 孔 (HOLE_PLATED) =========== -->
+<!-- TEST_CASE: 简化方式 - 电镀孔定义 -->
+<foundation:Item id="ITEM_HOLE_PLATED_SINGLE" geometryType="HOLE_PLATED" IsAttributeChanged="false">
+  <foundation:Name>Plated Hole 3mm</foundation:Name>
+  <foundation:Description>Plated through hole with 3mm diameter</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  
+  <!-- 标识符 -->
+  <pdm:Identifier>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:Number>PTH_3mm</foundation:Number>
+    <foundation:Version>1</foundation:Version>
+    <foundation:Revision>0</foundation:Revision>
+    <foundation:Sequence>0</foundation:Sequence>
+  </pdm:Identifier>
+  
+  <!-- 包名称：孔焊盘名称 -->
+  <pdm:PackageName>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>PAD_3mm</foundation:ObjectName>
+  </pdm:PackageName>
+  
+  <!-- 形状引用 -->
+  <pdm:Shape>SHAPE_PLATED_HOLE_3MM</pdm:Shape>
+</foundation:Item>
+
+<!-- =========== 4. 传统方式 - 板框定义 =========== -->
+<!-- TEST_CASE: 传统方式 - 使用Stratum作为Third Item -->
+<foundation:Item id="ITEM_BOARD_TRADITIONAL" IsAttributeChanged="false">
+  <foundation:Name>PCB Board Traditional</foundation:Name>
+  <foundation:Description>Board defined using traditional method</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  
+  <!-- 传统方式：没有geometryType属性 -->
+  
+  <!-- 形状引用：引用Stratum对象 -->
+  <pdm:Shape>STRATUM_BOARD</pdm:Shape>
+</foundation:Item>
+
+<!-- =========== 5. 传统方式 - 组件定义 =========== -->
+<!-- TEST_CASE: 传统方式 - 使用AssemblyComponent作为Third Item -->
+<foundation:Item id="ITEM_COMPONENT_TRADITIONAL" IsAttributeChanged="false">
+  <foundation:Name>Capacitor 0603</foundation:Name>
+  <foundation:Description>0603 capacitor using traditional method</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  
+  <pdm:PackageName>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:ObjectName>0603</foundation:ObjectName>
+  </pdm:PackageName>
+  
+  <!-- 传统方式：引用AssemblyComponent -->
+  <pdm:Shape>ASSEMBLY_COMP_CAPACITOR</pdm:Shape>
+</foundation:Item>
+
+<!-- =========== 6. 禁布区定义 =========== -->
+<!-- TEST_CASE: 简化方式 - 禁布区定义 -->
+<foundation:Item id="ITEM_KEEPOUT_SINGLE" geometryType="KEEPOUT_AREA_ROUTE" IsAttributeChanged="false">
+  <foundation:Name>Route Keepout Area</foundation:Name>
+  <foundation:Description>No routing allowed in this area</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>SHAPE_ROUTE_KEEPOUT</pdm:Shape>
+</foundation:Item>
+
+<!-- =========== 7. 弯曲区域定义 =========== -->
+<!-- TEST_CASE: 简化方式 - 弯曲区域定义 -->
+<foundation:Item id="ITEM_BEND_SINGLE" geometryType="BEND" IsAttributeChanged="false">
+  <foundation:Name>Bend Area</foundation:Name>
+  <foundation:Description>Flexible bend area</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>BEND_FLEX_AREA</pdm:Shape>
+</foundation:Item>
+
+<!-- =========== 8. 物理层定义 =========== -->
+<!-- TEST_CASE: 简化方式 - 阻焊层定义 -->
+<foundation:Item id="ITEM_LAYER_SOLDERMASK" geometryType="LAYER_SOLDERMASK" IsAttributeChanged="false">
+  <foundation:Name>Solder Mask Top</foundation:Name>
+  <foundation:Description>Top layer solder mask</foundation:Description>
+  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:Shape>SHAPE_SOLDERMASK_TOP</pdm:Shape>
+  <!-- 参考名称：被Stackup引用 -->
+  <pdm:ReferenceName>TOP_SOLDERMASK</pdm:ReferenceName>
+</foundation:Item>
+```
+
+**注意事项**：
+
+1. **geometryType使用**：
+   - 简化方式：必须使用`geometryType`属性
+   - 传统方式：不使用`geometryType`属性
+
+2. **形状引用差异**：
+   - 简化方式：直接引用`ShapeElement`
+   - 传统方式：引用Third Item（Stratum、AssemblyComponent等）
+
+3. **标识符重要性**：
+   - 不是必需的，但强烈推荐
+   - 用于变更跟踪（SendChanges消息）
+   - 确保`SystemScope`在协作中保持稳定
+
+4. **包名称（PackageName）**：
+   - 用于可重用封装（元件封装、孔类型）
+   - 相同包名称的项目可被多个实例引用
+
+5. **引脚定义（PackagePin）**：
+   - 用于精确的3D模型对齐
+   - primary=true标识主引脚（引脚1）
+
+6. **用户属性**：
+   - 用于存储元件参数（电阻值、容差等）
+   - 注意单位：只存储数值，不包含单位字符串
+
+7. **3D模型引用**：
+   - 提供更详细的几何信息
+   - 引用外部的3D模型文件
+
+**建模差异**：
+
+| 对比维度         | 传统建模                       | 优化建模（IDXv4.0+）     |
+| ---------------- | ------------------------------ | ------------------------ |
+| **geometryType** | 不使用                         | 必须使用                 |
+| **Shape引用**    | 引用Third Item对象             | 直接引用ShapeElement     |
+| **结构深度**     | Item→Third Item→ShapeElement   | Item→ShapeElement        |
+| **文件大小**     | 较大                           | 较小                     |
+| **可读性**       | 需要查看Third Item才能知道类型 | geometryType直接说明类型 |
+
+**类型定义**：
+
+```typescript
+// ============= 项目定义 (Item single) =============
+
+/**
+ * 项目类型枚举
+ *
+ * @remarks
+ * 定义EDMDItem的ItemType属性，标识项目是单个还是装配体
+ * REF: Section 4.1
+ */
+export enum ItemType {
+	/** 简单类型-项目定义 */
+	SINGLE = 'single',
+	/** 复杂类型-项目实例 */
+	ASSEMBLY = 'assembly',
+}
+
+/**
+ * 标识符定义
+ *
+ * @remarks
+ * 用于唯一标识一个项目，包含系统范围、编号、版本、修订和序列号
+ * REF: Section 5.2.1
+ */
+export interface EDMDIdentifier {
+	/** 系统范围，定义命名空间 */
+	SystemScope: string;
+	/** 项目编号，在系统范围内唯一 */
+	Number: string;
+	/** 版本号 */
+	Version: string;
+	/** 修订号 */
+	Revision: string;
+	/** 序列号，用于变更跟踪 */
+	Sequence: string;
+	/** 是否属性已变更 */
+	IsAttributeChanged?: boolean;
+	/** 是否持久化 */
+	Persistent?: boolean;
+	/** 是否创建者 */
+	IsOriginator?: boolean;
+}
+
+/**
+ * 项目定义（ItemType="single"）
+ *
+ * @remarks
+ * 表示项目的几何定义，可被多个实例引用
+ * REF: Section 4.1
+ * XML: <foundation:Item>
+ */
+export interface EDMDItemSingle extends EDMDObject {
+	/** 项目类型，必须为 "single" */
+	ItemType: ItemType.SINGLE;
+	/** 几何类型（简化方式使用，传统方式不使用） */
+	geometryType?: GeometryType;
+	/** 项目唯一标识符 */
+	Identifier?: EDMDIdentifier;
+	/** 包名称（用于可重用封装，如元件封装） */
+	PackageName?: EDMDName;
+	/** 参考名称（用于被其他项目引用，如层被Stackup引用） */
+	ReferenceName?: string;
+	/** 形状引用：简化方式引用ShapeElement，传统方式引用Third Item */
+	Shape: string;
+	/** 包引脚定义（用于封装引脚位置） */
+	PackagePins?: EDMPackagePin[];
+	/** 3D模型引用（可选） */
+	EDMD3DModel?: string;
+	/** 基线标记 */
+	BaseLine?: boolean;
+	/** 组装到名称（用于相对定位） */
+	AssembleToName?: string;
+}
+
+/**
+ * 包引脚定义
+ *
+ * @remarks
+ * 用于定义元件引脚的位置和形状
+ * REF: Section 6.2.1.5
+ */
+export interface EDMPackagePin {
+	/** 引脚编号 */
+	pinNumber: string;
+	/** 是否为主引脚 */
+	primary: boolean;
+	/** 引脚位置点引用 */
+	Point: string;
+	/** 引脚形状引用 */
+	Shape?: string;
+}
+
+/**
+ * 3D模型定义
+ *
+ * @remarks
+ * 用于引用外部3D模型文件
+ * REF: Section 6.2.1.3
+ */
+export interface EDMD3DModel extends EDMDObject {
+	/** 模型标识符（文件名或ID） */
+	ModelIdentifier: string;
+	/** 模型版本/配置 */
+	ModelVersion?: string;
+	/** 模型位置（相对路径） */
+	ModelLocation?: string;
+	/** MCAD格式 */
+	MCADFormat: string;
+	/** MCAD格式版本 */
+	MCADFormatVersion?: string;
+	/** 变换矩阵（用于对齐） */
+	Transformation?: string;
+	/** 变换参考（坐标系参考） */
+	TransformationReference?: string;
+}
+```
+
+#### **第10层：项目实例和项目装配 (Item Assembly)**
+
+**完整示例**：
+
+```xml
+<!-- =========== 1. 板装配 (BOARD_OUTLINE) =========== -->
+<!-- TEST_CASE: 简化方式 - 板装配，包含主板和多个孔 -->
+<foundation:Item id="ITEM_BOARD_ASSEMBLY" geometryType="BOARD_OUTLINE" IsAttributeChanged="false">
+  <foundation:Name>PCB Board Assembly</foundation:Name>
+  <foundation:Description>Complete board assembly with holes and cutouts</foundation:Description>
+  <!-- 项目类型：assembly 表示装配体 -->
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 标识符 -->
+  <pdm:Identifier>
+    <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+    <foundation:Number>BOARD_ASSEMBLY_001</foundation:Number>
+    <foundation:Version>1</foundation:Version>
+    <foundation:Revision>0</foundation:Revision>
+    <foundation:Sequence>0</foundation:Sequence>
+  </pdm:Identifier>
+  
+  <!-- 项目实例列表 -->
+  <pdm:ItemInstance id="ITEMINST_BOARD" IsAttributeChanged="false">
+    <!-- 引用的项目ID（ITEM_BOARD_SINGLE） -->
+    <pdm:Item>ITEM_BOARD_SINGLE</pdm:Item>
+    
+    <!-- 实例名称 -->
+    <pdm:InstanceName>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>Board_Instance_1</foundation:ObjectName>
+    </pdm:InstanceName>
+    
+    <!-- 变换矩阵：2D变换，定义位置和旋转 -->
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <!-- 旋转矩阵元素 -->
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <!-- 平移 -->
+      <pdm:tx>
+        <property:Value>0.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>0.000000</property:Value>
+      </pdm:ty>
+    </pdm:Transformation>
+    
+    <!-- Z轴偏移（可选，IDXv4.0+）：相对板表面的偏移 -->
+    <pdm:zOffset>
+      <property:Value>0.000000</property:Value>
+    </pdm:zOffset>
+    
+    <!-- 用户属性：实例特定信息 -->
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>LAYER</foundation:ObjectName>
+      </property:Key>
+      <property:Value>TOP</property:Value>
+    </foundation:UserProperty>
+  </pdm:ItemInstance>
+  
+  <!-- 孔实例1 -->
+  <pdm:ItemInstance id="ITEMINST_HOLE1" IsAttributeChanged="false">
+    <pdm:Item>ITEM_HOLE_PLATED_SINGLE</pdm:Item>
+    <pdm:InstanceName>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>Hole_Instance_1</foundation:ObjectName>
+    </pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <!-- 孔在板上的位置 -->
+      <pdm:tx>
+        <property:Value>20.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>30.000000</property:Value>
+      </pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+  
+  <!-- 孔实例2 -->
+  <pdm:ItemInstance id="ITEMINST_HOLE2" IsAttributeChanged="false">
+    <pdm:Item>ITEM_HOLE_PLATED_SINGLE</pdm:Item>
+    <pdm:InstanceName>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>Hole_Instance_2</foundation:ObjectName>
+    </pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <pdm:tx>
+        <property:Value>80.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>30.000000</property:Value>
+      </pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+  
+  <!-- 元件实例1 -->
+  <pdm:ItemInstance id="ITEMINST_COMP1" IsAttributeChanged="false">
+    <pdm:Item>ITEM_COMPONENT_SINGLE</pdm:Item>
+    <pdm:InstanceName>
+      <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+      <foundation:ObjectName>R1</foundation:ObjectName>
+    </pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <!-- 45度旋转 -->
+      <pdm:xx>0.707107</pdm:xx>
+      <pdm:xy>0.707107</pdm:xy>
+      <pdm:yx>-0.707107</pdm:yx>
+      <pdm:yy>0.707107</pdm:yy>
+      <pdm:tx>
+        <property:Value>50.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>50.000000</property:Value>
+      </pdm:ty>
+    </pdm:Transformation>
+    
+    <!-- 角色和权限（可选）：标记实例的所有权 -->
+    <foundation:RoleOnItemInstance>
+      <administration:RoleName>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>Owner</foundation:ObjectName>
+      </administration:RoleName>
+      <administration:RoleType>owner</administration:RoleType>
+      <administration:Category>Electrical</administration:Category>
+    </foundation:RoleOnItemInstance>
+  </pdm:ItemInstance>
+  
+  <!-- 组装到名称（可选）：相对定位参考 -->
+  <pdm:AssembleToName>TOP</pdm:AssembleToName>
+  
+  <!-- 基线标记 -->
+  <pdm:BaseLine>
+    <property:Value>true</property:Value>
+  </pdm:BaseLine>
+</foundation:Item>
+
+<!-- =========== 2. 元件装配 (COMPONENT) =========== -->
+<!-- TEST_CASE: 简化方式 - 元件装配，通常用于复杂元件 -->
+<foundation:Item id="ITEM_COMP_ASSEMBLY" geometryType="COMPONENT" IsAttributeChanged="false">
+  <foundation:Name>IC Assembly</foundation:Name>
+  <foundation:Description>IC with multiple sub-components</foundation:Description>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 子元件实例（如IC本体和散热器） -->
+  <pdm:ItemInstance id="ITEMINST_IC_BODY">
+    <pdm:Item>ITEM_IC_BODY_SINGLE</pdm:Item>
+    <pdm:InstanceName>IC_Body</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <pdm:tx>
+        <property:Value>0.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>0.000000</property:Value>
+      </pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+  
+  <pdm:ItemInstance id="ITEMINST_HEATSINK">
+    <pdm:Item>ITEM_HEATSINK_SINGLE</pdm:Item>
+    <pdm:InstanceName>Heatsink</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <pdm:tx>
+        <property:Value>0.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>5.000000</property:Value>
+      </pdm:ty>
+      <!-- Z轴偏移：散热器在IC上方5mm -->
+      <pdm:zOffset>
+        <property:Value>5.000000</property:Value>
+      </pdm:zOffset>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+</foundation:Item>
+
+<!-- =========== 3. 柔性板弯曲装配 (BEND) =========== -->
+<!-- TEST_CASE: 简化方式 - 弯曲装配，用于柔性板 -->
+<foundation:Item id="ITEM_BEND_ASSEMBLY" geometryType="BEND" IsAttributeChanged="false">
+  <foundation:Name>Flex Bend Assembly</foundation:Name>
+  <foundation:Description>Flexible board bend area</foundation:Description>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 弯曲区域实例 -->
+  <pdm:ItemInstance id="ITEMINST_BEND_AREA" bendSequenceNumber="1">
+    <!-- bendSequenceNumber: 弯曲顺序（1表示第一个弯曲） -->
+    <pdm:Item>ITEM_BEND_SINGLE</pdm:Item>
+    <pdm:InstanceName>Bend_Area_1</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <pdm:tx>
+        <property:Value>30.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>20.000000</property:Value>
+      </pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+</foundation:Item>
+
+<!-- =========== 4. 层堆叠装配 (LAYER_STACKUP) =========== -->
+<!-- TEST_CASE: 简化方式 - 层堆叠装配 -->
+<foundation:Item id="ITEM_STACKUP_ASSEMBLY" geometryType="LAYER_STACKUP" IsAttributeChanged="false">
+  <foundation:Name>Layer Stackup</foundation:Name>
+  <foundation:Description>PCB layer stackup definition</foundation:Description>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 参考名称：被板区域引用 -->
+  <pdm:ReferenceName>PCB_Stackup</pdm:ReferenceName>
+  
+  <!-- 层实例（按堆叠顺序） -->
+  <pdm:ItemInstance id="ITEMINST_TOP_SOLDERMASK">
+    <pdm:Item>ITEM_LAYER_SOLDERMASK</pdm:Item>
+    <pdm:InstanceName>Top_SolderMask</pdm:InstanceName>
+    <!-- 用户属性定义层类型和Z范围 -->
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>LayerType</foundation:ObjectName>
+      </property:Key>
+      <property:Value>SolderMask</property:Value>
+    </foundation:UserProperty>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>UpperBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>1.610000</property:Value>
+    </foundation:UserProperty>
+    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+      <property:Key>
+        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
+        <foundation:ObjectName>LowerBound</foundation:ObjectName>
+      </property:Key>
+      <property:Value>1.600000</property:Value>
+    </foundation:UserProperty>
+  </pdm:ItemInstance>
+  
+  <!-- 更多层实例... -->
+</foundation:Item>
+
+<!-- =========== 5. 传统方式 - 板装配 =========== -->
+<!-- TEST_CASE: 传统方式 - 没有geometryType -->
+<foundation:Item id="ITEM_BOARD_ASSEMBLY_TRADITIONAL" IsAttributeChanged="false">
+  <foundation:Name>Board Assembly Traditional</foundation:Name>
+  <foundation:Description>Traditional board assembly</foundation:Description>
+  <pdm:ItemType>assembly</pdm:ItemType>
+  
+  <!-- 传统方式没有geometryType -->
+  
+  <!-- 实例引用传统方式定义的项目 -->
+  <pdm:ItemInstance id="ITEMINST_BOARD_TRAD">
+    <pdm:Item>ITEM_BOARD_TRADITIONAL</pdm:Item>
+    <pdm:InstanceName>Board_Instance_Trad</pdm:InstanceName>
+    <pdm:Transformation>
+      <pdm:TransformationType>d2</pdm:TransformationType>
+      <pdm:xx>1.000000</pdm:xx>
+      <pdm:xy>0.000000</pdm:xy>
+      <pdm:yx>0.000000</pdm:yx>
+      <pdm:yy>1.000000</pdm:yy>
+      <pdm:tx>
+        <property:Value>0.000000</property:Value>
+      </pdm:tx>
+      <pdm:ty>
+        <property:Value>0.000000</property:Value>
+      </pdm:ty>
+    </pdm:Transformation>
+  </pdm:ItemInstance>
+</foundation:Item>
+```
+
+**注意事项**：
+
+1. **几何类型继承**：
+   - 简化方式：Assembly通常继承其包含的Item的geometryType
+   - 对于板装配，geometryType通常为`BOARD_OUTLINE`
+   - 对于元件装配，geometryType通常为`COMPONENT`
+
+2. **变换矩阵**：
+   - `TransformationType`: `d2`表示2D变换，`d3`表示3D变换
+   - 2D变换用于大多数PCB元件定位
+   - 3D变换用于特殊3D定位需求
+
+3. **Z轴偏移**：
+   - IDXv4.0+引入，用于相对定位
+   - 正值表示远离参考表面，负值表示朝向参考表面
+   - 与`AssembleToName`配合使用
+
+4. **弯曲顺序**：
+   - `bendSequenceNumber`定义柔性板弯曲顺序
+   - 数字越小，弯曲越早执行
+
+5. **角色和权限**：
+   - 用于协作权限控制
+   - 可以标记实例为只读或特定系统的专有
+
+6. **实例引用完整性**：
+   - `Item`属性必须引用已定义的Item Single的ID
+   - 所有引用的Item必须已正确定义
+
+7. **装配层次**：
+   - Assembly可以包含其他Assembly的实例
+   - 支持多层次嵌套结构
+
+**建模差异**：
+
+| 对比维度         | 传统建模                     | 优化建模（IDXv4.0+）            |
+| ---------------- | ---------------------------- | ------------------------------- |
+| **geometryType** | 通常不使用                   | 推荐使用，提高可读性            |
+| **结构深度**     | 较深，包含Third Item层       | 较浅，直接引用ShapeElement      |
+| **权限控制**     | 可能缺少角色定义             | 支持精细的角色权限              |
+| **相对定位**     | 较少使用AssembleToName       | 充分利用AssembleToName和zOffset |
+| **弯曲支持**     | 可能不支持bendSequenceNumber | 完整支持柔性板特性              |
+
+**类型定义**：
+
+```typescript
+// ============= 项目实例和项目装配 (Item assembly) =============
+
+/**
+ * 变换类型枚举
+ *
+ * @remarks
+ * 定义变换矩阵的类型
+ */
+export enum TransformationType {
+  /** 2D变换 */
+  D2 = 'd2',
+  /** 3D变换 */
+  D3 = 'd3',
+}
+
+/**
+ * 变换矩阵定义
+ *
+ * @remarks
+ * 用于定义项目的平移、旋转和缩放
+ * REF: Section 4.1.1.1
+ */
+export interface EDMDTransformation {
+  /** 变换类型 */
+  TransformationType: TransformationType;
+  /** 2D/3D变换矩阵元素 */
+  xx: number;
+  xy: number;
+  yx?: number;
+  yy?: number;
+  zx?: number;
+  zy?: number;
+  zz?: number;
+  /** 平移向量 */
+  tx: EDMDLengthProperty;
+  ty: EDMDLengthProperty;
+  tz?: EDMDLengthProperty;
+}
+
+/**
+ * 角色定义
+ *
+ * @remarks
+ * 用于定义实例的协作权限
+ * REF: Section 4.1.3
+ */
+export interface RoleOnItemInstance {
+  /** 角色名称 */
+  RoleName: EDMDName;
+  /** 角色类型 */
+  RoleType: 'owner' | 'designer' | 'reviewer';
+  /** 类别（电气/机械） */
+  Category: 'Electrical' | 'Mechanical' | string;
+  /** 上下文（实例ID） */
+  Context?: string;
+}
+
+/**
+ * 项目实例定义
+ *
+ * @remarks
+ * 表示项目定义的一个具体实例，包含位置和变换信息
+ * REF: Section 4.1.1.1
+ */
+export interface EDMDItemInstance extends EDMDObject {
+  /** 引用的项目ID */
+  Item: string;
+  /** 实例名称 */
+  InstanceName?: EDMDName;
+  /** 变换矩阵 */
+  Transformation?: EDMDTransformation;
+  /** Z轴偏移（相对定位，IDXv4.0+） */
+  zOffset?: EDMDLengthProperty;
+  /** 弯曲序列号（用于柔性板弯曲顺序） */
+  bendSequenceNumber?: number;
+  /** 实例用户区域层名称（用于Other Outline映射到ECAD层） */
+  InstanceUserAreaLayerName?: EDMDName;
+  /** 用户属性列表 */
+  UserProperties?: EDMDUserSimpleProperty[];
+  /** 角色和权限信息 */
+  Roles?: RoleOnItemInstance[];
+}
+
+/**
+ * 项目装配（ItemType="assembly"）
+ *
+ * @remarks
+ * 表示项目的一个或多个实例，包含几何类型和实例列表
+ * REF: Section 4.1
+ */
+export interface EDMDItemAssembly extends EDMDObject {
+  /** 项目类型，必须为 "assembly" */
+  ItemType: ItemType.ASSEMBLY;
+  /** 几何类型（简化方式的关键属性） */
+  geometryType?: GeometryType;
+  /** 项目唯一标识符 */
+  Identifier?: EDMDIdentifier;
+  /** 项目实例列表 */
+  ItemInstances: EDMDItemInstance[];
+  /** 组装到名称（用于相对层/表面定位） */
+  AssembleToName?: string;
+  /** 参考名称（便于其他项目引用） */
+  ReferenceName?: string;
+  /** 基线标记 */
+  BaseLine?: boolean;
+}
+```
+
+**总结**：
+项目实例和装配层是IDX中实现协作的核心。它通过实例化Item定义，并组合它们形成完整的PCB设计。简化建模通过`geometryType`属性提高了可读性，同时提供了更灵活的相对定位机制（`AssembleToName`和`zOffset`）。传统建模则保持了向后兼容性，但结构较深。
+
+
+
+## 曲线集上下边界计算逻辑
 
 根据 **PSI5 IDXv4.5 实施指南**，曲线集（`CurveSet2d`）的 `LowerBound` 和 `UpperBound` 计算方式如下：
 
@@ -2739,19 +2959,14 @@ interface ZCoordinateCalculation {
 export enum BoundSpecialValues {
   /** 未定义下边界：向下无限延伸 */
   UNDEFINED_LOWER = 'unbounded_bottom',
-  
   /** 未定义上边界：向上无限延伸 */
   UNDEFINED_UPPER = 'unbounded_top',
-  
   /** 值=0且参考面=板底：表示从板底表面开始 */
   BOARD_BOTTOM_SURFACE = 0,
-  
   /** 当 UpperBound=LowerBound 时：表示无限薄的面（如铜箔） */
   ZERO_THICKNESS = 'zero_thickness',
-  
   /** 负值：在参考面下方 */
   BELOW_REFERENCE = 'negative',
-  
   /** 正值：在参考面上方 */
   ABOVE_REFERENCE = 'positive'
 }
@@ -2785,435 +3000,3 @@ export enum BoundSpecialValues {
    - 参考面选择：建议统一使用**上表面**（TOP）作为参考
 
 这些规则在文档的 **第21-22页（4.1.1节）** 和 **第94-95页（6.5节）** 有详细说明。
-
-## 十四、挖洞图元实现
-
-TODO
-
-## 十五、元件建模
-
-### 📦 **封装（Package）vs 元件（Component）概念**
-
-```typescript
-/**
- * 封装 vs 元件的区别：
- */
-interface PackageVsComponent {
-  // 封装（Package）：物理形式，无3D模型
-  package: {
-    definition: '2D轮廓 + 引脚位置',
-    contains: '引脚几何、焊盘形状、丝印等',
-    analogy: 'PCB上的"脚印"'
-  };
-  
-  // 元件（Component）：具体实例，有3D模型
-  component: {
-    definition: '封装 + 3D模型 + 电特性',
-    contains: '封装引用、3D模型、热属性、电属性等',
-    analogy: '实际安装在PCB上的零件'
-  };
-}
-```
-
-## 🎯 **完整案例：0805电阻**
-
-#### **1. 封装定义（Package）**
-```xml
-<!-- 0805电阻封装定义 -->
-<foundation:Item id="PKG_RES_0805" geometryType="PACKAGE">
-    <foundation:Name>RESISTOR_0805</foundation:Name>
-    <foundation:Description>0805 Resistor Package</foundation:Description>
-    <pdm:ItemType>single</pdm:ItemType>
-    
-    <!-- 封装标识符 -->
-    <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
-        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-        <foundation:Number>PKG-0805-RES</foundation:Number>
-        <foundation:Version>1</foundation:Version>
-        <foundation:Revision>0</foundation:Revision>
-        <foundation:Sequence>0</foundation:Sequence>
-    </pdm:Identifier>
-    
-    <!-- 封装名称（用于库引用） -->
-    <pdm:PackageName xsi:type="foundation:EDMDName">
-        <foundation:SystemScope>LIBRARY</foundation:SystemScope>
-        <foundation:ObjectName>0805</foundation:ObjectName>
-    </pdm:PackageName>
-    
-    <!-- ============ 引脚定义 ============ -->
-    
-    <!-- 引脚1 -->
-    <pdm:PackagePin pinNumber="1" primary="true">
-        <!-- 引脚位置（相对封装原点） -->
-        <d2:Point>
-            <foundation:CartesianPoint id="PIN1_POS" xsi:type="d2:EDMDCartesianPoint">
-                <d2:X xsi:type="property:EDMDLengthProperty">
-                    <property:Value>-0.95</property:Value>  <!-- -0.95mm -->
-                </d2:X>
-                <d2:Y xsi:type="property:EDMDLengthProperty">
-                    <property:Value>0</property:Value>
-                </d2:Y>
-            </foundation:CartesianPoint>
-        </d2:Point>
-        
-        <!-- 引脚形状（矩形焊盘） -->
-        <pdm:Shape>PIN1_SHAPE</pdm:Shape>
-    </pdm:PackagePin>
-    
-    <!-- 引脚2 -->
-    <pdm:PackagePin pinNumber="2" primary="false">
-        <d2:Point>
-            <foundation:CartesianPoint id="PIN2_POS" xsi:type="d2:EDMDCartesianPoint">
-                <d2:X xsi:type="property:EDMDLengthProperty">
-                    <property:Value>0.95</property:Value>  <!-- 0.95mm -->
-                </d2:X>
-                <d2:Y xsi:type="property:EDMDLengthProperty">
-                    <property:Value>0</property:Value>
-                </d2:Y>
-            </foundation:CartesianPoint>
-        </d2:Point>
-        <pdm:Shape>PIN2_SHAPE</pdm:Shape>
-    </pdm:PackagePin>
-    
-    <!-- ============ 封装外形几何 ============ -->
-    
-    <!-- 封装本体形状（矩形） -->
-    <pdm:Shape>PKG_BODY_SHAPE</pdm:Shape>
-    
-</foundation:Item>
-```
-
-#### **2. 引脚形状定义**
-```xml
-<!-- 引脚1形状：1.3mm x 1.5mm矩形 -->
-<foundation:CurveSet2d id="PIN1_CURVE" xsi:type="d2:EDMDCurveSet2d">
-    <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-    <d2:LowerBound xsi:type="property:EDMDLengthProperty">
-        <property:Value>0</property:Value>
-    </d2:LowerBound>
-    <d2:UpperBound xsi:type="property:EDMDLengthProperty">
-        <property:Value>0.1</property:Value>  <!-- 焊盘高度0.1mm -->
-    </d2:UpperBound>
-    
-    <!-- 矩形定义（围绕引脚位置） -->
-    <d2:DetailedGeometricModelElement>PIN1_RECT</d2:DetailedGeometricModelElement>
-</foundation:CurveSet2d>
-
-<foundation:PolyLine id="PIN1_RECT" xsi:type="d2:EDMDPolyLine">
-    <!-- 以引脚中心为原点，创建矩形 -->
-    <d2:Point>
-        <foundation:CartesianPoint id="PIN1_PT1">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.65</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.75</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="PIN1_PT2">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>0.65</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.75</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="PIN1_PT3">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>0.65</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>0.75</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="PIN1_PT4">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.65</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>0.75</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="PIN1_PT5">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.65</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.75</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-</foundation:PolyLine>
-
-<foundation:ShapeElement id="PIN1_SHAPE" xsi:type="pdm:EDMDShapeElement">
-    <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-    <pdm:Inverted>false</pdm:Inverted>
-    <pdm:DefiningShape>PIN1_CURVE</pdm:DefiningShape>
-</foundation:ShapeElement>
-
-<!-- 引脚2形状（与引脚1相同，可以复用或独立定义） -->
-<foundation:ShapeElement id="PIN2_SHAPE" xsi:type="pdm:EDMDShapeElement">
-    <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-    <pdm:Inverted>false</pdm:Inverted>
-    <pdm:DefiningShape>PIN1_CURVE</pdm:DefiningShape>
-</foundation:ShapeElement>
-```
-
-#### **3. 封装本体形状**
-```xml
-<!-- 封装本体形状：2.0mm x 1.25mm x 0.5mm -->
-<foundation:CurveSet2d id="BODY_CURVE" xsi:type="d2:EDMDCurveSet2d">
-    <pdm:ShapeDescriptionType>GeometricModel</pdm:ShapeDescriptionType>
-    <d2:LowerBound xsi:type="property:EDMDLengthProperty">
-        <property:Value>0</property:Value>
-    </d2:LowerBound>
-    <d2:UpperBound xsi:type="property:EDMDLengthProperty">
-        <property:Value>0.5</property:Value>  <!-- 封装高度0.5mm -->
-    </d2:UpperBound>
-    
-    <!-- 矩形定义 -->
-    <d2:DetailedGeometricModelElement>BODY_RECT</d2:DetailedGeometricModelElement>
-</foundation:CurveSet2d>
-
-<foundation:PolyLine id="BODY_RECT" xsi:type="d2:EDMDPolyLine">
-    <!-- 封装外形 -->
-    <d2:Point>
-        <foundation:CartesianPoint id="BODY_PT1">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>-1.0</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.625</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="BODY_PT2">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>1.0</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.625</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="BODY_PT3">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>1.0</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>0.625</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="BODY_PT4">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>-1.0</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>0.625</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-    <d2:Point>
-        <foundation:CartesianPoint id="BODY_PT5">
-            <d2:X xsi:type="property:EDMDLengthProperty">
-                <property:Value>-1.0</property:Value>
-            </d2:X>
-            <d2:Y xsi:type="property:EDMDLengthProperty">
-                <property:Value>-0.625</property:Value>
-            </d2:Y>
-        </foundation:CartesianPoint>
-    </d2:Point>
-</foundation:PolyLine>
-
-<foundation:ShapeElement id="PKG_BODY_SHAPE" xsi:type="pdm:EDMDShapeElement">
-    <pdm:ShapeElementType>FeatureShapeElement</pdm:ShapeElementType>
-    <pdm:Inverted>false</pdm:Inverted>
-    <pdm:DefiningShape>BODY_CURVE</pdm:DefiningShape>
-</foundation:ShapeElement>
-```
-
-#### **4. 元件定义（Component）包含3D模型**
-```xml
-<!-- 具体电阻元件：10KΩ 0805 -->
-<foundation:Item id="COMP_10K_0805" geometryType="COMPONENT">
-    <foundation:Name>10K_0805_RESISTOR</foundation:Name>
-    <foundation:Description>10K Ohm 0805 Resistor</foundation:Description>
-    <pdm:ItemType>single</pdm:ItemType>
-    
-    <!-- 元件标识符 -->
-    <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
-        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-        <foundation:Number>COMP-10K-0805</foundation:Number>
-        <foundation:Version>1</foundation:Version>
-        <foundation:Revision>0</foundation:Revision>
-        <foundation:Sequence>0</foundation:Sequence>
-    </pdm:Identifier>
-    
-    <!-- 引用封装 -->
-    <pdm:PackageName xsi:type="foundation:EDMDName">
-        <foundation:SystemScope>LIBRARY</foundation:SystemScope>
-        <foundation:ObjectName>0805</foundation:ObjectName>
-    </pdm:PackageName>
-    
-    <!-- ============ 电特性属性 ============ -->
-    
-    <!-- 电阻值 -->
-    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-        <property:Key xsi:type="foundation:EDMDName">
-            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-            <foundation:ObjectName>RESISTANCE</foundation:ObjectName>
-        </property:Key>
-        <property:Value>10000</property:Value>  <!-- 10KΩ -->
-    </foundation:UserProperty>
-    
-    <!-- 容差 -->
-    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-        <property:Key xsi:type="foundation:EDMDName">
-            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-            <foundation:ObjectName>TOLERANCE</foundation:ObjectName>
-        </property:Key>
-        <property:Value>1</property:Value>  <!-- 1% -->
-    </foundation:UserProperty>
-    
-    <!-- 功率 -->
-    <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-        <property:Key xsi:type="foundation:EDMDName">
-            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-            <foundation:ObjectName>POWER_MAX</foundation:ObjectName>
-        </property:Key>
-        <property:Value>0.125</property:Value>  <!-- 1/8W -->
-    </foundation:UserProperty>
-    
-    <!-- ============ 3D模型信息 ============ -->
-    
-    <!-- 关键：3D模型关联到元件，而不是封装 -->
-    <pdm:EDMD3DModel>MODEL_3D_0805_RESISTOR</pdm:EDMD3DModel>
-    
-    <!-- 引用封装形状（2D轮廓） -->
-    <pdm:Shape>PKG_BODY_SHAPE</pdm:Shape>
-    
-</foundation:Item>
-```
-
-#### **5. 3D模型定义**
-
-```xml
-<!-- 3D模型信息 -->
-<foundation:Model3D id="MODEL_3D_0805_RESISTOR">
-    <pdm:ModelIdentifier>Resistor_0805.step</pdm:ModelIdentifier>
-    <pdm:ModelVersion>1.0</pdm:ModelVersion>
-    
-    <!-- 模型位置（相对路径） -->
-    <pdm:ModelLocation>/3D_Models/Passives/Resistors/</pdm:ModelLocation>
-    
-    <!-- 文件格式 -->
-    <pdm:MCADFormat>STEP</pdm:MCADFormat>
-    <pdm:MCADFormatVersion>AP214</pdm:MCADFormatVersion>
-    
-    <!-- 变换矩阵（用于对齐3D模型与2D封装） -->
-    <pdm:Transformation xsi:type="pdm:EDMDTransformation">
-        <pdm:TransformationType>d3</pdm:TransformationType>
-        <!-- 单位矩阵 -->
-        <pdm:xx>1.0</pdm:xx>
-        <pdm:xy>0.0</pdm:xy>
-        <pdm:xz>0.0</pdm:xz>
-        <pdm:yx>0.0</pdm:yx>
-        <pdm:yy>1.0</pdm:yy>
-        <pdm:yz>0.0</pdm:yz>
-        <pdm:zx>0.0</pdm:zx>
-        <pdm:zy>0.0</pdm:zy>
-        <pdm:zz>1.0</pdm:zz>
-        <!-- 偏移：如果3D模型原点不在封装中心 -->
-        <pdm:tx xsi:type="property:EDMDLengthProperty">
-            <property:Value>0.0</property:Value>
-        </pdm:tx>
-        <pdm:ty xsi:type="property:EDMDLengthProperty">
-            <property:Value>0.0</property:Value>
-        </pdm:ty>
-        <pdm:tz xsi:type="property:EDMDLengthProperty">
-            <property:Value>0.25</property:Value>  <!-- 向上偏移0.25mm -->
-        </pdm:tz>
-    </pdm:Transformation>
-    
-    <!-- 可选：变换参考（如坐标系名称） -->
-    <pdm:TransformationReference>CSYS_0805_CENTER</pdm:TransformationReference>
-</foundation:Model3D>
-```
-
-#### **6. 元件实例（安装在PCB上）**
-```xml
-<!-- PCB上的电阻实例 -->
-<foundation:Item id="INST_R1" geometryType="COMPONENT">
-    <foundation:Name>R1</foundation:Name>
-    <foundation:Description>10K Resistor R1</foundation:Description>
-    <pdm:ItemType>assembly</pdm:ItemType>
-    
-    <!-- 实例标识符 -->
-    <pdm:Identifier xsi:type="foundation:EDMDIdentifier">
-        <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-        <foundation:Number>INST-R1</foundation:Number>
-        <foundation:Version>1</foundation:Version>
-        <foundation:Revision>0</foundation:Revision>
-        <foundation:Sequence>0</foundation:Sequence>
-    </pdm:Identifier>
-    
-    <!-- 实例属性 -->
-    <pdm:ItemInstance xsi:type="pdm:EDMDItemInstance">
-        <!-- 引用元件定义 -->
-        <pdm:Item>COMP_10K_0805</pdm:Item>
-        
-        <!-- 参考标志符 -->
-        <pdm:InstanceName xsi:type="foundation:EDMDName">
-            <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-            <foundation:ObjectName>R1</foundation:ObjectName>
-        </pdm:InstanceName>
-        
-        <!-- 可选：零件编号 -->
-        <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
-            <property:Key xsi:type="foundation:EDMDName">
-                <foundation:SystemScope>ECADSYSTEM</foundation:SystemScope>
-                <foundation:ObjectName>PARTNUM</foundation:ObjectName>
-            </property:Key>
-            <property:Value>RC0805FR-0710KL</property:Value>
-        </foundation:UserProperty>
-        
-        <!-- 位置和方向变换 -->
-        <pdm:Transformation xsi:type="pdm:EDMDTransformation">
-            <pdm:TransformationType>d2</pdm:TransformationType>
-            <!-- 旋转45度 -->
-            <pdm:xx>0.7071</pdm:xx>  <!-- cos(45°) -->
-            <pdm:xy>0.7071</pdm:xy>  <!-- sin(45°) -->
-            <pdm:yx>-0.7071</pdm:yx> <!-- -sin(45°) -->
-            <pdm:yy>0.7071</pdm:yy>  <!-- cos(45°) -->
-            <!-- 位置：X=50mm, Y=30mm -->
-            <pdm:tx xsi:type="property:EDMDLengthProperty">
-                <property:Value>50.0</property:Value>
-            </pdm:tx>
-            <pdm:ty xsi:type="property:EDMDLengthProperty">
-                <property:Value>30.0</property:Value>
-            </pdm:ty>
-        </pdm:Transformation>
-    </pdm:ItemInstance>
-    
-    <!-- 装配到板子顶面 -->
-    <pdm:AssembleToName>TOP_SURFACE</pdm:AssembleToName>
-    
-    <!-- 可选：Z偏移 -->
-    <pdm:ItemInstance zOffset="0.05">  <!-- 离板面0.05mm -->
-        <!-- ... -->
-    </pdm:ItemInstance>
-</foundation:Item>
-```
-

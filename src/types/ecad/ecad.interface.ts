@@ -5,7 +5,7 @@ import { Line } from '../../libs/geometry/Line';
 import { Polyline } from '../../libs/geometry/Polyline';
 import { Rect } from '../../libs/geometry/Rect';
 import { Vector2 } from '../../libs/geometry/Vector2';
-import { EDMDIdentifier, EDMDTransformation3D, EDMDUserSimpleProperty, GlobalUnit, RoleOnItemInstance } from '../core/base.types';
+import { EDMDIdentifier, EDMDTransformation3D, EDMDUserSimpleProperty, GlobalUnit, RoleOnItemInstance } from '../edmd/base.types';
 
 /**
  * ECAD 系统数据顶层结构

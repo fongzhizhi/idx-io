@@ -69,7 +69,7 @@ import {
 	StratumSurfaceDesignation,
 	MCADModelFormat,
 	EDMPackagePin,
-} from '../../types/core';
+} from '../../types/edmd';
 import { Arc } from '../../libs/geometry/Arc';
 import { Circle } from '../../libs/geometry/Circle';
 import { Line } from '../../libs/geometry/Line';

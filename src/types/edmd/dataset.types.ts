@@ -1,6 +1,6 @@
-import { EDMDIdentifier, EDMDObject, EDMDName, EDMDTransformation, EDMDHeader, CartesianPoint } from './base.types';
+import { EDMDIdentifier, EDMDObject, EDMDName, EDMDTransformation, EDMDHeader, EDMDCartesianPoint } from './base.types';
 import { EDMDGeometry, EDMDCurveSet2D } from './geometry.types';
-import { EDMDItemSingle, EDMDItemAssembly } from './items.types';
+import { EDMDItemSingle, EDMDItemAssembly } from './item.types';
 import { IDXComputationalTag } from './namespace.types';
 import { EDMDShapeElement, EDMDStratum } from './shape-element.types';
 
@@ -32,7 +32,7 @@ export interface EDMDDataSet {
  */
 export type EDMDDataSetBody = Partial<{
 	/** 点集合 */
-	Points: CartesianPoint[];
+	Points: EDMDCartesianPoint[];
 	/** 几何元素集合 */
 	Geometries: EDMDGeometry[];
 	/** 2D曲线集合 */

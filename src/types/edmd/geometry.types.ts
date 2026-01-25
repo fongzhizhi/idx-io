@@ -7,6 +7,8 @@ import { EDMDObject, EDMDLengthProperty } from './base.types';
 import { IDXD2Tag } from './namespace.types';
 
 // ============= 几何描述类型 =============
+
+/** 几何元素类型 */
 export type EDMDGeometryType =
 	| IDXD2Tag.EDMDPolyLine
 	| IDXD2Tag.EDMDArc
@@ -170,7 +172,7 @@ export interface EDMDLine extends EDMDBaseGeometry {
 // ============= 2D曲线集 =============
 
 /**
- * 2D曲线集合
+ * 2D曲线集
  *
  * @remarks
  * 定义几何元素的Z轴范围，实现2.5D表示
@@ -178,13 +180,21 @@ export interface EDMDLine extends EDMDBaseGeometry {
  * XML: <foundation:CurveSet2d xsi:type="d2:EDMDCurveSet2d">
  */
 export interface EDMDCurveSet2D extends EDMDObject, EDMDZBounds {
-	/** 形状描述类型，通常为 GeometricModel */
-	ShapeDescriptionType: 'GeometricModel' | 'DocumentationModel';
+	/** 形状描述类型 */
+	ShapeDescriptionType: CurveSet2DShapeDescType;
 	/** 引用的几何元素id列表 */
 	DetailedGeometricModelElements: string[];
 }
 
-/**Z轴边界(坐标)  */
+/** 2D曲线集形状描述类型 */
+export enum CurveSet2DShapeDescType {
+	/** 几何模型（常用） */
+	GeometricModel = 'GeometricModel',
+	/** 文档模型 */
+	DocumentationModel = 'DocumentationModel',
+}
+
+/**Z轴边界（坐标）  */
 export interface EDMDZBounds {
 	/** Z轴下边界，定义曲线起始高度 */
 	LowerBound: EDMDLengthProperty;

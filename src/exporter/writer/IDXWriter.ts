@@ -25,12 +25,12 @@ import {
 	EDMDUserSimpleProperty,
 	EDMDHistory,
 	EDMDLine,
-} from '../../types/core';
+} from '../../types/edmd';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
 import { IDXWriteConfig } from '../../types/exporter/writer/idx-writer.interface';
 import { DefaultIDXWriteConfig } from './config/idx-writer.config';
 import { hasOwnProperty, isValidBool, iterateObject, toBoolean, toString } from '../../utils/object.utils';
-import { getIDXTagName, isIDXNameSpace, PropAttrChanedAttrName, XsiTypeAttrName } from '../../core/utils/idx-namespace.utils';
+import { getIDXTagName, isIDXNameSpace, PropAttrChanedAttrName, XsiTypeAttrName } from '../../edmd/utils/idx-namespace.utils';
 import {
 	IDXComputationalTag,
 	IDXD2Tag,
@@ -40,7 +40,7 @@ import {
 	IDXPDMTag,
 	IDXPropertyTag,
 	IDXXSITag,
-} from '../../types/core/namespace.types';
+} from '../../types/edmd/namespace.types';
 import { iterateArr } from '../../utils/array.utils';
 import { isValidNumber } from '../../utils/number.utils';
 

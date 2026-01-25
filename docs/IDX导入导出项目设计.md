@@ -1,4 +1,4 @@
-# IDX导入导出项目设计规划
+# IDX导入导出项目设计
 
 ## 背景知识
 
@@ -80,59 +80,29 @@ graph TD
 + 导出模块：根据`ECAD`系统提供的数据，导出`IDX`格式源码。
 + 导入模块：根据`IDX`格式源码，提取`ECAD`系统数据。
 
-因此，整个项目的目录结构将按如下思路设计：
+因此，项目的目录结构设计为：
 
 ```txt
-idx-io/
-├── src/
-│   ├── core/                    # EDMD
-│   │   ├── types/               # TypeScript类型定义
-│   │   ├── schemas/             # XSD/JSON Schema验证
-│   │   │   ├── idx-v4.5.xsd
-│   │   │   └── validators.ts
-│   │   ├── xml/                 # XML处理工具
-│   │   │   ├── builder.ts      # XML构建器
-│   │   │   ├── parser.ts       # XML解析器
-│   │   │   └── utils.ts        # XML工具函数
-│   │   └── utils/               # 通用工具函数
-│   ├── exporter/                # 导出模块
-│   │   ├── index.ts            # 主导出入口
-│   │   ├── idx-exporter.ts     # IDX导出器主类
-│   │   ├── builders/           # 各类构建器
-│   │   │   ├── board-builder.ts    # PCB板构建
-│   │   │   ├── component-builder.ts # 组件构建
-│   │   │   ├── layer-builder.ts     # 层构建
-│   │   │   └── change-builder.ts    # 变更构建
-│   │   ├── writers/            # 各种写入器
-│   │   │   ├── idx-writer.ts   # IDX文件写入
-│   │   │   ├── xml-writer.ts   # XML格式写入
-│   │   │   └── compression.ts  # 压缩处理
-│   │   └── adapters/           # 适配器（连接外部数据源）
-│   │       ├── ecad-adapter.ts # ECAD系统适配
-│   │       └── generic-adapter.ts
-│   ├── importer/                # 导入模块（未来）
-│   └── models/                  # 业务模型
-│       ├── pcb-board.ts
-│       ├── component.ts
-│       └── ...
-├── examples/                    # 示例代码
-│   ├── export-basic.ts         # 基础导出示例
-│   ├── export-with-layers.ts   # 多层板示例
-│   ├── export-flex-board.ts    # 柔性板示例
-│   └── test-data/              # 测试数据
-├── test/                       # 测试
-│   ├── unit/
-│   ├── integration/
-│   └── fixtures/               # 测试固件
-├── docs/                       # 文档
-│   ├── api/                    # API文档
-│   ├── usage/                  # 使用指南
-│   └── protocol/               # IDX协议文档
-├── scripts/                    # 构建/部署脚本
-├── package.json
-├── tsconfig.json
-├── tsconfig.build.json         # 生产构建配置
-└── README.md
+├── docs/                   # 项目文档目录
+├── public/                 # 静态资源目录
+│   ├── idx/                # IDX相关文档资源
+│   └── PSI5_IDXv4.5_Schema/ # IDX v4.5 XSD模式文件
+├── src/                    # 源代码目录
+│   ├── edmd/               # EDMD模块
+│   │   └── utils/          # 核心工具函数
+│   ├── exporter/           # 导出模块
+│   │   ├── builder/        # IDX构建器
+│   │   ├── idx-exporter/   # IDX导出器
+│   │   └── writer/         # IDX写入器
+│   ├── importer/           # 导入模块
+│   ├── libs/               # 基础库
+│   │   └── geometry/       # 几何计算库
+│   ├── types/              # TS类型定义
+│   │   ├── edmd/           # EDMD类型定义
+│   │   ├── ecad/           # ECAD相关类型
+│   │   └── exporter/       # 导出器类型定义
+│   └── utils/              # 通用工具函数
+└── test/                   # 测试目录
 ```
 
 ## 技术选型
@@ -166,7 +136,22 @@ idx-io/
 
 ## 导出模块设计
 
+导出模块分为两部分实现：
 
+1. 建模：将`ECAD`数据构建为`EDMD`数据模型。
+2. 编码：将`EDMD`模型编码为`IDX`格式。
+
+### 建模模块`IDXBuilder`
+
+`IDXBuilder`负责将`ECAD`数据构建为`EDMD`数据，负责`IDX`格式的建模逻辑。
+
+### 编码模块`IDXWriter`
+
+`IDXWriter`负责将`IDXBuilder`构建好的`EDMD`数据模型，输出为`IDX`格式，即`XML`格式，此过程专门负责编码，不复杂相关建模逻辑处理。
+
+### 导出模块`IDXExporter`
+
+`IDXExporter`负责组织`IDXBuilder`和`IDXExporter`，是`IDX`格式导出的入口模块。
 
 ## 导入模块设计
 

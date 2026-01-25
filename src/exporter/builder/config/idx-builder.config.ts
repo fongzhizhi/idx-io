@@ -1,4 +1,4 @@
-import { GlobalUnit } from '../../../types/core';
+import { GlobalUnit } from '../../../types/edmd';
 import { IDXBuildConfig } from '../../../types/exporter/builder/idx-builder.interface';
 
 /** IDX 模型构建-默认配置 */

@@ -3,19 +3,31 @@
 // REF: Section 4.1
 // NOTE: 项目可以是单个组件或装配体（包含多个子项目）
 
+import { GeometryType } from '../../libs/geometry/Geometry2D';
 import {
 	EDMDObject,
 	EDMDName,
 	EDMDTransformation,
 	EDMDLengthProperty,
-	EDMDUserSimpleProperty,
-	EDMDIdentifier,
-	CartesianPoint,
 	RoleOnItemInstance,
+	EDMDIdentifier,
 } from './base.types';
-import { GeometryType, ItemType } from './enums';
 
 // ============= 项目定义 (Item single) =============
+
+/**
+ * 项目类型枚举
+ *
+ * @remarks
+ * 定义EDMDItem的ItemType属性，标识项目是单个还是装配体
+ * REF: Section 4.1
+ */
+export enum ItemType {
+	/** 简单类型-项目定义 */
+	SINGLE = 'single',
+	/** 复杂类型-项目实例 */
+	ASSEMBLY = 'assembly',
+}
 
 /**
  * 项目定义（ItemType="single"）
@@ -28,11 +40,15 @@ import { GeometryType, ItemType } from './enums';
 export interface EDMDItemSingle extends EDMDObject {
 	/** 项目类型，必须为 "single" */
 	ItemType: ItemType.SINGLE;
+	/** 几何类型（简化方式使用，传统方式不使用） */
+	geometryType?: GeometryType;
 	/** 项目唯一标识符 */
 	Identifier?: EDMDIdentifier;
 	/** 包名称（用于可重用封装，如元件封装） */
 	PackageName?: EDMDName;
-	/** 形状引用：在简化方式中引用 ShapeElement，传统方式中引用 Stratum 等 */
+	/** 参考名称（用于被其他项目引用，如层被Stackup引用） */
+	ReferenceName?: string;
+	/** 形状引用：简化方式引用ShapeElement，传统方式引用Third Item */
 	Shape: string;
 	/** 包引脚定义（用于封装引脚位置） */
 	PackagePins?: EDMPackagePin[];
@@ -40,8 +56,8 @@ export interface EDMDItemSingle extends EDMDObject {
 	EDMD3DModel?: string;
 	/** 基线标记 */
 	BaseLine?: boolean;
-	/** 用户自定义属性 */
-	UserProperties?: EDMDUserSimpleProperty[];
+	/** 组装到名称（用于相对定位） */
+	AssembleToName?: string;
 }
 
 /**
@@ -62,7 +78,31 @@ export interface EDMPackagePin {
 	Shape?: string;
 }
 
-// ============= 项目实例 (Item assembly) =============
+/**
+ * 3D模型定义
+ *
+ * @remarks
+ * 用于引用外部3D模型文件
+ * REF: Section 6.2.1.3
+ */
+export interface EDMD3DModel extends EDMDObject {
+	/** 模型标识符（文件名或ID） */
+	ModelIdentifier: string;
+	/** 模型版本/配置 */
+	ModelVersion?: string;
+	/** 模型位置（相对路径） */
+	ModelLocation?: string;
+	/** MCAD格式 */
+	MCADFormat: string;
+	/** MCAD格式版本 */
+	MCADFormatVersion?: string;
+	/** 变换矩阵（用于对齐） */
+	Transformation?: string;
+	/** 变换参考（坐标系参考） */
+	TransformationReference?: string;
+}
+
+// ============= 项目实例和项目装配 (Item assembly) =============
 
 /**
  * 项目实例定义
@@ -82,8 +122,6 @@ export interface EDMDItemInstance extends EDMDObject {
 	zOffset?: EDMDLengthProperty;
 	/** 弯曲序列号（用于柔性板弯曲顺序） */
 	bendSequenceNumber?: number;
-	/** 用户自定义属性 */
-	UserProperties?: EDMDUserSimpleProperty[];
 	/** 实例用户区域层名称（用于Other Outline映射到ECAD层） */
 	InstanceUserAreaLayerName?: EDMDName;
 }
@@ -110,8 +148,6 @@ export interface EDMDItemAssembly extends EDMDObject {
 	ReferenceName?: string;
 	/** 基线标记 */
 	BaseLine?: boolean;
-	/** 用户自定义属性 */
-	UserProperties?: EDMDUserSimpleProperty[];
 	/** 角色和权限信息 */
 	Roles?: RoleOnItemInstance[];
 }

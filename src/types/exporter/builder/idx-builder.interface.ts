@@ -1,4 +1,4 @@
-import { GlobalUnit } from '../../core/base.types';
+import { GlobalUnit } from '../../edmd/base.types';
 
 /** IDX 模型构建配置 */
 export interface IDXBuildConfig {
