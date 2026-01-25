@@ -1,87 +1,23 @@
-import {
-	ECADData,
-	ECADBoard,
-	ECADLayer,
-	ECADLayerStackup,
-	ECADLayerZone,
-	ECADFootprint,
-	ECADComponent,
-	ECADHole,
-	ECADConstraintArea,
-	ECADGeometry,
-	ECADClosedGeometry,
-	ECADOpenGeometry,
-	ECADMeta,
-	ECADNonCollaborativeData,
-	ECADBend,
-	ECADMillingPath,
-	ECADTrace,
-	ECADCopperArea,
-	ECADSilkscreen,
-	ECADConstraintPurpose,
-	ECADLayerType,
-	ECADModel3D,
-	ECADObject,
-	ECADModelFormat,
-	ECADTransformation2D,
-	ECADHoleType,
-} from '../../types/ecad/ecad.interface';
-import {
-	EDMDDataSet,
-	EDMDDataSetBody,
-	EDMDHeader,
-	EDMDProcessInstruction,
-	EDMDProcessInstructionSendInformation,
-	EDMDIdentifier,
-	EDMDObject,
-	CartesianPoint,
-	EDMDGeometry,
-	EDMDCurveSet2D,
-	EDMDShapeElement,
-	EDMDStratum,
-	EDMDModel3D,
-	EDMDItemSingle,
-	EDMDItemAssembly,
-	EDMDHistory,
-	EDMDHistoryEntry,
-	EDMDTransformation,
-	EDMDUserSimpleProperty,
-	RoleOnItemInstance,
-	GlobalUnit,
-	IDXComputationalTag,
-	EDMDLine,
-	IDXD2Tag,
-	EDMDBaseGeometry,
-	EDMDArc,
-	EDMDCircleCenter,
-	EDMDPolyLine,
-	EDMDCompositeCurve,
-	ShapeElementType,
-	ItemType,
-	GeometryType,
-	LayerPurpose,
-	TechnologyType,
-	EDMDItemInstance,
-	EDMDName,
-	UserSimpleProperty,
-	EDMDZBounds,
-	StratumType,
-	StratumSurfaceDesignation,
-	MCADModelFormat,
-	EDMPackagePin,
-} from '../../types/edmd';
-import { Arc } from '../../libs/geometry/Arc';
-import { Circle } from '../../libs/geometry/Circle';
-import { Line } from '../../libs/geometry/Line';
-import { Polyline } from '../../libs/geometry/Polyline';
-import { Rect } from '../../libs/geometry/Rect';
-import { Vector2 } from '../../libs/geometry/Vector2';
-import { IDXBuildConfig } from '../../types/exporter/builder/idx-builder.interface';
-import { DefaultIDXBuildConfig } from './config/idx-builder.config';
-import { isValidBool, iterateObject } from '../../utils/object.utils';
-import { iterateArr } from '../../utils/array.utils';
-import { isNumeric, isValidNumber } from '../../utils/number.utils';
-import { IDXBuilderIDPre } from '../../types/exporter/builder/idx-builder.types';
+import { Arc } from "../../libs/geometry/Arc";
+import { Circle } from "../../libs/geometry/Circle";
+import { GeometryType } from "../../libs/geometry/Geometry2D";
+import { Line } from "../../libs/geometry/Line";
+import { Polyline } from "../../libs/geometry/Polyline";
+import { Rect } from "../../libs/geometry/Rect";
+import { Vector2 } from "../../libs/geometry/Vector2";
+import { ECADLayer, ECADLayerStackup, ECADData, ECADObject, ECADTransformation2D, ECADMeta, ECADLayerType, ECADGeometry, ECADBoard, ECADClosedGeometry, ECADMillingPath, ECADLayerZone, ECADBend, ECADModel3D, ECADModelFormat, ECADFootprint, ECADComponent, ECADHole, ECADHoleType, ECADConstraintArea, ECADConstraintPurpose, ECADNonCollaborativeData, ECADTrace, ECADCopperArea, ECADSilkscreen } from "../../types/ecad/ecad.interface";
+import { EDMDIdentifier, EDMDName, EDMDUserSimpleProperty, EDMDTransformation, UserSimpleProperty, EDMDCartesianPoint } from "../../types/edmd/base.types";
+import { EDMDHistory, EDMDDataSet, EDMDHeader, EDMDDataSetBody, EDMDProcessInstruction, EDMDProcessInstructionSendInformation } from "../../types/edmd/dataset.types";
+import { EDMDZBounds, EDMDGeometry, EDMDCurveSet2D, EDMDLine, EDMDArc, EDMDCircleCenter, EDMDPolyLine, EDMDCompositeCurve } from "../../types/edmd/geometry.types";
+import { EDMDItemSingle, EDMDItemAssembly, ItemType, EDMDItemInstance, EDMPackagePin } from "../../types/edmd/item.types";
+import { EDMDModel3D } from "../../types/edmd/model3d.types";
+import { IDXD2Tag, IDXComputationalTag } from "../../types/edmd/namespace.types";
+import { EDMDShapeElement, EDMDStratum, LayerPurpose, ShapeElementType, StratumType, StratumSurfaceDesignation } from "../../types/edmd/shape-element.types";
+import { IDXBuildConfig } from "../../types/exporter/builder/idx-builder.interface";
+import { IDXBuilderIDPre } from "../../types/exporter/builder/idx-builder.types";
+import { iterateArr } from "../../utils/array.utils";
+import { isValidBool, iterateObject } from "../../utils/object.utils";
+import { DefaultIDXBuildConfig } from "./config/idx-builder.config";
 
 /**
  * IDX 模型构建器
@@ -119,8 +55,8 @@ export class IDXBuilder {
 	/** 封装表(packageName -> FootprintSingle) */
 	private footprintSingleMap = new Map<string, EDMDItemSingle>();
 
-	/** 点集合(pointHash -> CartesianPoint) */
-	private pointMap = new Map<number, CartesianPoint>();
+	/** 点集合(pointHash -> EDMDCartesianPoint) */
+	private pointMap = new Map<number, EDMDCartesianPoint>();
 	/** 几何表(idxId -> EDMDGeometry) */
 	private geometryMap = new Map<string, EDMDGeometry>();
 	/** 曲线集集合 */
@@ -751,7 +687,7 @@ export class IDXBuilder {
 
 		// # 创建新点
 		const pointId = this.generateId(IDXBuilderIDPre.Point);
-		const cartesianPoint: CartesianPoint = {
+		const cartesianPoint: EDMDCartesianPoint = {
 			id: pointId,
 			X: point.x,
 			Y: point.y,

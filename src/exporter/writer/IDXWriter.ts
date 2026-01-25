@@ -1,48 +1,19 @@
 // src/exporter/writer/IDXWriter.ts
 import { create } from 'xmlbuilder2';
-import {
-	CartesianPoint,
-	EDMDDataSet,
-	EDMDGeometry,
-	EDMDCurveSet2D,
-	EDMDShapeElement,
-	EDMDItemSingle,
-	EDMDItemAssembly,
-	EDMDItemInstance,
-	EDMDTransformation,
-	GlobalUnit,
-	GeometryType,
-	EDMDProcessInstructionType,
-	EDMDObject,
-	EDMDPolyLine,
-	EDMDArc,
-	EDMDCircleCenter,
-	EDMDBSplineCurve,
-	EDMDCompositeCurve,
-	EDMDIdentifier,
-	EDMDName,
-	EDMPackagePin,
-	EDMDUserSimpleProperty,
-	EDMDHistory,
-	EDMDLine,
-} from '../../types/edmd';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
+import { getIDXTagName, isIDXNameSpace, XsiTypeAttrName, PropAttrChanedAttrName } from '../../edmd/utils/idx-namespace.utils';
+import { EDMDObject, EDMDIdentifier, EDMDName, EDMDUserSimpleProperty, EDMDTransformation } from '../../types/edmd/base.types';
+import { EDMDDataSet, EDMDHistory } from '../../types/edmd/dataset.types';
+import { EDMDGeometry, EDMDPolyLine, EDMDLine, EDMDArc, EDMDCircleCenter, EDMDBSplineCurve, EDMDCompositeCurve, EDMDCurveSet2D } from '../../types/edmd/geometry.types';
+import { EDMDItemSingle, EDMPackagePin, EDMDItemAssembly, EDMDItemInstance } from '../../types/edmd/item.types';
+import { IDXFoundationTag, IDXNameSpaceLinks, IDXD2Tag, IDXPropertyTag, IDXPDMTag, IDXNameSpace, IDXComputationalTag } from '../../types/edmd/namespace.types';
+import { EDMDShapeElement } from '../../types/edmd/shape-element.types';
 import { IDXWriteConfig } from '../../types/exporter/writer/idx-writer.interface';
-import { DefaultIDXWriteConfig } from './config/idx-writer.config';
-import { hasOwnProperty, isValidBool, iterateObject, toBoolean, toString } from '../../utils/object.utils';
-import { getIDXTagName, isIDXNameSpace, PropAttrChanedAttrName, XsiTypeAttrName } from '../../edmd/utils/idx-namespace.utils';
-import {
-	IDXComputationalTag,
-	IDXD2Tag,
-	IDXFoundationTag,
-	IDXNameSpace,
-	IDXNameSpaceLinks,
-	IDXPDMTag,
-	IDXPropertyTag,
-	IDXXSITag,
-} from '../../types/edmd/namespace.types';
 import { iterateArr } from '../../utils/array.utils';
 import { isValidNumber } from '../../utils/number.utils';
+import { iterateObject, toBoolean, isValidBool, toString } from '../../utils/object.utils';
+import { DefaultIDXWriteConfig } from './config/idx-writer.config';
+
 
 /** IDX 格式生成器 */
 export class IDXWriter {
@@ -255,30 +226,38 @@ export class IDXWriter {
 		this.bodyEle = bodyEle;
 
 		// # 构建数据体（按照IDX层次结构顺序）
-		// 1. 点 → 2. 几何 → 3. 曲线集 → 4. 形状元素 → 5. 项目定义 → 6. 项目实例
 
-		// 1. 构建坐标点
+		// ## 构建坐标点
 		this.buildCartesianPoints();
 
-		// 2. 构建几何元素
+		// ## 构建几何元素
 		this.buildGeometries();
 
-		// 3. 构建曲线集
+		// ## 构建曲线集
 		this.buildCurveSets();
 
-		// 4. 构建形状元素
+		// ## 构建形状元素
 		this.buildShapeElements();
 
-		// 5. 构建3D模型引用（可选）
+		// ## 构建传统方式Third Item层次
+		this.buildThirdItems();
+
+		// ## 构建物理层和构建层堆叠
+		this.buildLayersAndLayersStackup();
+
+		// ## 构建3D模型
 		this.buildModels3D();
 
-		// 6. 构建项目定义（Item single）
+		// ## 构建封装
+		this.buildPackages();
+
+		// ## 构建项目定义
 		this.buildItemsSingle();
 
-		// 7. 构建项目实例（Item assembly）
+		// ## 构建项目实例和装配
 		this.buildItemsAssembly();
 
-		// 8. 构建历史记录（可选）
+		// ## 构建历史记录
 		this.buildHistories();
 	}
 
@@ -318,7 +297,6 @@ export class IDXWriter {
 	}
 
 	// ------------ 构建层 ------------
-	// TODO: 层数据在 Item 中, 需要前置处理
 
 	// ------------ 构建几何 ------------
 	/** 批量构建坐标点 */
@@ -727,9 +705,28 @@ export class IDXWriter {
 		shapeElementEle.ele(getIDXTagName(IDXPDMTag.DefiningShape)).txt(shapeElement.DefiningShape);
 	}
 
-	/** 构建3D模型引用 */
+	// ------------ 构建传统Third Item层次 ------------
+	/** 批量构建传统Third Item层次 */
+	private buildThirdItems(){
+		// TODO: 待实现
+	}
+
+	// ------------ 构建物理层和层堆叠------------
+	private buildLayersAndLayersStackup() {
+		// TODO: 待实现
+	}
+
+
+	// ------------ 构建3D模型------------
+	/** 构建3D模型 */
 	private buildModels3D() {
-		// TODO: 实现3D模型引用
+		// TODO: 实现构建3D模型
+	}
+
+	// ------------ 构建封装------------
+	/** 构建封装 */
+	private buildPackages() {
+		// TODO: 实现构建封装
 	}
 
 	// ------------ 构建项目定义 ------------
@@ -1134,10 +1131,10 @@ export class IDXWriter {
 			}
 		} else if (instructionType == IDXComputationalTag.SendChanges) {
 			// ## 添加变更相关数据
-			// TODO: 实现变更相关数据
+			// TODO: 暂不支持
 		} else {
 			// ## 添加请求相关数据
-			// TODO: 实现请求相关数据
+			// TODO: 暂不支持
 		}
 	}
 
@@ -1171,6 +1168,6 @@ export class IDXWriter {
 		const bodyEle = this.bodyEle;
 		if (!bodyEle) return;
 
-		// TODO: 实现历史记录构建
+		// TODO: 暂不支持
 	}
 }
