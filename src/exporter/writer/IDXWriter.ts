@@ -1,8 +1,7 @@
-// src/exporter/writer/IDXWriter.ts
 import { create } from 'xmlbuilder2';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
 import { getIDXTagName, isIDXNameSpace, XsiTypeAttrName, PropAttrChanedAttrName } from '../../edmd/utils/idx-namespace.utils';
-import { EDMDObject, EDMDIdentifier, EDMDName, EDMDUserSimpleProperty, EDMDTransformation } from '../../types/edmd/base.types';
+import { EDMDObject, EDMDIdentifier, EDMDName, EDMDUserSimpleProperty, EDMDTransformation, EDMDCartesianPoint } from '../../types/edmd/base.types';
 import { EDMDDataSet, EDMDHistory } from '../../types/edmd/dataset.types';
 import { EDMDGeometry, EDMDPolyLine, EDMDLine, EDMDArc, EDMDCircleCenter, EDMDBSplineCurve, EDMDCompositeCurve, EDMDCurveSet2D } from '../../types/edmd/geometry.types';
 import { EDMDItemSingle, EDMPackagePin, EDMDItemAssembly, EDMDItemInstance } from '../../types/edmd/item.types';
@@ -320,7 +319,7 @@ export class IDXWriter {
 	}
 
 	/** 构建坐标点 */
-	private buildCartesianPoint(point: CartesianPoint) {
+	private buildCartesianPoint(point: EDMDCartesianPoint) {
 		const bodyEle = this.bodyEle;
 		if (!bodyEle) {
 			return;
