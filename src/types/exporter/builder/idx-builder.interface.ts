@@ -2,7 +2,7 @@ import { GlobalUnit } from '../../edmd/base.types';
 
 /** IDX 模型构建配置 */
 export interface IDXBuildConfig {
-	/** 是否使用简化表示法(geometryType) */
+	/** 是否使用简化模型 */
 	useSimplified: boolean;
 	/** 全局单位 */
 	unit: GlobalUnit;

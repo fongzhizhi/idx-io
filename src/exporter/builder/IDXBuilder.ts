@@ -1572,21 +1572,21 @@ export class IDXBuilder {
 	 * 处理走线
 	 */
 	private processTrace(trace: ECADTrace): void {
-		// TODO
+		// TODO: 暂不支持走线建模
 	}
 
 	/**
 	 * 处理铜皮区域
 	 */
 	private processCopperArea(area: ECADCopperArea): void {
-		// TODO
+		// TODO: 暂不支持铜皮区域建模
 	}
 
 	/**
 	 * 处理丝印
 	 */
 	private processSilkscreen(silkscreen: ECADSilkscreen): void {
-		// TODO
+		// TODO: 暂不支持丝印建模
 	}
 
 	// ============= 构建 ProcessInstruction =============
