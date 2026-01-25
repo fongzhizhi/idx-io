@@ -1,6 +1,5 @@
 import { Arc } from '../../libs/geometry/Arc';
 import { Circle } from '../../libs/geometry/Circle';
-import { GeometryKind } from '../../libs/geometry/Geometry2D';
 import { Line } from '../../libs/geometry/Line';
 import { Polyline } from '../../libs/geometry/Polyline';
 import { Rect } from '../../libs/geometry/Rect';
@@ -57,10 +56,11 @@ import {
 	EDMDCircleCenter,
 	EDMDPolyLine,
 	EDMDCompositeCurve,
+	CurveSet2DShapeDescType,
 } from '../../types/edmd/geometry.types';
-import { EDMDItemSingle, EDMDItemAssembly, ItemType, EDMDItemInstance, EDMPackagePin } from '../../types/edmd/item.types';
+import { EDMDItemSingle, EDMDItemAssembly, ItemType, EDMDItemInstance, EDMPackagePin, EDMDGeometryType } from '../../types/edmd/item.types';
 import { EDMDModel3D } from '../../types/edmd/model3d.types';
-import { IDXD2Tag, IDXComputationalTag } from '../../types/edmd/namespace.types';
+import { IDXD2Tag, IDXComputationalTag, IDXPDMTag } from '../../types/edmd/namespace.types';
 import {
 	EDMDShapeElement,
 	EDMDStratum,
@@ -238,9 +238,9 @@ export class IDXBuilder {
 		return {
 			SystemScope: this.config.systemScope,
 			Number: this.generateIdentifierNumber(prefix),
-			Version: 1,
-			Revision: 0,
-			Sequence: 0,
+			Version: '1',
+			Revision: '0',
+			Sequence: '0',
 		};
 	}
 
@@ -347,11 +347,7 @@ export class IDXBuilder {
 
 		// # 计算相对坐标
 		// REF: 默认使用参考层的上表面作为基准（符合IDX惯例）
-		const refZ = referenceLayer.UpperBound;
-		return {
-			LowerBound: bounds.LowerBound - refZ,
-			UpperBound: bounds.UpperBound - refZ,
-		};
+		// TODO
 	}
 
 	/**
@@ -377,6 +373,10 @@ export class IDXBuilder {
 			tx: x,
 			ty: y,
 		};
+	}
+
+	private assembleBody(): EDMDDataSetBody {
+		// TODO
 	}
 
 	// ============= 构建 Header =============
@@ -525,7 +525,7 @@ export class IDXBuilder {
 			delete layerAssembly.geometryType;
 			userProperties.push(
 				this.craeteUserSimpleProperty(
-					UserSimpleProperty.LayerType,
+					UserSimpleProperty.LAYER_TYPE,
 					this.getLayerPurposeByLayerType(
 						layerType
 					)
@@ -548,39 +548,39 @@ export class IDXBuilder {
 	 * 将ECAD系统的层类型映射到IDXv4.0+的geometryType属性
 	 * REF: Section 6.1.2, Table 4 (层类型与GeometryType对应关系)
 	 */
-	private getLayerGeometryByLayerType(type: ECADLayerType): GeometryKind {
+	private getLayerGeometryByLayerType(type: ECADLayerType): EDMDGeometryType {
 		switch (type) {
 			case ECADLayerType.SIGNAL:
 			case ECADLayerType.POWER_GROUND:
-				return GeometryKind.LAYER_OTHERSIGNAL;
+				return EDMDGeometryType.LAYER_OTHERSIGNAL;
 			case ECADLayerType.DIELECTRIC:
-				return GeometryKind.LAYER_DIELECTRIC;
+				return EDMDGeometryType.LAYER_DIELECTRIC;
 			case ECADLayerType.SOLDERMASK:
-				return GeometryKind.LAYER_SOLDERMASK;
+				return EDMDGeometryType.LAYER_SOLDERMASK;
 			case ECADLayerType.SILKSCREEN:
-				return GeometryKind.LAYER_SILKSCREEN;
+				return EDMDGeometryType.LAYER_SILKSCREEN;
 			case ECADLayerType.SOLDERPASTE:
-				return GeometryKind.LAYER_SOLDERPASTE;
+				return EDMDGeometryType.LAYER_SOLDERPASTE;
 			case ECADLayerType.PASTEMASK:
-				return GeometryKind.LAYER_PASTEMASK;
+				return EDMDGeometryType.LAYER_PASTEMASK;
 			case ECADLayerType.GLUE:
-				return GeometryKind.LAYER_GLUE;
+				return EDMDGeometryType.LAYER_GLUE;
 			case ECADLayerType.GLUEMASK:
-				return GeometryKind.LAYER_GLUEMASK;
+				return EDMDGeometryType.LAYER_GLUEMASK;
 			case ECADLayerType.EMBEDDED_CAP_DIELECTRIC:
-				return GeometryKind.LAYER_EMBEDDED_CAP_DIELECTRIC;
+				return EDMDGeometryType.LAYER_EMBEDDED_CAP_DIELECTRIC;
 			case ECADLayerType.EMBEDDED_RESISTOR:
-				return GeometryKind.LAYER_EMBEDDED_RESISTOR;
+				return EDMDGeometryType.LAYER_EMBEDDED_RESISTOR;
 			case ECADLayerType.GENERIC:
-				return GeometryKind.LAYER_GENERIC;
+				return EDMDGeometryType.LAYER_GENERIC;
 			case ECADLayerType.OTHER:
-				return GeometryKind.LAYER_GENERIC;
+				return EDMDGeometryType.LAYER_GENERIC;
 
 			default:
 				console.warn(
 					`未识别的层类型: ${type}, 使用默认 LAYER_GENERIC 类型`
 				);
-				return GeometryKind.LAYER_GENERIC;
+				return EDMDGeometryType.LAYER_GENERIC;
 		}
 	}
 
@@ -598,36 +598,36 @@ export class IDXBuilder {
 	private getLayerPurposeByLayerType(type: ECADLayerType): LayerPurpose {
 		switch (type) {
 			case ECADLayerType.SIGNAL:
-				return LayerPurpose.OTHERSIGNAL;
+				return LayerPurpose.OtherSignal;
 			case ECADLayerType.POWER_GROUND:
-				return LayerPurpose.POWERGROUND;
+				return LayerPurpose.PowerOrGround;
 			case ECADLayerType.DIELECTRIC:
-				return LayerPurpose.DIELECTRIC;
+				return LayerPurpose.EmbeddedPassiveCapacitorDielectric;
 			case ECADLayerType.SOLDERMASK:
-				return LayerPurpose.SOLDERMASK;
+				return LayerPurpose.SolderMask;
 			case ECADLayerType.SILKSCREEN:
-				return LayerPurpose.SILKSCREEN;
+				return LayerPurpose.SilkScreen;
 			case ECADLayerType.SOLDERPASTE:
-				return LayerPurpose.SOLDERPASTE;
+				return LayerPurpose.SolderPaste;
 			case ECADLayerType.PASTEMASK:
-				return LayerPurpose.PASTEMASK;
+				return LayerPurpose.SolderPaste;
 			case ECADLayerType.GLUE:
-				return LayerPurpose.GLUE;
+				return LayerPurpose.Glue;
 			case ECADLayerType.GLUEMASK:
-				return LayerPurpose.GLUEMASK;
+				return LayerPurpose.Glue;
 			case ECADLayerType.EMBEDDED_CAP_DIELECTRIC:
-				return LayerPurpose.EMBEDDED_CAP_DIELECTRIC;
+				return LayerPurpose.EmbeddedPassiveCapacitorDielectric;
 			case ECADLayerType.EMBEDDED_RESISTOR:
-				return LayerPurpose.EMBEDDED_RESISTOR;
+				return LayerPurpose.EmbeddedPassiveResistor;
 			case ECADLayerType.GENERIC:
-				return LayerPurpose.GENERIC;
+				return LayerPurpose.GenericLayer;
 			case ECADLayerType.OTHER:
-				return LayerPurpose.GENERIC;
+				return LayerPurpose.GenericLayer;
 			default:
 				console.warn(
 					`未识别的层类型: ${type}, 使用默认 GENERIC 类型`
 				);
-				return LayerPurpose.GENERIC;
+				return LayerPurpose.GenericLayer;
 		}
 	}
 
@@ -712,7 +712,7 @@ export class IDXBuilder {
 			id: layerStackupId,
 			Name: layerStackName,
 			ItemType: ItemType.ASSEMBLY,
-			geometryType: GeometryKind.LAYER_STACKUP,
+			geometryType: EDMDGeometryType.LAYER_STACKUP,
 			ItemInstances: itemInstances,
 			ReferenceName: layerStackName,
 			UserProperties: userProperties,
@@ -937,7 +937,7 @@ export class IDXBuilder {
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
+			ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 			DetailedGeometricModelElements: [boardShapeId],
 			...boardZBounds,
 		};
@@ -1001,8 +1001,8 @@ export class IDXBuilder {
 			id: boardAssemblyId,
 			ItemType: ItemType.ASSEMBLY,
 			geometryType: assemblyToName
-				? GeometryKind.BOARD_AREA_RIGID
-				: GeometryKind.BOARD_OUTLINE,
+				? EDMDGeometryType.BOARD_AREA_RIGID
+				: EDMDGeometryType.BOARD_OUTLINE,
 			ItemInstances: [boardInstance],
 		};
 		if (assemblyToName) {
@@ -1034,7 +1034,7 @@ export class IDXBuilder {
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
+			ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 			LowerBound: 0,
 			UpperBound: boardThickness,
 			DetailedGeometricModelElements: [cutoutShapeId],
@@ -1076,7 +1076,7 @@ export class IDXBuilder {
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
+			ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 			LowerBound: 0,
 			UpperBound: boardThickness,
 			DetailedGeometricModelElements: [pathShapeId],
@@ -1114,6 +1114,7 @@ export class IDXBuilder {
 	private createBoardStratum(shapeElementIds: string | string[]): string {
 		const stratumId = this.generateId(IDXBuilderIDPre.Stratum);
 		const stratum: EDMDStratum = {
+			type: IDXPDMTag.EDMDStratum,
 			id: stratumId,
 			ShapeElements: Array.isArray(shapeElementIds)
 				? shapeElementIds
@@ -1157,7 +1158,7 @@ export class IDXBuilder {
 		const idxModel: EDMDModel3D = {
 			id: modelId,
 			ModelIdentifier: identifier,
-			MCADFormat: this.convertModelFormat(format),
+			MCADFormat: format,
 		};
 		if (version) {
 			idxModel.ModelVersion = version;
@@ -1171,54 +1172,6 @@ export class IDXBuilder {
 
 		this.model3DIdMap.set(identifier, modelId);
 		return modelId;
-	}
-
-	/**
-	 * ECAD到MCAD模型格式转换器
-	 * @param ecadFormat ECAD格式
-	 * @param targetMCAD 目标MCAD系统（可选）
-	 * @returns MCAD支持的格式
-	 */
-	private convertModelFormat(ecadFormat: ECADModelFormat, targetMCAD?: MCADModelFormat): MCADModelFormat {
-		switch (ecadFormat) {
-			case ECADModelFormat.STEP:
-				return MCADModelFormat.STEP;
-
-			case ECADModelFormat.STL:
-				return MCADModelFormat.STL;
-
-			case ECADModelFormat.IGES:
-				// IGES转STEP更可靠
-				return MCADModelFormat.STEP;
-
-			case ECADModelFormat.PARASOLID:
-				// Parasolid是Siemens的格式
-				if (
-					targetMCAD ===
-						MCADModelFormat.NX ||
-					targetMCAD ===
-						MCADModelFormat.SolidEdge
-				) {
-					return MCADModelFormat.NX; // NX支持Parasolid
-				}
-				return MCADModelFormat.STEP;
-
-			case ECADModelFormat.SOLIDWORKS:
-				if (targetMCAD === MCADModelFormat.SolidWorks) {
-					return MCADModelFormat.SolidWorks;
-				}
-				return MCADModelFormat.STEP;
-
-			case ECADModelFormat.NX:
-				return MCADModelFormat.NX;
-
-			case ECADModelFormat.CATIA:
-				return MCADModelFormat.Catia;
-
-			default:
-				// 默认转为STEP（最通用的中性格式）
-				return MCADModelFormat.STEP;
-		}
 	}
 
 	// ------------ 构建封装 ------------
@@ -1239,7 +1192,7 @@ export class IDXBuilder {
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
+			ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 			LowerBound: 0,
 			UpperBound: 0,
 			DetailedGeometricModelElements: [outlineShapeId],
@@ -1326,7 +1279,7 @@ export class IDXBuilder {
 			const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 			const curveSet: EDMDCurveSet2D = {
 				id: curveSetId,
-				ShapeDescriptionType: 'GeometricModel',
+				ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 				LowerBound: 0,
 				UpperBound: 0,
 				DetailedGeometricModelElements: [outlineShapeId],
@@ -1378,7 +1331,9 @@ export class IDXBuilder {
 
 		// # 创建元件装配
 		const componentAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
-		const geometryType = isMechanical ? GeometryKind.COMPONENT_MECHANICAL : GeometryKind.COMPONENT;
+		const geometryType = isMechanical
+			? EDMDGeometryType.COMPONENT_MECHANICAL
+			: EDMDGeometryType.COMPONENT;
 		const componentAssembly: EDMDItemAssembly = {
 			...this.getCommonData(component),
 			id: componentAssemblyId,
@@ -1427,7 +1382,7 @@ export class IDXBuilder {
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
+			ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 			LowerBound: lowerBound || 0,
 			UpperBound: upperBound || 0,
 			DetailedGeometricModelElements: [holeShapeId],
@@ -1494,23 +1449,23 @@ export class IDXBuilder {
 	 * @param viaType ECAD孔类型
 	 * @returns 对应的IDX几何类型
 	 */
-	private convertHoleType(viaType: ECADHoleType): GeometryKind {
+	private convertHoleType(viaType: ECADHoleType): EDMDGeometryType {
 		switch (viaType) {
 			case ECADHoleType.PTH:
-				return GeometryKind.HOLE_PLATED;
+				return EDMDGeometryType.HOLE_PLATED;
 			case ECADHoleType.NPTH:
-				return GeometryKind.HOLE_NON_PLATED;
+				return EDMDGeometryType.HOLE_NON_PLATED;
 			case ECADHoleType.VIA:
-				return GeometryKind.VIA;
+				return EDMDGeometryType.VIA;
 			case ECADHoleType.FILLED_VIA:
-				return GeometryKind.FILLED_VIA;
+				return EDMDGeometryType.FILLED_VIA;
 			case ECADHoleType.BLIND:
 			case ECADHoleType.BURIED:
 				// 盲孔和埋孔在IDX中通常用VIA表示，通过z范围区分
-				return GeometryKind.VIA;
+				return EDMDGeometryType.VIA;
 			default:
 				// 默认返回电镀孔
-				return GeometryKind.HOLE_PLATED;
+				return EDMDGeometryType.HOLE_PLATED;
 		}
 	}
 
@@ -1536,7 +1491,7 @@ export class IDXBuilder {
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
 		const curveSet: EDMDCurveSet2D = {
 			id: curveSetId,
-			ShapeDescriptionType: 'GeometricModel',
+			ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 			LowerBound: lowerBound || 0,
 			UpperBound: upperBound || 0,
 			DetailedGeometricModelElements: [constraintShapeId],
@@ -1574,9 +1529,10 @@ export class IDXBuilder {
 		const constraintAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
 		const constraintAssembly: EDMDItemAssembly = {
 			...this.getCommonData(constraint),
+			ItemType: ItemType.ASSEMBLY,
 			id: constraintAssemblyId,
 			geometryType,
-			ItemInstance: [itemInstance],
+			ItemInstances: [itemInstance],
 		};
 
 		this.itemsAssembly.push(constraintAssembly);
@@ -1585,25 +1541,8 @@ export class IDXBuilder {
 	/**
 	 * 获取约束类型的geometryType
 	 */
-	private convertConstraintType(type: 'KEEPOUT' | 'KEEPIN', purpose: ECADConstraintPurpose): string {
-		const prefix = type === 'KEEPOUT' ? 'KEEPOUT_AREA' : 'KEEPIN_AREA';
-
-		switch (purpose) {
-			case 'ROUTE':
-				return `${prefix}_ROUTE`;
-			case 'COMPONENT':
-				return `${prefix}_COMPONENT`;
-			case 'VIA':
-				return `${prefix}_VIA`;
-			case 'TESTPOINT':
-				return `${prefix}_TESTPOINT`;
-			case 'THERMAL':
-				return `${prefix}_THERMAL`;
-			case 'OTHER':
-				return `${prefix}_OTHER`;
-			default:
-				return `${prefix}_OTHER`;
-		}
+	private convertConstraintType(type: 'KEEPOUT' | 'KEEPIN', purpose: ECADConstraintPurpose): EDMDGeometryType {
+		// TODO
 	}
 
 	// ------------ 构建非协作数据 ------------
