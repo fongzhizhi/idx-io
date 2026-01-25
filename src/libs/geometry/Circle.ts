@@ -1,6 +1,6 @@
 import { Arc } from './Arc';
 import { BBox2 } from './BBox2';
-import { Geometry2D, GeometryType } from './Geometry2D';
+import { Geometry2D, GeometryKind } from './Geometry2D';
 import { Matrix3 } from './Matrix3';
 import { Vector2 } from './Vector2';
 
@@ -16,7 +16,7 @@ export type CircleApproximationStrategy =
 
 /** 整圆 */
 export class Circle extends Geometry2D {
-	readonly type = GeometryType.Circle;
+	readonly type = GeometryKind.Circle;
 	/** 圆心 */
 	readonly center: Vector2;
 	/** 半径 */

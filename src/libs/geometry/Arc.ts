@@ -2,7 +2,7 @@ import { iterateArr } from '../../utils/array.utils';
 import { Angle } from './Angle';
 import { BBox2 } from './BBox2';
 import { Circle, CircleApproximationStrategy } from './Circle';
-import { Geometry2D, GeometryType } from './Geometry2D';
+import { Geometry2D, GeometryKind } from './Geometry2D';
 import { Line } from './Line';
 import { Matrix3 } from './Matrix3';
 import { Polyline } from './Polyline';
@@ -10,7 +10,7 @@ import { Vector2 } from './Vector2';
 
 /** Arc 圆弧 */
 export class Arc extends Geometry2D {
-	readonly type = GeometryType.Arc;
+	readonly type = GeometryKind.Arc;
 
 	readonly radiusX: number;
 	readonly radiusY: number;

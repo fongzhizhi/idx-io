@@ -2,7 +2,7 @@ import { iterateArr } from '../../utils/array.utils';
 import { Arc } from './Arc';
 import { BBox2 } from './BBox2';
 import { Circle } from './Circle';
-import { Geometry2D, GeometryType } from './Geometry2D';
+import { Geometry2D, GeometryKind } from './Geometry2D';
 import { Line } from './Line';
 import { Matrix3 } from './Matrix3';
 import { Vector2 } from './Vector2';
@@ -12,7 +12,7 @@ import { Vector2 } from './Vector2';
  * @description Line和Arc拼接轮廓
  */
 export class Polyline extends Geometry2D {
-	readonly type = GeometryType.Polyline;
+	readonly type = GeometryKind.Polyline;
 
 	/** 连续的几何图元集合 */
 	readonly primitives: readonly (Line | Arc)[];

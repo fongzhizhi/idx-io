@@ -9,7 +9,7 @@ import { IDXD2Tag } from './namespace.types';
 // ============= 几何描述类型 =============
 
 /** 几何元素类型 */
-export type EDMDGeometryType =
+export type GeometryKind =
 	| IDXD2Tag.EDMDPolyLine
 	| IDXD2Tag.EDMDArc
 	| IDXD2Tag.EDMDCircleCenter
@@ -22,7 +22,7 @@ export type EDMDGeometryType =
 /** 几何元素基础类型(便于判断几何类型) */
 export interface EDMDBaseGeometry extends EDMDObject {
 	/** 几何类型 */
-	type: EDMDGeometryType;
+	type: GeometryKind;
 }
 
 /**

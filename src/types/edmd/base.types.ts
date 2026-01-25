@@ -57,7 +57,7 @@ export enum UserSimpleProperty {
 	/** 上边界（Z轴），通常用于定义层或几何体的结束高度 */
 	UpperBound = 'UpperBound',
 	/** 层类型，如 SolderMask、Signal、SilkScreen 等（见表4） */
-	LayerType = 'LayerType',
+	LAYER_TYPE = 'LAYER_TYPE',
 	/** 板厚，用于简单板的厚度定义 */
 	Thickness = 'THICKNESS',
 	/** 层堆叠总厚度 */
@@ -98,6 +98,12 @@ export enum UserSimpleProperty {
 	MAPPED_LAYER = 'MAPPED_LAYER',
 	/** 弯曲序列号，用于定义弯曲应用顺序 */
 	bendSequenceNumber = 'bendSequenceNumber',
+	/** 材料类型 */
+	MATERIAL = 'MATERIAL',
+	/** 介电常数 */
+	DIELECTRIC_CONSTANT = 'DIELECTRIC_CONSTANT',
+	/** 厚度 */
+	THICKNESS = 'THICKNESS',
 }
 
 // ============= 几何基础类型 =============

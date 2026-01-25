@@ -1,9 +1,24 @@
 // ============= 物理层和层堆叠类型 =============
 
+import { EDMDGeometryType } from './item.types';
+
 /**
  * 层技术类型枚举
  */
-export enum LayerTechnologyType {
+export type LayerTechnologyType =
+	| EDMDGeometryType.LAYER_SILKSCREEN
+	| EDMDGeometryType.LAYER_OTHERSIGNAL
+	| EDMDGeometryType.LAYER_POWERGROUND
+	| EDMDGeometryType.LAYER_SOLDERMASK
+	| EDMDGeometryType.LAYER_DIELECTRIC
+	| EDMDGeometryType.LAYER_SOLDERPASTE
+	| EDMDGeometryType.LAYER_GLUE
+	| EDMDGeometryType.LAYER_LANDSONLY;
+
+/**
+ * 传统层技术类型枚举
+ */
+export enum TraditionalLayerTechnologyType {
 	/** 信号层 */
 	SIGNAL = 'LAYER_OTHERSIGNAL',
 	/** 电源/地层 */

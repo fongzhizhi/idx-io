@@ -1,4 +1,5 @@
 import { EDMDObject } from './base.types';
+import { IDXPDMTag } from './namespace.types';
 
 // ============= 形状元素 =============
 
@@ -45,7 +46,24 @@ export enum ShapeElementType {
 /**
  * 传统方式Third Item联合类型
  */
-export type EDMDThirdItem = EDMDStratum | EDMDAssemblyComponent | EDMDInterStratumFeature | EDMDKeepOut | EDMDKeepIn | EDMDFunctionalItemShape;
+export type EDMDThirdItem =
+	| EDMDStratumTechnology
+	| EDMDStratum
+	| EDMDAssemblyComponent
+	| EDMDInterStratumFeature
+	| EDMDKeepOut
+	| EDMDKeepIn
+	| EDMDFunctionalItemShape;
+
+/** 传统方式Third Item类型枚举 */
+export type EDMDThirdItemType =
+	| IDXPDMTag.EDMDStratumTechnology
+	| IDXPDMTag.EDMDStratum
+	| IDXPDMTag.EDMDAssemblyComponent
+	| IDXPDMTag.EDMDInterStratumFeature
+	| IDXPDMTag.EDMDKeepOut
+	| IDXPDMTag.EDMDKeepIn
+	| IDXPDMTag.EDMDFunctionalItemShape;
 
 /** 层类型枚举 */
 export enum StratumType {
@@ -173,6 +191,7 @@ export enum AssemblyComponentType {
  * REF: Section 6.1.2.3
  */
 export interface EDMDStratumTechnology extends EDMDObject {
+	type: IDXPDMTag.EDMDStratumTechnology;
 	/** 技术类型 */
 	TechnologyType: TechnologyType;
 	/** 层用途 */
@@ -187,6 +206,7 @@ export interface EDMDStratumTechnology extends EDMDObject {
  * REF: Section 6.1.2.1
  */
 export interface EDMDStratum extends EDMDObject {
+	type: IDXPDMTag.EDMDStratum;
 	/** 引用的形状元素id列表 */
 	ShapeElements: string[];
 	/** 层类型 */
@@ -205,6 +225,7 @@ export interface EDMDStratum extends EDMDObject {
  * REF: Section 6.2.1.1
  */
 export interface EDMDAssemblyComponent extends EDMDObject {
+	type: IDXPDMTag.EDMDAssemblyComponent;
 	/** 引用的形状元素 */
 	ShapeElement: string;
 	/** 组件类型 */
@@ -219,6 +240,7 @@ export interface EDMDAssemblyComponent extends EDMDObject {
  * REF: Section 6.3.1
  */
 export interface EDMDInterStratumFeature extends EDMDObject {
+	type: IDXPDMTag.EDMDInterStratumFeature;
 	/** 引用的形状元素 */
 	ShapeElement: string;
 	/** 跨层特征类型 */
@@ -235,6 +257,7 @@ export interface EDMDInterStratumFeature extends EDMDObject {
  * REF: Section 6.5.1.1
  */
 export interface EDMDKeepOut extends EDMDObject {
+	type: IDXPDMTag.EDMDKeepOut;
 	/** 引用的形状元素 */
 	ShapeElement: string;
 	/** 禁布目的 */
@@ -249,6 +272,7 @@ export interface EDMDKeepOut extends EDMDObject {
  * REF: Section 6.5.1.1
  */
 export interface EDMDKeepIn extends EDMDObject {
+	type: IDXPDMTag.EDMDKeepIn;
 	/** 引用的形状元素 */
 	ShapeElement: string;
 	/** 保留目的 */
@@ -263,6 +287,7 @@ export interface EDMDKeepIn extends EDMDObject {
  * REF: Section 6.6.1.1, 6.7.1.1
  */
 export interface EDMDFunctionalItemShape extends EDMDObject {
+	type: IDXPDMTag.EDMDFunctionalItemShape;
 	/** 引用的形状元素 */
 	ShapeElement: string;
 	/** 功能区类型 */

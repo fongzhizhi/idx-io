@@ -75,6 +75,8 @@ export enum IDXFoundationTag {
 	Item = 'Item',
 	/** 形状元素，定义项目的几何形状 */
 	ShapeElement = 'ShapeElement',
+	/** 曲线集合，定义 2D 或 2.5D 几何形状 */
+	InterStratumFeature = 'InterStratumFeature',
 	/** 2D 曲线集合，定义 2.5D 几何的 Z 轴范围 */
 	CurveSet2d = 'CurveSet2d',
 	/** 2D 笛卡尔坐标点 */
@@ -113,6 +115,20 @@ export enum IDXFoundationTag {
 	Revision = 'Revision',
 	/** 序列号，每次变更递增 */
 	Sequence = 'Sequence',
+	/** 层 */
+	Stratum = 'Stratum',
+	/** 装配组件 */
+	AssemblyComponent = 'AssemblyComponent',
+	/** 禁布区 */
+	KeepOut = 'KeepOut',
+	/** 保留区 */
+	KeepIn = 'KeepIn',
+	/** 层技术 */
+	StratumTechnology = 'StratumTechnology',
+	/** 功能性项目形状 */
+	FunctionalItemShape = 'FunctionalItemShape',
+	/** 3D模型 */
+	Model3D = 'Model3D',
 }
 
 /**
@@ -168,8 +184,32 @@ export enum IDXPDMTag {
 	ShapeDescriptionType = 'ShapeDescriptionType',
 	/** 形状元素类型，如 FeatureShapeElement、PartMountingFeature 等 */
 	ShapeElementType = 'ShapeElementType',
+	/** 装配组件，表示 PCB 上的组件 */
+	ShapeElement = 'ShapeElement',
 	/** 定义形状，指向曲线集合 */
 	DefiningShape = 'DefiningShape',
+	/** 组件类型，如 Board、Component 等 */
+	AssemblyComponentType = 'AssemblyComponentType',
+	/** 跨层特征，定义跨多个层的几何形状 */
+	InterStratumFeatureType = 'InterStratumFeatureType',
+	/** 模型标识 */
+	ModelIdentifier = 'ModelIdentifier',
+	/** 目的，用于 KeepOut 和 KeepIn 定义 */
+	Purpose = 'Purpose',
+	/** 功能区类型 */
+	FunctionalItemShapeType = 'FunctionalItemShapeType',
+	/** MCAD格式 */
+	MCADFormat = 'MCADFormat',
+	/** MCAD格式版本 */
+	ModelVersion = 'ModelVersion',
+	/** 模型位置（相对路径） */
+	ModelLocation = 'ModelLocation',
+	/** MCAD格式版本 */
+	MCADFormatVersion = 'MCADFormatVersion',
+	/** 变换参考（坐标系参考） */
+	TransformationReference = 'TransformationReference',
+	/** 实例用户区域层名称（用于Other Outline映射） */
+	InstanceUserAreaLayerName = 'InstanceUserAreaLayerName',
 	/** 反转标记，用于布尔运算（false=添加，true=减去） */
 	Inverted = 'Inverted',
 	/** 弯曲元素，用于柔性板弯曲区域 */
@@ -217,6 +257,22 @@ export enum IDXPDMTag {
 
 	/** EDMD 形状元素标识 */
 	EDMDShapeElement = 'EDMDShapeElement',
+	/** EDMD 层标识 */
+	EDMDStratum = 'EDMDStratum',
+	/** EDMD 层技术标识 */
+	EDMDStratumTechnology = 'EDMDStratumTechnology',
+	/** EDMD 装配组件标识 */
+	EDMDAssemblyComponent = 'EDMDAssemblyComponent',
+	/** EDMD 层间特征标识 */
+	EDMDInterStratumFeature = 'EDMDInterStratumFeature',
+	/** EDMD 禁止区标识 */
+	EDMDKeepOut = 'EDMDKeepOut',
+	/** EDMD 允许区标识 */
+	EDMDKeepIn = 'EDMDKeepIn',
+	/** EDMD 功能性项目形状标识 */
+	EDMDFunctionalItemShape = 'EDMDFunctionalItemShape',
+	/** EDMD 3D模型标识 */
+	EDMDModel3D = 'EDMDModel3D',
 }
 
 /**
@@ -240,6 +296,12 @@ export enum IDXD2Tag {
 	PolyLine = 'PolyLine',
 	/** 点，多段线中的点 */
 	Point = 'Point',
+	/** 点1 */
+	Point1 = 'Point1',
+	/** 点2 */
+	Point2 = 'Point2',
+	/** 点3 */
+	Point3 = 'Point3',
 	/** 厚度，多段线的宽度（如用于走线或铣削路径） */
 	Thickness = 'Thickness',
 	/** 圆弧 */
@@ -274,6 +336,10 @@ export enum IDXD2Tag {
 	CenterPoint = 'CenterPoint',
 	/** 直径 */
 	Diameter = 'Diameter',
+	/** 椭圆长半轴长度 */
+	SemiMajorAxis = 'SemiMajorAxis',
+	/** 椭圆短半轴长度 */
+	SemiMinorAxis = 'SemiMinorAxis',
 	/** 控制点 */
 	ControlPoint = 'ControlPoint',
 	/** 阶数 */

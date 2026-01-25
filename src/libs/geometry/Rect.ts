@@ -1,12 +1,12 @@
 import { BBox2 } from './BBox2';
-import { Geometry2D, GeometryType } from './Geometry2D';
+import { Geometry2D, GeometryKind } from './Geometry2D';
 import { Matrix3 } from './Matrix3';
 import { Polyline } from './Polyline';
 import { Vector2 } from './Vector2';
 
 /** 矩形 */
 export class Rect extends Geometry2D {
-	readonly type = GeometryType.Rect;
+	readonly type = GeometryKind.Rect;
 	/** 左下角 */
 	readonly leftBottom: Vector2;
 	/** 宽度 */

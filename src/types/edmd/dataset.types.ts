@@ -77,13 +77,13 @@ export type EDMDDataSetBody = Partial<{
 	/** 形状元素集合 */
 	ShapeElements: EDMDShapeElement[];
 	/** 传统方式Third Item类型集合 */
-	Strata: EDMDThirdItem[];
+	ThirdItems: EDMDThirdItem[];
 
 	// ------------ 引用相关 ------------
 	/** 物理层集合 */
 	Layers: LayerDefinition[];
 	/** 层堆叠集合 */
-	LayersStackup: LayerStackupDefinition[];
+	LayerStackups: LayerStackupDefinition[];
 	/** 3D模型引用集合 */
 	Models3D: EDMDModel3D[];
 

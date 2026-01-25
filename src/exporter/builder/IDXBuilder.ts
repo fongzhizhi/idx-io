@@ -1,23 +1,79 @@
-import { Arc } from "../../libs/geometry/Arc";
-import { Circle } from "../../libs/geometry/Circle";
-import { GeometryType } from "../../libs/geometry/Geometry2D";
-import { Line } from "../../libs/geometry/Line";
-import { Polyline } from "../../libs/geometry/Polyline";
-import { Rect } from "../../libs/geometry/Rect";
-import { Vector2 } from "../../libs/geometry/Vector2";
-import { ECADLayer, ECADLayerStackup, ECADData, ECADObject, ECADTransformation2D, ECADMeta, ECADLayerType, ECADGeometry, ECADBoard, ECADClosedGeometry, ECADMillingPath, ECADLayerZone, ECADBend, ECADModel3D, ECADModelFormat, ECADFootprint, ECADComponent, ECADHole, ECADHoleType, ECADConstraintArea, ECADConstraintPurpose, ECADNonCollaborativeData, ECADTrace, ECADCopperArea, ECADSilkscreen } from "../../types/ecad/ecad.interface";
-import { EDMDIdentifier, EDMDName, EDMDUserSimpleProperty, EDMDTransformation, UserSimpleProperty, EDMDCartesianPoint } from "../../types/edmd/base.types";
-import { EDMDHistory, EDMDDataSet, EDMDHeader, EDMDDataSetBody, EDMDProcessInstruction, EDMDProcessInstructionSendInformation } from "../../types/edmd/dataset.types";
-import { EDMDZBounds, EDMDGeometry, EDMDCurveSet2D, EDMDLine, EDMDArc, EDMDCircleCenter, EDMDPolyLine, EDMDCompositeCurve } from "../../types/edmd/geometry.types";
-import { EDMDItemSingle, EDMDItemAssembly, ItemType, EDMDItemInstance, EDMPackagePin } from "../../types/edmd/item.types";
-import { EDMDModel3D } from "../../types/edmd/model3d.types";
-import { IDXD2Tag, IDXComputationalTag } from "../../types/edmd/namespace.types";
-import { EDMDShapeElement, EDMDStratum, LayerPurpose, ShapeElementType, StratumType, StratumSurfaceDesignation } from "../../types/edmd/shape-element.types";
-import { IDXBuildConfig } from "../../types/exporter/builder/idx-builder.interface";
-import { IDXBuilderIDPre } from "../../types/exporter/builder/idx-builder.types";
-import { iterateArr } from "../../utils/array.utils";
-import { isValidBool, iterateObject } from "../../utils/object.utils";
-import { DefaultIDXBuildConfig } from "./config/idx-builder.config";
+import { Arc } from '../../libs/geometry/Arc';
+import { Circle } from '../../libs/geometry/Circle';
+import { GeometryKind } from '../../libs/geometry/Geometry2D';
+import { Line } from '../../libs/geometry/Line';
+import { Polyline } from '../../libs/geometry/Polyline';
+import { Rect } from '../../libs/geometry/Rect';
+import { Vector2 } from '../../libs/geometry/Vector2';
+import {
+	ECADLayer,
+	ECADLayerStackup,
+	ECADData,
+	ECADObject,
+	ECADTransformation2D,
+	ECADMeta,
+	ECADLayerType,
+	ECADGeometry,
+	ECADBoard,
+	ECADClosedGeometry,
+	ECADMillingPath,
+	ECADLayerZone,
+	ECADBend,
+	ECADModel3D,
+	ECADModelFormat,
+	ECADFootprint,
+	ECADComponent,
+	ECADHole,
+	ECADHoleType,
+	ECADConstraintArea,
+	ECADConstraintPurpose,
+	ECADNonCollaborativeData,
+	ECADTrace,
+	ECADCopperArea,
+	ECADSilkscreen,
+} from '../../types/ecad/ecad.interface';
+import {
+	EDMDIdentifier,
+	EDMDName,
+	EDMDUserSimpleProperty,
+	EDMDTransformation,
+	UserSimpleProperty,
+	EDMDCartesianPoint,
+} from '../../types/edmd/base.types';
+import {
+	EDMDHistory,
+	EDMDDataSet,
+	EDMDHeader,
+	EDMDDataSetBody,
+	EDMDProcessInstruction,
+	EDMDProcessInstructionSendInformation,
+} from '../../types/edmd/dataset.types';
+import {
+	EDMDZBounds,
+	EDMDGeometry,
+	EDMDCurveSet2D,
+	EDMDLine,
+	EDMDArc,
+	EDMDCircleCenter,
+	EDMDPolyLine,
+	EDMDCompositeCurve,
+} from '../../types/edmd/geometry.types';
+import { EDMDItemSingle, EDMDItemAssembly, ItemType, EDMDItemInstance, EDMPackagePin } from '../../types/edmd/item.types';
+import { EDMDModel3D } from '../../types/edmd/model3d.types';
+import { IDXD2Tag, IDXComputationalTag } from '../../types/edmd/namespace.types';
+import {
+	EDMDShapeElement,
+	EDMDStratum,
+	LayerPurpose,
+	ShapeElementType,
+	StratumType,
+	StratumSurfaceDesignation,
+} from '../../types/edmd/shape-element.types';
+import { IDXBuildConfig } from '../../types/exporter/builder/idx-builder.interface';
+import { IDXBuilderIDPre } from '../../types/exporter/builder/idx-builder.types';
+import { iterateArr } from '../../utils/array.utils';
+import { isValidBool, iterateObject } from '../../utils/object.utils';
+import { DefaultIDXBuildConfig } from './config/idx-builder.config';
 
 /**
  * IDX 模型构建器
@@ -492,39 +548,39 @@ export class IDXBuilder {
 	 * 将ECAD系统的层类型映射到IDXv4.0+的geometryType属性
 	 * REF: Section 6.1.2, Table 4 (层类型与GeometryType对应关系)
 	 */
-	private getLayerGeometryByLayerType(type: ECADLayerType): GeometryType {
+	private getLayerGeometryByLayerType(type: ECADLayerType): GeometryKind {
 		switch (type) {
 			case ECADLayerType.SIGNAL:
 			case ECADLayerType.POWER_GROUND:
-				return GeometryType.LAYER_OTHERSIGNAL;
+				return GeometryKind.LAYER_OTHERSIGNAL;
 			case ECADLayerType.DIELECTRIC:
-				return GeometryType.LAYER_DIELECTRIC;
+				return GeometryKind.LAYER_DIELECTRIC;
 			case ECADLayerType.SOLDERMASK:
-				return GeometryType.LAYER_SOLDERMASK;
+				return GeometryKind.LAYER_SOLDERMASK;
 			case ECADLayerType.SILKSCREEN:
-				return GeometryType.LAYER_SILKSCREEN;
+				return GeometryKind.LAYER_SILKSCREEN;
 			case ECADLayerType.SOLDERPASTE:
-				return GeometryType.LAYER_SOLDERPASTE;
+				return GeometryKind.LAYER_SOLDERPASTE;
 			case ECADLayerType.PASTEMASK:
-				return GeometryType.LAYER_PASTEMASK;
+				return GeometryKind.LAYER_PASTEMASK;
 			case ECADLayerType.GLUE:
-				return GeometryType.LAYER_GLUE;
+				return GeometryKind.LAYER_GLUE;
 			case ECADLayerType.GLUEMASK:
-				return GeometryType.LAYER_GLUEMASK;
+				return GeometryKind.LAYER_GLUEMASK;
 			case ECADLayerType.EMBEDDED_CAP_DIELECTRIC:
-				return GeometryType.LAYER_EMBEDDED_CAP_DIELECTRIC;
+				return GeometryKind.LAYER_EMBEDDED_CAP_DIELECTRIC;
 			case ECADLayerType.EMBEDDED_RESISTOR:
-				return GeometryType.LAYER_EMBEDDED_RESISTOR;
+				return GeometryKind.LAYER_EMBEDDED_RESISTOR;
 			case ECADLayerType.GENERIC:
-				return GeometryType.LAYER_GENERIC;
+				return GeometryKind.LAYER_GENERIC;
 			case ECADLayerType.OTHER:
-				return GeometryType.LAYER_GENERIC;
+				return GeometryKind.LAYER_GENERIC;
 
 			default:
 				console.warn(
 					`未识别的层类型: ${type}, 使用默认 LAYER_GENERIC 类型`
 				);
-				return GeometryType.LAYER_GENERIC;
+				return GeometryKind.LAYER_GENERIC;
 		}
 	}
 
@@ -656,7 +712,7 @@ export class IDXBuilder {
 			id: layerStackupId,
 			Name: layerStackName,
 			ItemType: ItemType.ASSEMBLY,
-			geometryType: GeometryType.LAYER_STACKUP,
+			geometryType: GeometryKind.LAYER_STACKUP,
 			ItemInstances: itemInstances,
 			ReferenceName: layerStackName,
 			UserProperties: userProperties,
@@ -945,8 +1001,8 @@ export class IDXBuilder {
 			id: boardAssemblyId,
 			ItemType: ItemType.ASSEMBLY,
 			geometryType: assemblyToName
-				? GeometryType.BOARD_AREA_RIGID
-				: GeometryType.BOARD_OUTLINE,
+				? GeometryKind.BOARD_AREA_RIGID
+				: GeometryKind.BOARD_OUTLINE,
 			ItemInstances: [boardInstance],
 		};
 		if (assemblyToName) {
@@ -1322,7 +1378,7 @@ export class IDXBuilder {
 
 		// # 创建元件装配
 		const componentAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
-		const geometryType = isMechanical ? GeometryType.COMPONENT_MECHANICAL : GeometryType.COMPONENT;
+		const geometryType = isMechanical ? GeometryKind.COMPONENT_MECHANICAL : GeometryKind.COMPONENT;
 		const componentAssembly: EDMDItemAssembly = {
 			...this.getCommonData(component),
 			id: componentAssemblyId,
@@ -1438,23 +1494,23 @@ export class IDXBuilder {
 	 * @param viaType ECAD孔类型
 	 * @returns 对应的IDX几何类型
 	 */
-	private convertHoleType(viaType: ECADHoleType): GeometryType {
+	private convertHoleType(viaType: ECADHoleType): GeometryKind {
 		switch (viaType) {
 			case ECADHoleType.PTH:
-				return GeometryType.HOLE_PLATED;
+				return GeometryKind.HOLE_PLATED;
 			case ECADHoleType.NPTH:
-				return GeometryType.HOLE_NON_PLATED;
+				return GeometryKind.HOLE_NON_PLATED;
 			case ECADHoleType.VIA:
-				return GeometryType.VIA;
+				return GeometryKind.VIA;
 			case ECADHoleType.FILLED_VIA:
-				return GeometryType.FILLED_VIA;
+				return GeometryKind.FILLED_VIA;
 			case ECADHoleType.BLIND:
 			case ECADHoleType.BURIED:
 				// 盲孔和埋孔在IDX中通常用VIA表示，通过z范围区分
-				return GeometryType.VIA;
+				return GeometryKind.VIA;
 			default:
 				// 默认返回电镀孔
-				return GeometryType.HOLE_PLATED;
+				return GeometryKind.HOLE_PLATED;
 		}
 	}
 

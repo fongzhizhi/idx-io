@@ -1,11 +1,11 @@
 import { BBox2 } from './BBox2';
-import { Geometry2D, GeometryType } from './Geometry2D';
+import { Geometry2D, GeometryKind } from './Geometry2D';
 import { Matrix3 } from './Matrix3';
 import { Vector2 } from './Vector2';
 
 /** 线条 */
 export class Line extends Geometry2D {
-	readonly type = GeometryType.Line;
+	readonly type = GeometryKind.Line;
 
 	readonly start: Vector2;
 	readonly end: Vector2;
