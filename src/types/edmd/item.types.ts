@@ -4,14 +4,7 @@
 // NOTE: 项目可以是单个组件或装配体（包含多个子项目）
 
 import { GeometryType } from '../../libs/geometry/Geometry2D';
-import {
-	EDMDObject,
-	EDMDName,
-	EDMDTransformation,
-	EDMDLengthProperty,
-	RoleOnItemInstance,
-	EDMDIdentifier,
-} from './base.types';
+import { EDMDObject, EDMDName, EDMDTransformation, EDMDLengthProperty, RoleOnItemInstance, EDMDIdentifier } from './base.types';
 
 // ============= 项目定义 (Item single) =============
 

@@ -103,18 +103,19 @@ export enum UserSimpleProperty {
 // ============= 几何基础类型 =============
 /**
  * 长度属性接口
- * 
+ *
  * @remarks
  * 用于表示IDX中的长度值，通常用于坐标、尺寸等
  */
-export interface EDMDLengthProperty {
-	/** 数值，单位由上下文定义（通常为毫米） */
-	Value: number;
-	/** 可选单位说明，如未指定则使用GlobalUnitLength */
-	Unit?: GlobalUnit;
-	/** 标记属性是否已变更（可选） */
-	IsAttributeChanged?: boolean;
-}
+export type EDMDLengthProperty = number; // Design: 根据指南建议, 应该全局Header中定义, 额外定义比较冗余
+// export interface EDMDLengthProperty {
+// 	/** 数值，单位由上下文定义（通常为毫米） */
+// 	Value: number;
+// 	/** 可选单位说明，如未指定则使用GlobalUnitLength */
+// 	Unit?: GlobalUnit;
+// 	/** 标记属性是否已变更（可选） */
+// 	IsAttributeChanged?: boolean;
+// }
 
 /**
  * 二维笛卡尔坐标点
@@ -129,8 +130,6 @@ export interface EDMDCartesianPoint extends EDMDObject {
 	X: number;
 	/** Y坐标值 */
 	Y: number;
-	/** Z坐标值(不常用) */
-	Z?: number;
 }
 
 // ============= 标识符和引用类型 =============
@@ -253,36 +252,6 @@ export enum GlobalUnit {
 	UNIT_INCH = 'UNIT_INCH',
 	UNIT_MIL = 'UNIT_MIL',
 	UNIT_CM = 'UNIT_CM',
-}
-
-/**
- * EDMD数据集头部信息
- *
- * @remarks
- * 包含创建者信息、时间戳和全局设置
- * REF: Section 5.1
- */
-export interface EDMDHeader {
-	/** 数据集描述 */
-	Description?: string;
-	/** 创建者姓名 */
-	CreatorName?: string;
-	/** 创建者公司 */
-	CreatorCompany?: string;
-	/** 创建者系统（ECAD/MCAD软件名称） */
-	CreatorSystem?: string;
-	/** 后处理器名称 */
-	PostProcessor?: string;
-	/** 后处理器版本 */
-	PostProcessorVersion?: string;
-	/** 创建者用户ID */
-	Creator?: string;
-	/** 全局长度单位 */
-	GlobalUnitLength: GlobalUnit;
-	/** 创建日期时间 (ISO 8601) */
-	CreationDateTime: string;
-	/** 最后修改日期时间 (ISO 8601) */
-	ModifiedDateTime: string;
 }
 
 /**

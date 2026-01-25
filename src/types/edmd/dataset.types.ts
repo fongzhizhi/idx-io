@@ -1,8 +1,10 @@
-import { EDMDIdentifier, EDMDObject, EDMDName, EDMDTransformation, EDMDHeader, EDMDCartesianPoint } from './base.types';
+import { EDMDIdentifier, EDMDObject, EDMDName, EDMDCartesianPoint, GlobalUnit } from './base.types';
 import { EDMDGeometry, EDMDCurveSet2D } from './geometry.types';
 import { EDMDItemSingle, EDMDItemAssembly } from './item.types';
+import { LayerDefinition, LayerStackupDefinition } from './layer.types';
+import { EDMDModel3D } from './model3d.types';
 import { IDXComputationalTag } from './namespace.types';
-import { EDMDShapeElement, EDMDStratum } from './shape-element.types';
+import { EDMDShapeElement, EDMDStratum, EDMDThirdItem } from './shape-element.types';
 
 // ============= IDX消息类型 =============
 // DESIGN: IDX协议支持三种消息类型，所有消息都基于EDMDDataSet
@@ -26,30 +28,105 @@ export interface EDMDDataSet {
 	ProcessInstruction: EDMDProcessInstruction;
 }
 
+// ============= HEADER =============
+/**
+ * EDMD数据集头部信息
+ *
+ * @remarks
+ * 包含创建者信息、时间戳和全局设置
+ * REF: Section 5.1
+ */
+export interface EDMDHeader {
+	/** 数据集描述 */
+	Description?: string;
+	/** 创建者姓名 */
+	CreatorName?: string;
+	/** 创建者公司 */
+	CreatorCompany?: string;
+	/** 创建者系统（ECAD/MCAD软件名称） */
+	CreatorSystem?: string;
+	/** 后处理器名称 */
+	PostProcessor?: string;
+	/** 后处理器版本 */
+	PostProcessorVersion?: string;
+	/** 创建者用户ID */
+	Creator?: string;
+	/** 全局长度单位 */
+	GlobalUnitLength: GlobalUnit;
+	/** 创建日期时间 (ISO 8601) */
+	CreationDateTime: string;
+	/** 最后修改日期时间 (ISO 8601) */
+	ModifiedDateTime: string;
+}
+
+// ============= Boay =============
 /**
  * 数据体，包含所有设计数据
  * @description 按层级划分和统计数据
  */
 export type EDMDDataSetBody = Partial<{
+	// ------------ 几何相关 ------------
 	/** 点集合 */
 	Points: EDMDCartesianPoint[];
 	/** 几何元素集合 */
 	Geometries: EDMDGeometry[];
 	/** 2D曲线集合 */
 	CurveSets: EDMDCurveSet2D[];
+
+	// ------------ 形状相关 ------------
 	/** 形状元素集合 */
 	ShapeElements: EDMDShapeElement[];
-	/** 层次定义集合（传统方式） */
-	Strata: EDMDStratum[];
+	/** 传统方式Third Item类型集合 */
+	Strata: EDMDThirdItem[];
+
+	// ------------ 引用相关 ------------
+	/** 物理层集合 */
+	Layers: LayerDefinition[];
+	/** 层堆叠集合 */
+	LayersStackup: LayerStackupDefinition[];
 	/** 3D模型引用集合 */
 	Models3D: EDMDModel3D[];
+
+	// ------------ 项目Item相关 ------------
 	/** 项目定义集合（Item single） */
 	ItemsSingle: EDMDItemSingle[];
 	/** 项目实例集合（Item assembly） */
 	ItemsAssembly: EDMDItemAssembly[];
+
+	// ------------ 历史记录相关 ------------
 	/** 历史记录集合 */
 	Histories: EDMDHistory[];
 }>;
+
+/**
+ * 历史记录
+ *
+ * @remarks
+ * 可选的事务历史记录
+ * REF: Section 5.4
+ */
+export interface EDMDHistory extends EDMDObject {
+	/** 历史记录条目 */
+	HistoryEntries?: EDMDHistoryEntry[];
+	/** 主题（引用的事务或变更） */
+	Subject?: string;
+}
+
+/**
+ * 历史记录条目
+ */
+export interface EDMDHistoryEntry {
+	/** 创建者标识符 */
+	Creator: string;
+	/** 文本描述 */
+	Text: string;
+	/** 创建日期时间 */
+	CreationDateTime: string;
+	/** 系统范围 */
+	SystemScope: string;
+}
+
+// ============= ProcessInstruction =============
 
 /**
  * 处理指令类型
@@ -76,6 +153,7 @@ export interface EDMDProcessInstructionBase {
 	/** 执行者（发送者） */
 	Actor?: string;
 }
+
 /**
  * 发送信息指令（基线发送）
  *
@@ -134,91 +212,40 @@ export interface EDMDTransaction extends EDMDObject {
  *
  * @remarks
  * 描述一个具体的项目变更
+ * REF: Section 5.2.1, 5.2.2
  */
-export interface EDMDChange {
+export interface EDMDChange extends EDMDObject {
 	/** 执行者 */
 	Actor?: string;
-	/** 新项目标识符 */
+	/** 新项目标识符（用于添加、修改、替换操作） */
 	NewItem?: EDMDIdentifier;
-	/** 前驱项目标识符 */
+	/** 前驱项目标识符（用于修改、替换操作） */
 	PredecessorItem?: EDMDIdentifier;
+
+	/** 变更类型 */
+	ChangeType: EDMDChangeType;
+
 	/** 接受标记（用于响应） */
-	Accept?: { Value: boolean };
-	/** 删除的实例名称（用于删除操作） */
-	DeletedInstanceName?: EDMDName;
+	Accept?: {
+		/** 接受/拒绝值 */
+		Value: boolean;
+		/** 接受/拒绝的理由 */
+		Reason?: string;
+		/** 可选：接受者评论 */
+		Comment?: string;
+	};
 }
 
-/**
- * 3D模型引用
- *
- * @remarks
- * 用于引用外部3D模型文件
- * REF: Section 6.2.1.3
- */
-export interface EDMDModel3D extends EDMDObject {
-	/** 模型标识符（文件名或ID） */
-	ModelIdentifier: string;
-	/** 模型版本/配置 */
-	ModelVersion?: string;
-	/** 模型位置（相对路径） */
-	ModelLocation?: string;
-	/** MCAD文件格式 */
-	MCADFormat: MCADModelFormat;
-	/** MCAD格式版本 */
-	MCADFormatVersion?: string;
-	/** 变换矩阵（用于对齐） */
-	Transformation?: EDMDTransformation;
-	/** 变换参考（坐标系名称） */
-	TransformationReference?: string;
-}
-
-/**
- * MCAD支持的模型格式
- * @ref 根据IDX指南第78页，建议使用以下标准名称
- */
-export enum MCADModelFormat {
-	/** Dassault SolidWorks */
-	SolidWorks = 'SolidWorks',
-	/** Siemens NX */
-	NX = 'NX',
-	/** Dassault CATIA */
-	Catia = 'Catia',
-	/** 中性STEP格式 */
-	STEP = 'STEP',
-	/** 网格STL格式 */
-	STL = 'STL',
-	/** Autodesk Inventor */
-	Inventor = 'Inventor',
-	/** Autodesk Fusion 360 */
-	Fusion = 'Fusion',
-	/** Siemens Solid Edge */
-	SolidEdge = 'SolidEdge',
-}
-
-/**
- * 历史记录
- *
- * @remarks
- * 可选的事务历史记录
- * REF: Section 5.4
- */
-export interface EDMDHistory extends EDMDObject {
-	/** 历史记录条目 */
-	HistoryEntries?: EDMDHistoryEntry[];
-	/** 主题（引用的事务或变更） */
-	Subject?: string;
-}
-
-/**
- * 历史记录条目
- */
-export interface EDMDHistoryEntry {
-	/** 创建者标识符 */
-	Creator: string;
-	/** 文本描述 */
-	Text: string;
-	/** 创建日期时间 */
-	CreationDateTime: string;
-	/** 系统范围 */
-	SystemScope: string;
+/** 变更类型枚举 */
+export enum EDMDChangeType {
+	/** 添加新项目 */
+	ADD = 'add',
+	/** 删除项目 */
+	REMOVE = 'remove',
+	/** 移动项目 */
+	MOVE = 'move',
+	/** 修改项目属性或形状 */
+	MODIFY = 'modify',
+	/** 替换项目 */
+	REPLACE = 'replace',
 }

@@ -258,10 +258,6 @@ IDXv4.0 引入了 **`geometryType` 属性**，显著简化了建模结构。
   <d2:Y xsi:type="property:EDMDLengthProperty">
     <property:Value>20.000000</property:Value>
   </d2:Y>
-  <!-- Z坐标。可选，不常用，2D点没有Z坐标 -->
-  <d2:Y xsi:type="property:EDMDLengthProperty">
-    <property:Value>30.000000</property:Value>
-  </d2:Y>
 </foundation:CartesianPoint>
 ```
 
@@ -303,8 +299,6 @@ export interface CartesianPoint extends EDMDObject {
 	X: number;
 	/** Y坐标值 */
 	Y: number;
-	/** Z坐标值(不常用) */
-	Z?: number;
 }
 ```
 
@@ -870,23 +864,7 @@ export interface EDMDZBounds {
 **类型定义**：
 
 ```typescript
-/**
- * 形状元素类型枚举
- *
- * @remarks
- * 根据IDX规范Table 2和实际使用情况定义
- */
-export type ShapeElementType = 
-  | 'FeatureShapeElement'      // 通用特征形状
-  | 'PartMountingFeature'      // 安装特征
-  | 'NonFeatureShapeElement'   // 非特征几何
-  | 'PartFeature'              // 元件特征（传统方法）
-  | 'ComponentTerminal'        // 元件端子
-  | 'ViaTerminal'              // 过孔端子
-  | 'FeatureShapeElement'      // 特征形状元素（最常用）
-  | 'PartMountingFeature'      // 部件安装特征
-  | 'NonFeatureShapeElement'   // 非特征形状元素
-  | 'ComponentTerminal';       // 元件端子
+// ============= 形状元素 =============
 
 /**
  * 形状元素
@@ -897,68 +875,34 @@ export type ShapeElementType =
  * XML: <foundation:ShapeElement xsi:type="pdm:EDMDShapeElement">
  */
 export interface EDMDShapeElement extends EDMDObject {
-  /** XML类型标识 */
-  'xsi:type': 'pdm:EDMDShapeElement';
-  /** 形状元素类型 */
-  ShapeElementType: ShapeElementType;
-  /** 布尔运算标记：false=添加材料，true=减去材料 */
-  Inverted: boolean;
-  /** 引用的曲线集id */
-  DefiningShape: string;
-  /** 可选用户属性 */
-  UserProperties?: EDMDUserSimpleProperty[];
+	/** 形状元素类型 */
+	ShapeElementType: ShapeElementType;
+	/** 布尔运算标记：false=添加材料，true=减去材料 */
+	Inverted: boolean;
+	/** 引用的曲线集id */
+	DefiningShape: string;
 }
 
 /**
- * 特殊形状元素：添加材料的形状
- */
-export interface PositiveShapeElement extends EDMDShapeElement {
-  Inverted: false;
-}
-
-/**
- * 特殊形状元素：减去材料的形状（切割）
- */
-export interface NegativeShapeElement extends EDMDShapeElement {
-  Inverted: true;
-}
-
-/**
- * 复合形状元素（包含多个子形状）
+ * 形状元素类型枚举
  *
  * @remarks
- * 用于表示需要多个布尔操作组合的复杂形状
+ * 定义形状元素的功能和用途
+ * REF: Section 6.9 (Table 8)
  */
-export interface CompositeShapeElement extends EDMDObject {
-  /** 主形状元素ID */
-  MainShape: string;
-  /** 切割形状元素ID数组（Inverted=true） */
-  CutoutShapes: string[];
-  /** 附加形状元素ID数组（Inverted=false） */
-  AdditionalShapes: string[];
-}
-
-/**
- * 形状元素管理器
- *
- * @remarks
- * 用于管理IDX文件中的形状元素定义
- */
-export interface ShapeElementManager {
-  /** 添加形状元素 */
-  addShapeElement(shape: EDMDShapeElement): boolean;
-  
-  /** 根据类型获取形状元素 */
-  getShapeElementsByType(type: ShapeElementType): EDMDShapeElement[];
-  
-  /** 获取引用特定曲线集的形状元素 */
-  getShapeElementsByCurveSet(curveSetId: string): EDMDShapeElement[];
-  
-  /** 获取所有切割形状（Inverted=true） */
-  getCutoutShapes(): NegativeShapeElement[];
-  
-  /** 获取所有添加形状（Inverted=false） */
-  getPositiveShapes(): PositiveShapeElement[];
+export enum ShapeElementType {
+	/** 特征形状元素（最常用） */
+	FeatureShapeElement = 'FeatureShapeElement',
+	/** 零件安装特征（用于孔、铣削切口等） */
+	PartMountingFeature = 'PartMountingFeature',
+	/** 非特征形状元素（用于弯曲区域等） */
+	NonFeatureShapeElement = 'NonFeatureShapeElement',
+	/** 零件特征 */
+	PartFeature = 'PartFeature',
+	/** 元件端子（用于引脚定义） */
+	ComponentTermination = 'ComponentTermination',
+	/** 设计层 */
+	DesignLayerStratum = 'DesignLayerStratum',
 }
 ```
 
@@ -1445,7 +1389,7 @@ export interface EDMDFunctionalItemShape extends EDMDObject {
 <foundation:Item id="ITEM_LAYER_SIGNAL_1" geometryType="LAYER_OTHERSIGNAL" IsAttributeChanged="false">
   <foundation:Name>Signal Layer 1</foundation:Name>
   <foundation:Description>Inner signal layer for routing</foundation:Description>
-  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:ItemType>assembly</pdm:ItemType>
   
   <!-- 形状引用：可以引用走线、焊盘等形状 -->
   <pdm:Shape>SHAPE_SIGNAL_TRACES_LAYER1</pdm:Shape>
@@ -1474,7 +1418,7 @@ export interface EDMDFunctionalItemShape extends EDMDObject {
 <foundation:Item id="ITEM_LAYER_DIELECTRIC_1" geometryType="LAYER_DIELECTRIC" IsAttributeChanged="false">
   <foundation:Name>Dielectric Layer 1</foundation:Name>
   <foundation:Description>FR4 dielectric material</foundation:Description>
-  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:ItemType>assembly</pdm:ItemType>
   <pdm:Shape>SHAPE_DIELECTRIC_AREA</pdm:Shape>
   <pdm:ReferenceName>DIELECTRIC_LAYER_1</pdm:ReferenceName>
   
@@ -1499,7 +1443,7 @@ export interface EDMDFunctionalItemShape extends EDMDObject {
 <foundation:Item id="ITEM_LAYER_SOLDERMASK_TOP" geometryType="LAYER_SOLDERMASK" IsAttributeChanged="false">
   <foundation:Name>Top Solder Mask</foundation:Name>
   <foundation:Description>Solder mask on top side</foundation:Description>
-  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:ItemType>assembly</pdm:ItemType>
   <pdm:Shape>SHAPE_SOLDERMASK_TOP</pdm:Shape>
   <pdm:ReferenceName>TOP_SOLDERMASK</pdm:ReferenceName>
 </foundation:Item>
@@ -1508,7 +1452,7 @@ export interface EDMDFunctionalItemShape extends EDMDObject {
 <foundation:Item id="ITEM_LAYER_SILKSCREEN_TOP" geometryType="LAYER_SILKSCREEN" IsAttributeChanged="false">
   <foundation:Name>Top Silkscreen</foundation:Name>
   <foundation:Description>Silkscreen printing on top side</foundation:Description>
-  <pdm:ItemType>single</pdm:ItemType>
+  <pdm:ItemType>assembly</pdm:ItemType>
   <pdm:Shape>SHAPE_SILKSCREEN_TOP</pdm:Shape>
   <pdm:ReferenceName>TOP_SILKSCREEN</pdm:ReferenceName>
 </foundation:Item>
@@ -2415,7 +2359,7 @@ export interface EDMD3DModel extends EDMDObject {
   </pdm:Identifier>
   
   <!-- 项目实例列表 -->
-  <pdm:ItemInstance id="ITEMINST_BOARD" IsAttributeChanged="false">
+  <pdm:ItemInstance id="ITEMINST_BOARD" IsAttributeChanged="false" zOffset=“0.20”>
     <!-- 引用的项目ID（ITEM_BOARD_SINGLE） -->
     <pdm:Item>ITEM_BOARD_SINGLE</pdm:Item>
     
@@ -2441,11 +2385,6 @@ export interface EDMD3DModel extends EDMDObject {
         <property:Value>0.000000</property:Value>
       </pdm:ty>
     </pdm:Transformation>
-    
-    <!-- Z轴偏移（可选，IDXv4.0+）：相对板表面的偏移 -->
-    <pdm:zOffset>
-      <property:Value>0.000000</property:Value>
-    </pdm:zOffset>
     
     <!-- 用户属性：实例特定信息 -->
     <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
