@@ -575,10 +575,20 @@ export class IDXBuilder {
 		// ## 层自定义属性
 		const userProperties: EDMDUserSimpleProperty[] = [];
 		if (layerMaterial) {
-			userProperties.push(this.createUserSimpleProperty('Material', layerMaterial));
+			userProperties.push(
+				this.createUserSimpleProperty(
+					UserSimpleProperty.MATERIAL,
+					layerMaterial
+				)
+			);
 		}
 		if (layerColor) {
-			userProperties.push(this.createUserSimpleProperty('Color', layerColor));
+			userProperties.push(
+				this.createUserSimpleProperty(
+					UserSimpleProperty.Color,
+					layerColor
+				)
+			);
 		}
 
 		const layerAssembly: EDMDItemAssembly = {

@@ -68,7 +68,7 @@ export enum IDXFoundationTag {
 	/** 数据体，包含所有几何元素、项目和形状定义 */
 	Body = 'Body',
 	/** EDMD 数据体标识 */
-	EDMDBody = 'EDMDBody',
+	EDMDDataSetBody = 'EDMDDataSetBody',
 	/** 设计指令, 定义文件的类型和意图 */
 	ProcessInstruction = 'ProcessInstruction',
 	/** 设计项目元素，表示 PCB 上的各种组件（板、元件、孔等） */
@@ -356,7 +356,7 @@ export enum IDXD2Tag {
 	/** EDMD 坐标点标识 */
 	EDMDCartesianPoint = 'EDMDCartesianPoint',
 	/** EDMD 多段线标识 */
-	EDMDPolyLine = 'EDMDPolyline',
+	EDMDPolyLine = 'EDMDPolyLine',
 	/** EDMD Arc标识 */
 	EDMDArc = 'EDMDArc',
 	/** EDMD 圆（圆心直径式）标识 */

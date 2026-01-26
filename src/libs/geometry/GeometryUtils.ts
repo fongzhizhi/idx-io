@@ -56,7 +56,7 @@ export class GeometryUtils {
 			throw new Error('At least 2 points are required to create a polyline');
 		}
 
-		const primitives: Geometry2D[] = [];
+		const primitives: Line[] = [];
 		for (let i = 0; i < points.length - 1; i++) {
 			const p1 = points[i];
 			const p2 = points[i + 1];

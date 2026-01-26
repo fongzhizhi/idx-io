@@ -150,7 +150,7 @@ export interface ECADLayer {
  * 一个设计可以有多个堆叠（如刚柔结合板的不同区域）。
  * REF: Section 6.1.2.2
  */
-export interface ECADLayerStackup {
+export interface ECADLayerStackup extends ECADObject {
 	/** 堆叠唯一标识符 */
 	id: string;
 	/** 堆叠名称，用于其他元素引用 */

@@ -104,6 +104,8 @@ export enum UserSimpleProperty {
 	DIELECTRIC_CONSTANT = 'DIELECTRIC_CONSTANT',
 	/** 厚度 */
 	THICKNESS = 'THICKNESS',
+	/** 颜色 */
+	Color = 'Color',
 }
 
 // ============= 几何基础类型 =============
