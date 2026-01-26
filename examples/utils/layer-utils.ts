@@ -74,8 +74,8 @@ export function createStandardFourLayers(): Record<string, ECADLayer> {
             name: config.name,
             type: config.type,
             thickness: config.thickness,
-            material: config.material,
-            color: config.color,
+            ...(config.material && { material: config.material }),
+            ...(config.color && { color: config.color }),
         };
     });
     
@@ -120,7 +120,7 @@ export function createStandardDielectricLayers(): Record<string, ECADLayer> {
             name: config.name,
             type: config.type,
             thickness: config.thickness,
-            material: config.material,
+            ...(config.material && { material: config.material }),
         };
     });
     

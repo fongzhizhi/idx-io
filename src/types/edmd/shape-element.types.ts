@@ -163,6 +163,8 @@ export enum FunctionalItemShapeType {
 	FlexibleArea = 'FlexibleArea',
 	/** 加强区域 */
 	Stiffener = 'Stiffener',
+	/** 刚性区域 */
+	RigidArea = 'RigidArea',
 	/** 机械组件 */
 	MechanicalItem = 'MechanicalItem',
 }

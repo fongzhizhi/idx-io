@@ -20,12 +20,12 @@ if (!exampleName) {
     console.log('使用方法: node run-example.js <example-name>');
     console.log('');
     console.log('可用的示例:');
-    console.log('  01.simple-board     - 简单板子');
-    console.log('  02.layer-stackup    - 层和层堆叠');
-    console.log('  03.components       - 元件');
-    console.log('  04.vias            - 过孔');
-    console.log('  05.keepout-keepin  - 禁止区和保留区');
-    console.log('  06.complete-board  - 完整多层板');
+    console.log('  01.simple-board           - 简单板子');
+    console.log('  02.layer-and-layer-stackup - 层和层堆叠');
+    console.log('  03.components             - 元件');
+    console.log('  04.vias                   - 过孔');
+    console.log('  05.keepout-keepin         - 禁止区和保留区');
+    console.log('  06.complete-board         - 完整多层板');
     process.exit(1);
 }
 

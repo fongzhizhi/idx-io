@@ -6,4 +6,8 @@ export const DefaultIDXWriteConfig: IDXWriteConfig = {
 	formatting: {
 		prettyPrint: true,
 	},
+	numberFormatting: {
+		decimalPlaces: 3,
+		removeTrailingZeros: true,
+	},
 } as const;

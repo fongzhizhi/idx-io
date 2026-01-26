@@ -131,6 +131,8 @@ export enum IDXFoundationTag {
 	Model3D = 'Model3D',
 	/** EDMD 名称标识 */
 	EDMDName = 'EDMDName',
+	/** 用戶自定义属性 */
+	UserProperty = 'UserProperty',
 }
 
 /**

@@ -1,40 +1,30 @@
 // ============= 物理层和层堆叠类型 =============
 
+import { EDMDIdentifier } from './base.types';
 import { EDMDGeometryType } from './item.types';
 
 /**
- * 层技术类型枚举
+ * LayerType枚举用于UserProperty [LayerType]的值。
+ * 根据IDXv4.5指南第51-52页，这些是用户属性LayerType的可能取值。
+ * 注意：这些值用于UserProperty，而geometryType使用不同的值（如LAYER_SOLDERMASK等）。
  */
-export type LayerTechnologyType =
-	| EDMDGeometryType.LAYER_SILKSCREEN
-	| EDMDGeometryType.LAYER_OTHERSIGNAL
-	| EDMDGeometryType.LAYER_POWERGROUND
-	| EDMDGeometryType.LAYER_SOLDERMASK
-	| EDMDGeometryType.LAYER_DIELECTRIC
-	| EDMDGeometryType.LAYER_SOLDERPASTE
-	| EDMDGeometryType.LAYER_GLUE
-	| EDMDGeometryType.LAYER_LANDSONLY;
-
-/**
- * 传统层技术类型枚举
- */
-export enum TraditionalLayerTechnologyType {
-	/** 信号层 */
-	SIGNAL = 'LAYER_OTHERSIGNAL',
-	/** 电源/地层 */
-	POWER_GROUND = 'LAYER_POWERGROUND',
-	/** 阻焊层 */
-	SOLDERMASK = 'LAYER_SOLDERMASK',
-	/** 丝印层 */
-	SILKSCREEN = 'LAYER_SILKSCREEN',
-	/** 介质层 */
-	DIELECTRIC = 'LAYER_DIELECTRIC',
-	/** 锡膏层 */
-	SOLDERPASTE = 'LAYER_SOLDERPASTE',
-	/** 胶层 */
-	GLUE = 'LAYER_GLUE',
-	/** 仅焊盘层 */
-	LANDS_ONLY = 'LAYER_LANDSONLY',
+export enum EDMDLayerType {
+	// 从表格中直接获取的值
+	SOLDERMASK = 'SolderMask',
+	SOLDERPASTE = 'SolderPaste',
+	SILKSCREEN = 'SilkScreen',
+	GENERICLAYER = 'GenericLayer',
+	GLUE = 'Glue',
+	GLUEMASK = 'GlueMask',
+	PASTEMASK = 'PasteMask',
+	OTHERSIGNAL = 'OtherSignal',
+	LANDSONLY = 'LandsOnly',
+	POWERGROUND = 'PowerOrGround',
+	EMBEDDED_CAPACITOR_DIELECTRIC = 'EmbeddedPassiveCapacitorDielectric',
+	EMBEDDED_RESISTOR = 'EmbeddedPassiveResistor',
+	DIELECTRIC = 'Dielectric',
+	// 从示例中推断出的值（未在表格中但使用）
+	SIGNAL = 'Signal',
 }
 
 /**
@@ -43,8 +33,8 @@ export enum TraditionalLayerTechnologyType {
 export interface LayerDefinition {
 	/** 层ID */
 	id: string;
-	/** 层类型 */
-	layerType: LayerTechnologyType;
+	/** 层类型（用于geometryType属性） */
+	layerType: EDMDGeometryType;
 	/** 层名称 */
 	name: string;
 	/** 层描述 */
@@ -61,6 +51,8 @@ export interface LayerDefinition {
 	thickness?: number;
 	/** 介电常数（介质层） */
 	dielectricConstant?: number;
+	/** 层标识符 */
+	identifier?: EDMDIdentifier;
 }
 
 /**
@@ -79,14 +71,20 @@ export interface LayerStackupDefinition {
 	layers: LayerStackupLayer[];
 	/** 总厚度 */
 	totalThickness: number;
+	/** 层堆叠标识符 */
+	identifier?: EDMDIdentifier;
 }
 
 /**
  * 层堆叠中的层定义
  */
 export interface LayerStackupLayer {
-	/** 层引用名称 */
+	/** 引用层ID */
+	layerId: string;
+	/** 层引用名称（用于显示） */
 	layerReferenceName: string;
+	/** 层类型（用于实例中的LayerType属性，使用简单类型名） */
+	layerType?: string;
 	/** 在此堆叠中的下边界 */
 	lowerBound: number;
 	/** 在此堆叠中的上边界 */

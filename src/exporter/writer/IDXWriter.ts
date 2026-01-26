@@ -321,6 +321,30 @@ export class IDXWriter {
 	}
 
 	// ------------ 构建通用数据 ------------
+
+	/**
+	 * 格式化数字
+	 * 统一处理数字的小数位数和格式化，避免浮点精度问题
+	 */
+	private formatNumber(value: number): string {
+		const { numberFormatting } = this.config;
+		const decimalPlaces = numberFormatting?.decimalPlaces ?? 3;
+		const removeTrailingZeros = numberFormatting?.removeTrailingZeros ?? true;
+
+		// 处理浮点精度问题：先四舍五入到指定精度
+		const roundedValue = Math.round(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces);
+
+		// 格式化到指定小数位数
+		let formatted = roundedValue.toFixed(decimalPlaces);
+
+		// 移除尾随零（如果启用）
+		if (removeTrailingZeros) {
+			formatted = parseFloat(formatted).toString();
+		}
+
+		return formatted;
+	}
+
 	/** 构建基础属性 */
 	private buildBasicAttr(baseObj: EDMDObject): Record<string, string> {
 		const baseAttrs: Record<string, string> = {};
@@ -358,7 +382,13 @@ export class IDXWriter {
 
 	/** 构建属性值 */
 	private buildPropValue(targetEle: XMLBuilder, value: number | boolean | string) {
-		targetEle.ele(PropValueAttrName).txt(toString(value));
+		let formattedValue: string;
+		if (typeof value === 'number') {
+			formattedValue = this.formatNumber(value);
+		} else {
+			formattedValue = toString(value);
+		}
+		targetEle.ele(PropValueAttrName).txt(formattedValue);
 	}
 
 	/** 构建长度属性值（带xsi:type声明） */
@@ -1156,36 +1186,28 @@ export class IDXWriter {
 		}
 	}
 
-	/** 构建物理层（简化方式） */
+	/** 构建物理层 */
 	private buildLayer(layer: LayerDefinition) {
 		const bodyEle = this.bodyEle;
 		if (!bodyEle) return;
-		const {
-			id,
-			layerType,
-			name,
-			description,
-			referenceName,
-			lowerBound,
-			upperBound,
-			material,
-			thickness,
-			dielectricConstant,
-		} = layer;
+		const { id, layerType, name, description, referenceName, identifier, thickness, material } = layer;
 
-		// # 构建节点
+		// # 构建节点 - 层定义只包含基本信息
 		const layerTagName = getIDXFoundationTagName(IDXFoundationTag.Item);
 
 		// ## 构建属性
 		const layerAttrs: Record<string, string> = {
 			id,
 			geometryType: layerType,
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDItem),
 		};
 
 		const layerEle = bodyEle.ele(layerTagName, layerAttrs);
 
 		// ## 构建基础数据
-		layerEle.ele(getIDXFoundationTagName(IDXFoundationTag.Name)).txt(name);
+		if (name) {
+			layerEle.ele(getIDXFoundationTagName(IDXFoundationTag.Name)).txt(name);
+		}
 		if (description) {
 			layerEle.ele(getIDXFoundationTagName(IDXFoundationTag.Description)).txt(
 				description
@@ -1195,47 +1217,30 @@ export class IDXWriter {
 		// ## 构建项目类型
 		layerEle.ele(getIDXPDMTagName(IDXPDMTag.ItemType)).txt(ItemType.ASSEMBLY);
 
-		// ## 构建形状引用（可选）
+		// ## 构建标识符（重要：每个层都需要唯一标识符）
+		this.buildItemIdentifier(layerEle, identifier);
+
+		// ## 构建用户属性（厚度和材料信息）
+		if (thickness !== undefined) {
+			this.buildCorrectUserProperty(layerEle, 'THICKNESS', thickness);
+		}
+		if (material) {
+			this.buildCorrectUserProperty(layerEle, 'MATERIAL', material);
+		}
+
+		// ## 构建引用名称（用于层堆叠引用）
 		if (referenceName) {
 			layerEle.ele(getIDXPDMTagName(IDXPDMTag.ReferenceName)).txt(referenceName);
 		}
 
-		// ## 构建用户属性：Z轴范围
-		const lowerBoundProp = this.createUserProperty(UserSimpleProperty.LowerBound, lowerBound.toString());
-		const upperBoundProp = this.createUserProperty(UserSimpleProperty.UpperBound, upperBound.toString());
-
-		this.buildUserProperty(layerEle, lowerBoundProp);
-		this.buildUserProperty(layerEle, upperBoundProp);
-
-		// ## 构建其他用户属性
-		if (material) {
-			const materialProp = this.createUserProperty(
-				UserSimpleProperty.MATERIAL,
-				material
-			);
-			this.buildUserProperty(layerEle, materialProp);
-		}
-		if (thickness) {
-			const thicknessProp = this.createUserProperty(
-				UserSimpleProperty.THICKNESS,
-				thickness.toString()
-			);
-			this.buildUserProperty(layerEle, thicknessProp);
-		}
-		if (dielectricConstant) {
-			const dielectricProp = this.createUserProperty(
-				UserSimpleProperty.DIELECTRIC_CONSTANT,
-				dielectricConstant.toString()
-			);
-			this.buildUserProperty(layerEle, dielectricProp);
-		}
+		// 注意：层定义中不包含边界信息，这些将在层堆叠中定义
 	}
 
-	/** 构建层堆叠（简化方式） */
+	/** 构建层堆叠 */
 	private buildLayerStackup(stackup: LayerStackupDefinition) {
 		const bodyEle = this.bodyEle;
 		if (!bodyEle) return;
-		const { id, name, description, referenceName, layers } = stackup;
+		const { id, name, description, referenceName, layers, identifier } = stackup;
 
 		// # 构建节点
 		const stackupTagName = getIDXFoundationTagName(IDXFoundationTag.Item);
@@ -1244,12 +1249,15 @@ export class IDXWriter {
 		const stackupAttrs: Record<string, string> = {
 			id: id,
 			geometryType: EDMDGeometryType.LAYER_STACKUP,
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDItem),
 		};
 
 		const stackupEle = bodyEle.ele(stackupTagName, stackupAttrs);
 
 		// ## 构建基础数据
-		stackupEle.ele(getIDXFoundationTagName(IDXFoundationTag.Name)).txt(name);
+		if (name) {
+			stackupEle.ele(getIDXFoundationTagName(IDXFoundationTag.Name)).txt(name);
+		}
 		if (description) {
 			stackupEle.ele(getIDXFoundationTagName(IDXFoundationTag.Description)).txt(
 				description
@@ -1259,60 +1267,99 @@ export class IDXWriter {
 		// ## 构建项目类型
 		stackupEle.ele(getIDXPDMTagName(IDXPDMTag.ItemType)).txt(ItemType.ASSEMBLY);
 
+		// ## 构建标识符（重要：每个层堆叠都需要唯一标识符）
+		this.buildItemIdentifier(stackupEle, identifier);
+
 		// ## 构建参考名称
 		if (referenceName) {
 			stackupEle.ele(getIDXPDMTagName(IDXPDMTag.ReferenceName)).txt(referenceName);
 		}
 
-		// ## 构建层实例
+		// ## 构建层实例 - 在这里定义层的边界信息
 		iterateArr(layers, layer => {
+			const instanceId = `INST_${layer.layerReferenceName.replace(/\s+/g, '_')}`;
 			const instanceAttrs: Record<string, string> = {
-				id: `INST_${layer.layerReferenceName}`,
+				id: instanceId,
+				[XsiTypeAttrName]: getIDXPDMTagName(
+					IDXPDMTag.EDMDItemInstance
+				),
 			};
 			const instanceEle = stackupEle.ele(
 				getIDXPDMTagName(IDXPDMTag.ItemInstance),
 				instanceAttrs
 			);
+			instanceEle.ele(getIDXPDMTagName(IDXPDMTag.Item)).txt(layer.layerId);
 
-			// 引用层
-			instanceEle.ele(getIDXPDMTagName(IDXPDMTag.Item)).txt(
-				layer.layerReferenceName
+			// 实例名称 - 正确的类型声明
+			const instanceNameAttrs: Record<string, string> = {
+				[XsiTypeAttrName]: getIDXFoundationTagName(
+					IDXFoundationTag.EDMDName
+				),
+			};
+			const instanceNameEle = instanceEle.ele(
+				getIDXPDMTagName(IDXPDMTag.InstanceName),
+				instanceNameAttrs
+			);
+			instanceNameEle.ele(
+				getIDXFoundationTagName(IDXFoundationTag.SystemScope)
+			).txt('ECADSYSTEM');
+			instanceNameEle.ele(getIDXFoundationTagName(IDXFoundationTag.ObjectName)).txt(
+				`${layer.layerReferenceName}_Instance`
 			);
 
-			// 实例名称
-			instanceEle.ele(getIDXPDMTagName(IDXPDMTag.InstanceName)).txt(
-				layer.layerReferenceName
-			);
+			// Z轴边界 - 使用正确的foundation:UserProperty结构
+			this.buildCorrectUserProperty(instanceEle, 'LowerBound', layer.lowerBound);
+			this.buildCorrectUserProperty(instanceEle, 'UpperBound', layer.upperBound);
 
-			// Z轴范围用户属性
-			const lowerBoundProp = this.createUserProperty(
-				UserSimpleProperty.LowerBound,
-				layer.lowerBound.toString()
-			);
-			const upperBoundProp = this.createUserProperty(
-				UserSimpleProperty.UpperBound,
-				layer.upperBound.toString()
-			);
+			// 层类型属性
+			if (layer.layerType) {
+				this.buildCorrectUserProperty(
+					instanceEle,
+					'LayerType',
+					layer.layerType
+				);
+			}
 
-			this.buildUserProperty(instanceEle, lowerBoundProp);
-			this.buildUserProperty(instanceEle, upperBoundProp);
-
-			// 其他用户属性
+			// 其他属性
 			if (layer.material) {
-				const materialProp = this.createUserProperty(
-					UserSimpleProperty.MATERIAL,
+				this.buildCorrectUserProperty(
+					instanceEle,
+					'MATERIAL',
 					layer.material
 				);
-				this.buildUserProperty(instanceEle, materialProp);
-			}
-			if (layer.layerPurpose) {
-				const purposeProp = this.createUserProperty(
-					UserSimpleProperty.LAYER_TYPE,
-					layer.layerPurpose
-				);
-				this.buildUserProperty(instanceEle, purposeProp);
 			}
 		});
+	}
+
+	/**
+	 * 构建正确的用户属性结构
+	 * 使用 <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
+	 */
+	private buildCorrectUserProperty(targetEle: XMLBuilder, key: string, value: string | number) {
+		if (!targetEle) return;
+
+		// 创建 foundation:UserProperty 元素
+		const userPropAttrs: Record<string, string> = {
+			[XsiTypeAttrName]: getIDXPropertyTagName(
+				IDXPropertyTag.EDMDUserSimpleProperty
+			),
+		};
+		const userPropEle = targetEle.ele(
+			getIDXFoundationTagName(IDXFoundationTag.UserProperty),
+			userPropAttrs
+		);
+
+		// 创建 property:Key 元素
+		const keyAttrs: Record<string, string> = {
+			[XsiTypeAttrName]: getIDXFoundationTagName(IDXFoundationTag.EDMDName),
+		};
+		const keyEle = userPropEle.ele(getIDXPropertyTagName(IDXPropertyTag.Key), keyAttrs);
+		keyEle.ele(getIDXFoundationTagName(IDXFoundationTag.SystemScope)).txt('ECADSYSTEM');
+		keyEle.ele(getIDXFoundationTagName(IDXFoundationTag.ObjectName)).txt(key);
+
+		// 创建 property:Value 元素 - 使用格式化的数字
+		const formattedValue = typeof value === 'number' ? this.formatNumber(value) : value.toString();
+		userPropEle.ele(getIDXPropertyTagName(IDXPropertyTag.Value)).txt(formattedValue);
 	}
 
 	// ------------ 构建3D模型------------
@@ -1608,10 +1655,15 @@ export class IDXWriter {
 		}
 
 		// # 构建节点
-		const userPropTagName = getIDXPropertyTagName(IDXPropertyTag.EDMDUserSimpleProperty);
+		const userPropTagName = getIDXFoundationTagName(IDXFoundationTag.UserProperty);
 
 		// ## 构建属性
-		const userPropAttrs: Record<string, string> = {};
+		const userPropAttrs: Record<string, string> = {
+			[XsiTypeAttrName]: getIDXPropertyTagName(
+				IDXPropertyTag.EDMDUserSimpleProperty
+			),
+		};
+
 		const isChanged = userProp.IsChanged;
 		if (isValidBool(isChanged)) {
 			userPropAttrs['IsChanged'] = toString(isChanged);

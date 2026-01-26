@@ -19,6 +19,8 @@ export enum IDXBuilderIDPre {
 	ThirdItem = 'TI',
 	/** 阶层(传统方式) */
 	Stratum = 'TI_STRATUM',
+	/** 层技术(传统方式) */
+	StratumTechnology = 'TI_STRATUM_TECH',
 	/** 元件(传统方式) */
 	AssemblyComponent = 'TI_Component',
 	/** 跨层特征(传统方式) */

@@ -62,6 +62,8 @@ export enum UserSimpleProperty {
 	Thickness = 'THICKNESS',
 	/** 层堆叠总厚度 */
 	TotalThickness = 'TotalThickness',
+	/** 层堆叠中的层数量 */
+	LAYER_COUNT = 'LAYER_COUNT',
 	/** 参考标志符（如 "C11"），用于标识组件实例 */
 	REFDES = 'REFDES',
 	/** 零件编号（如 "12333-CAP"） */

@@ -63,6 +63,7 @@ import {
 	EDMDEllipse,
 } from '../../types/edmd/geometry.types';
 import { EDMDItemSingle, EDMDItemAssembly, ItemType, EDMDItemInstance, EDMPackagePin, EDMDGeometryType } from '../../types/edmd/item.types';
+import { LayerDefinition, LayerStackupDefinition, LayerStackupLayer, EDMDLayerType } from '../../types/edmd/layer.types';
 import { EDMDModel3D } from '../../types/edmd/model3d.types';
 import { IDXD2Tag, IDXComputationalTag, IDXPDMTag } from '../../types/edmd/namespace.types';
 import {
@@ -81,6 +82,9 @@ import {
 	AssemblyComponentType,
 	EDMDFunctionalItemShape,
 	FunctionalItemShapeType,
+	EDMDStratumTechnology,
+	TechnologyType,
+	EDMDThirdItem,
 } from '../../types/edmd/shape-element.types';
 import { IDXBuildConfig } from '../../types/exporter/builder/idx-builder.interface';
 import { IDXBuilderIDPre } from '../../types/exporter/builder/idx-builder.types';
@@ -133,17 +137,18 @@ export class IDXBuilder {
 
 	/** 形状元素集合 */
 	private shapeElements: EDMDShapeElement[] = [];
-	/** 形状层次集合(传统方式建模) */
-	private strata: EDMDStratum[] = [];
-	/** 传统方式对象集合 */
-	private thirdItems: Array<
-		EDMDInterStratumFeature | EDMDKeepOut | EDMDKeepIn | EDMDAssemblyComponent | EDMDFunctionalItemShape
-	> = [];
+	/** 传统方式Third Item对象集合 */
+	private thirdItems: EDMDThirdItem[] = [];
 
 	/** 项目定义集合 */
 	private itemsSingle: EDMDItemSingle[] = [];
 	/** 项目装配集合 */
 	private itemsAssembly: EDMDItemAssembly[] = [];
+
+	/** 层定义集合 */
+	private layerDefinitions: LayerDefinition[] = [];
+	/** 层堆叠定义集合 */
+	private layerStackupDefinitions: LayerStackupDefinition[] = [];
 
 	/** 历史记录集合 */
 	private histories: EDMDHistory[] = [];
@@ -210,11 +215,13 @@ export class IDXBuilder {
 		this.curveSets = [];
 
 		this.shapeElements = [];
-		this.strata = [];
 		this.thirdItems = [];
 
 		this.itemsSingle = [];
 		this.itemsAssembly = [];
+
+		this.layerDefinitions = [];
+		this.layerStackupDefinitions = [];
 
 		this.histories = [];
 	}
@@ -434,8 +441,18 @@ export class IDXBuilder {
 		if (this.shapeElements.length > 0) body.ShapeElements = this.shapeElements;
 
 		// 收集传统方式Third Items
-		if (this.strata.length > 0 || this.thirdItems.length > 0) {
-			body.ThirdItems = [...this.strata, ...this.thirdItems];
+		if (this.thirdItems.length > 0) {
+			body.ThirdItems = this.thirdItems;
+		}
+
+		// 收集层定义
+		if (this.layerDefinitions.length > 0) {
+			body.Layers = this.layerDefinitions;
+		}
+
+		// 收集层堆叠定义
+		if (this.layerStackupDefinitions.length > 0) {
+			body.LayerStackups = this.layerStackupDefinitions;
 		}
 
 		// 收集项目定义
@@ -540,83 +557,232 @@ export class IDXBuilder {
 	 * 处理层和层堆叠
 	 *
 	 * @remarks
+	 * 根据IDXv4.5建模指南，创建LayerDefinition和LayerStackupDefinition
+	 * 并添加到EDMDDataSetBody的Layers和LayerStackups字段中
 	 * REF: Section 6.1.2.1, 6.1.2.2
 	 */
 	private processLayersAndStackups(layers: Record<string, ECADLayer>, stackups: Record<string, ECADLayerStackup>): void {
-		// # 处理层定义
-		iterateObject(layers, layer => {
-			this.processLayer(layer);
-		});
+		const { useSimplified } = this.config;
 
-		// # 处理层堆叠
-		iterateObject(stackups, layerStack => {
-			this.processLayerStackup(layerStack);
-		});
+		if (useSimplified) {
+			// # 简化建模方式
+			iterateObject(layers, layer => {
+				this.processLayerDefinition(layer);
+			});
+
+			iterateObject(stackups, layerStack => {
+				this.processLayerStackupDefinition(layerStack);
+			});
+		} else {
+			// # 传统建模方式
+			this.processLayersTraditional(layers, stackups);
+		}
 	}
 
 	/**
-	 * 处理单个物理层
+	 * 验证并准备层数据
+	 *
+	 * @remarks
+	 * 提取公共的层验证逻辑，避免重复代码
 	 */
-	private processLayer(layer: ECADLayer): void {
-		const { useSimplified } = this.config;
+	private validateAndPrepareLayers(layerStackup: ECADLayerStackup): Array<{ ecadId: string; layer: ECADLayer }> | null {
+		const { id: layerStackEcadId, layerIds } = layerStackup;
+
+		// # 验证层数据
+		if (!layerIds || layerIds.length === 0) {
+			console.warn(`Layer stackup ${layerStackEcadId} has no layers`);
+			return null;
+		}
+
+		const validLayers: Array<{ ecadId: string; layer: ECADLayer }> = [];
+		let hasInvalidLayer = false;
+
+		layerIds.forEach(layerId => {
+			const layer = this.layerMap.get(layerId);
+			if (!layer) {
+				console.warn(
+					`Invalid layer reference in stackup: ${layerId}`
+				);
+				hasInvalidLayer = true;
+				return;
+			}
+			validLayers.push({ ecadId: layerId, layer });
+		});
+
+		if (hasInvalidLayer || validLayers.length === 0) {
+			console.warn(`Skipping invalid layer stackup: ${layerStackEcadId}`);
+			return null;
+		}
+
+		return validLayers;
+	}
+
+	/**
+	 * 计算层的Z轴边界
+	 *
+	 * @remarks
+	 * 提取公共的Z轴计算逻辑，避免重复代码
+	 */
+	private calculateLayerBounds(validLayers: Array<{ ecadId: string; layer: ECADLayer }>): {
+		boundsMap: Map<string, EDMDZBounds>;
+		totalThickness: number;
+	} {
+		let currentZ = 0;
+		const boundsMap = new Map<string, EDMDZBounds>();
+
+		validLayers.forEach(({ ecadId, layer }) => {
+			const { thickness } = layer;
+
+			// 计算当前层的Z轴边界
+			const lowerBound = currentZ;
+			const upperBound = currentZ + thickness;
+
+			const layerBounds: EDMDZBounds = {
+				LowerBound: this.createLengthProperty(lowerBound),
+				UpperBound: this.createLengthProperty(upperBound),
+			};
+
+			// 保存层边界信息供其他对象使用
+			boundsMap.set(ecadId, layerBounds);
+
+			// 更新Z位置到下一层
+			currentZ += thickness;
+		});
+
+		return {
+			boundsMap,
+			totalThickness: currentZ,
+		};
+	}
+
+	/**
+	 * 保存层堆叠信息到映射表
+	 *
+	 * @remarks
+	 * 提取公共的映射表更新逻辑，避免重复代码
+	 */
+	private saveLayerStackupInfo(
+		layerStackEcadId: string,
+		layerStackup: ECADLayerStackup,
+		boundsMap: Map<string, EDMDZBounds>,
+		totalThickness: number
+	): void {
+		this.layerStackBoundsMap.set(layerStackEcadId, boundsMap);
+		this.layerStackMap.set(layerStackEcadId, layerStackup);
+		this.layerStackThicknessMap.set(layerStackEcadId, totalThickness);
+	}
+
+	/**
+	 * 处理单个物理层定义 (LayerDefinition)
+	 *
+	 * @remarks
+	 * 根据IDXv4.5建模指南，创建LayerDefinition对象
+	 * 添加到EDMDDataSetBody的Layers字段中
+	 */
+	private processLayerDefinition(layer: ECADLayer): void {
 		const {
 			id: layerId,
 			name: layerName,
 			type: layerType,
+			thickness: layerThickness,
 			material: layerMaterial,
-			color: layerColor,
 		} = layer;
 
-		// TODO: 数据检测
-
-		// # 创建设计层装配
-		const layerAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
-
-		// ## 层自定义属性
-		const userProperties: EDMDUserSimpleProperty[] = [];
-		if (layerMaterial) {
-			userProperties.push(
-				this.createUserSimpleProperty(
-					UserSimpleProperty.MATERIAL,
-					layerMaterial
-				)
-			);
-		}
-		if (layerColor) {
-			userProperties.push(
-				this.createUserSimpleProperty(
-					UserSimpleProperty.Color,
-					layerColor
-				)
-			);
-		}
-
-		const layerAssembly: EDMDItemAssembly = {
-			...this.getCommonData(layer),
-			id: layerAssemblyId,
-			ItemType: ItemType.ASSEMBLY,
-			geometryType: this.getLayerGeometryByLayerType(layerType),
-			ReferenceName: layerName, // Note: 用于 AssembleToName 引用
-			ItemInstances: [], // Design: 设计特点, 物理层虽然是 Assembly, 但不需要实例
-			UserProperties: userProperties,
+		// # 创建层定义对象 - 移除边界属性，这些将在层堆叠中定义
+		const layerDefinition: LayerDefinition = {
+			id: layerId,
+			layerType: this.getLayerTechnologyTypeByLayerType(layerType),
+			name: layerName,
+			description: `Layer definition: ${layerName}`,
+			referenceName: layerName, // 用于层堆叠中的引用
+			lowerBound: 0, // 占位符，实际值在层堆叠中设置
+			upperBound: 0, // 占位符，实际值在层堆叠中设置
+			thickness: layerThickness,
+			identifier: this.createIdentifier(`${layerId}_LAYER`),
 		};
-
-		// ## 传统方式建模
-		if (!useSimplified) {
-			delete layerAssembly.geometryType;
-			userProperties.push(
-				this.createUserSimpleProperty(
-					UserSimpleProperty.LAYER_TYPE,
-					this.getLayerPurposeByLayerType(
-						layerType
-					)
-				)
-			);
+		if (layerMaterial) {
+			layerDefinition.material = layerMaterial;
 		}
 
-		this.itemsAssembly.push(layerAssembly);
+		this.layerDefinitions.push(layerDefinition);
 		this.layerMap.set(layerId, layer);
-		this.layerIdMap.set(layerId, layerAssemblyId);
+		this.layerIdMap.set(layerId, layerId); // 使用原始ID作为引用
+	}
+
+	/**
+	 * 根据层类型获取LayerType用户属性值
+	 *
+	 * @param type ECAD层类型
+	 * @returns 对应的LayerType枚举值
+	 *
+	 * @remarks
+	 * 根据PSI5 IDXv4.5指南第51-52页，LayerType值应使用标准枚举值
+	 */
+	private getLayerTypeForUserProperty(type: ECADLayerType): string {
+		switch (type) {
+			case ECADLayerType.SIGNAL:
+				return EDMDLayerType.SIGNAL;
+			case ECADLayerType.POWER_GROUND:
+				return EDMDLayerType.POWERGROUND;
+			case ECADLayerType.DIELECTRIC:
+				return EDMDLayerType.DIELECTRIC;
+			case ECADLayerType.SOLDERMASK:
+				return EDMDLayerType.SOLDERMASK;
+			case ECADLayerType.SILKSCREEN:
+				return EDMDLayerType.SILKSCREEN;
+			case ECADLayerType.SOLDERPASTE:
+				return EDMDLayerType.SOLDERPASTE;
+			case ECADLayerType.PASTEMASK:
+				return EDMDLayerType.PASTEMASK;
+			case ECADLayerType.GLUE:
+				return EDMDLayerType.GLUE;
+			case ECADLayerType.GLUEMASK:
+				return EDMDLayerType.GLUEMASK;
+			case ECADLayerType.EMBEDDED_CAP_DIELECTRIC:
+				return EDMDLayerType.EMBEDDED_CAPACITOR_DIELECTRIC;
+			case ECADLayerType.EMBEDDED_RESISTOR:
+				return EDMDLayerType.EMBEDDED_RESISTOR;
+			case ECADLayerType.GENERIC:
+			case ECADLayerType.OTHER:
+			default:
+				return EDMDLayerType.GENERICLAYER;
+		}
+	}
+
+	/**
+	 * 根据层类型获取层技术类型
+	 *
+	 * @param type ECAD层类型
+	 * @returns 对应的EDMDGeometryType
+	 */
+	private getLayerTechnologyTypeByLayerType(type: ECADLayerType): EDMDGeometryType {
+		switch (type) {
+			case ECADLayerType.SIGNAL:
+				return EDMDGeometryType.LAYER_OTHERSIGNAL; // 信号层使用LAYER_OTHERSIGNAL
+			case ECADLayerType.POWER_GROUND:
+				return EDMDGeometryType.LAYER_OTHERSIGNAL;
+			case ECADLayerType.DIELECTRIC:
+				return EDMDGeometryType.LAYER_DIELECTRIC;
+			case ECADLayerType.SOLDERMASK:
+				return EDMDGeometryType.LAYER_SOLDERMASK;
+			case ECADLayerType.SILKSCREEN:
+				return EDMDGeometryType.LAYER_SILKSCREEN;
+			case ECADLayerType.SOLDERPASTE:
+				return EDMDGeometryType.LAYER_SOLDERPASTE;
+			case ECADLayerType.GLUE:
+				return EDMDGeometryType.LAYER_GLUE;
+			case ECADLayerType.PASTEMASK:
+			case ECADLayerType.GLUEMASK:
+			case ECADLayerType.EMBEDDED_CAP_DIELECTRIC:
+			case ECADLayerType.EMBEDDED_RESISTOR:
+			case ECADLayerType.GENERIC:
+			case ECADLayerType.OTHER:
+			default:
+				console.warn(
+					`未识别的层类型: ${type}, 使用默认 LAYER_OTHERSIGNAL 类型`
+				);
+				return EDMDGeometryType.LAYER_OTHERSIGNAL;
+		}
 	}
 
 	/**
@@ -632,6 +798,7 @@ export class IDXBuilder {
 	private getLayerGeometryByLayerType(type: ECADLayerType): EDMDGeometryType {
 		switch (type) {
 			case ECADLayerType.SIGNAL:
+				return EDMDGeometryType.LAYER_OTHERSIGNAL; // 信号层使用LAYER_OTHERSIGNAL
 			case ECADLayerType.POWER_GROUND:
 				return EDMDGeometryType.LAYER_OTHERSIGNAL;
 			case ECADLayerType.DIELECTRIC:
@@ -713,104 +880,219 @@ export class IDXBuilder {
 	}
 
 	/**
-	 * 处理层堆叠
+	 * 处理层堆叠定义 (LayerStackupDefinition)
+	 *
+	 * @remarks
+	 * 根据IDXv4.5建模指南，创建LayerStackupDefinition对象
+	 * 添加到EDMDDataSetBody的LayerStackups字段中
 	 */
-	private processLayerStackup(layerStackup: ECADLayerStackup): void {
-		const layerMap = this.layerMap;
-		const layerIdMap = this.layerIdMap;
-		const layerStackBoundsMap = this.layerStackBoundsMap;
-		const { id: layerStackEcadId, name: layerStackName, layerIds } = layerStackup;
+	private processLayerStackupDefinition(layerStackup: ECADLayerStackup): void {
+		const { id: layerStackEcadId, name: layerStackName } = layerStackup;
 
-		// # 检测层数据是否存在和创建
-		if (!layerIds || layerIds.length == 0) {
+		// # 验证层数据
+		const validLayers = this.validateAndPrepareLayers(layerStackup);
+		if (!validLayers) {
 			return;
 		}
-		const usedLayerdMap = new Map<string, ECADLayer>();
-		let hasInvalidLayer = false;
-		layerIds.forEach(layerId => {
-			const layer = layerMap.get(layerId);
-			const layerIdxId = layerIdMap.get(layerId);
-			if (!layer || !layerIdxId) {
-				hasInvalidLayer = true;
-				return;
-			}
-			usedLayerdMap.set(layerIdxId, layer);
-		});
-		if (hasInvalidLayer || usedLayerdMap.size == 0) {
-			return;
-		}
-		const { useSimplified } = this.config;
 
-		// # 创建层堆叠装配
-		const boundsMap = new Map<string, EDMDZBounds>();
-		layerStackBoundsMap.set(layerStackEcadId, boundsMap);
-		const layerStackupId = this.generateId(IDXBuilderIDPre.LayerStack);
+		// # 计算层的Z轴位置
+		const { boundsMap, totalThickness } = this.calculateLayerBounds(validLayers);
+		const stackupLayers: LayerStackupLayer[] = [];
 
-		// ## 创建层堆叠实例
-		let nextLowerBound = 0; // Design: 从底面开始, 从 0 开始计算
-		const itemInstances: EDMDItemInstance[] = [];
-		usedLayerdMap.forEach((layer, layerIdxId) => {
-			const { id: layerId, name: layerName, thickness } = layer;
+		validLayers.forEach(({ ecadId, layer }) => {
+			const { name: layerName, type: layerType } = layer;
+			const layerBounds = boundsMap.get(ecadId)!;
 
-			const layerBounds: EDMDZBounds = {
-				LowerBound: this.createLengthProperty(nextLowerBound),
-				UpperBound: this.createLengthProperty(
-					nextLowerBound + thickness
-				),
+			// 创建层堆叠中的层定义
+			const stackupLayer: LayerStackupLayer = {
+				layerId: this.layerIdMap.get(ecadId) || ecadId,
+				layerReferenceName: layerName,
+				layerType: this.getLayerTypeForUserProperty(
+					layerType
+				), // 使用正确的LayerType枚举值
+				lowerBound: layerBounds.LowerBound as number,
+				upperBound: layerBounds.UpperBound as number,
+				...(layer.material && { material: layer.material }),
 			};
-
-			const userProperties: EDMDUserSimpleProperty[] = [];
-			userProperties.push(
-				this.createUserSimpleProperty(
-					UserSimpleProperty.LowerBound,
-					layerBounds.LowerBound
-				)
-			);
-			userProperties.push(
-				this.createUserSimpleProperty(
-					UserSimpleProperty.UpperBound,
-					layerBounds.UpperBound
-				)
-			);
-			nextLowerBound = layerBounds.UpperBound;
-
-			const layerInstanceId = this.generateId(IDXBuilderIDPre.ItemInstance);
-			const layerInstance: EDMDItemInstance = {
-				id: layerInstanceId,
-				Item: layerIdxId,
-				InstanceName: this.createEDMDName(layerName),
-				UserProperties: userProperties,
-			};
-			itemInstances.push(layerInstance);
-
-			boundsMap.set(layerId, layerBounds);
+			stackupLayers.push(stackupLayer);
 		});
 
-		// ## 层堆叠属性
-		const totalThickness = nextLowerBound;
-		const userProperties: EDMDUserSimpleProperty[] = [];
-		userProperties.push(this.createUserSimpleProperty(UserSimpleProperty.TotalThickness, totalThickness));
-
-		const layerStackupAssembly: EDMDItemAssembly = {
-			Description: `Layer stackup: ${layerIds.length} layers`,
-			...this.getCommonData(layerStackup),
-			id: layerStackupId,
-			Name: layerStackName,
-			ItemType: ItemType.ASSEMBLY,
-			geometryType: EDMDGeometryType.LAYER_STACKUP,
-			ItemInstances: itemInstances,
-			ReferenceName: layerStackName,
-			UserProperties: userProperties,
+		// # 创建层堆叠定义对象
+		const layerStackupDefinition: LayerStackupDefinition = {
+			id: layerStackEcadId,
+			name: layerStackName,
+			description: `Layer stackup definition: ${validLayers.length} layers, ${totalThickness.toFixed(3)}mm total thickness`,
+			referenceName: layerStackName,
+			layers: stackupLayers,
+			totalThickness: totalThickness,
+			identifier: this.createIdentifier(`${layerStackEcadId}_STACKUP`),
 		};
 
-		// ## 传统方式建模
-		if (!useSimplified) {
-			delete layerStackupAssembly.geometryType;
+		this.layerStackupDefinitions.push(layerStackupDefinition);
+
+		// # 保存层堆叠信息
+		this.saveLayerStackupInfo(layerStackEcadId, layerStackup, boundsMap, totalThickness);
+	}
+
+	/**
+	 * 处理层和层堆叠（传统建模方式）
+	 *
+	 * @remarks
+	 * 传统建模方式使用完整的层次结构：
+	 * Item (assembly) → Item (single) → Third Item (EDMDStratum) → ShapeElement → CurveSet2d
+	 * REF: Section 6.1.2 (Traditional approach)
+	 */
+	private processLayersTraditional(layers: Record<string, ECADLayer>, stackups: Record<string, ECADLayerStackup>): void {
+		// # 处理层技术定义
+		iterateObject(layers, layer => {
+			this.processLayerTechnologyTraditional(layer);
+		});
+
+		// # 处理层堆叠（传统方式）
+		iterateObject(stackups, layerStack => {
+			this.processLayerStackupTraditional(layerStack);
+		});
+	}
+
+	/**
+	 * 处理单个层技术定义（传统方式）
+	 *
+	 * @remarks
+	 * 创建StratumTechnology对象，定义层的技术属性
+	 */
+	private processLayerTechnologyTraditional(layer: ECADLayer): void {
+		const { id: layerId, name: layerName, type: layerType } = layer;
+
+		// # 创建层技术对象
+		const stratumTechnologyId = this.generateId(IDXBuilderIDPre.StratumTechnology);
+		const stratumTechnology: EDMDStratumTechnology = {
+			id: stratumTechnologyId,
+			type: IDXPDMTag.EDMDStratumTechnology,
+			TechnologyType: TechnologyType.Design,
+			LayerPurpose: this.getLayerPurposeByLayerType(layerType),
+		};
+
+		this.thirdItems.push(stratumTechnology);
+		this.layerMap.set(layerId, layer);
+		this.layerIdMap.set(layerId, stratumTechnologyId); // 传统方式使用StratumTechnology ID
+	}
+
+	/**
+	 * 处理层堆叠（传统方式）
+	 *
+	 * @remarks
+	 * 传统方式需要创建完整的层次结构：
+	 * 1. 为每个层创建ShapeElement和CurveSet2D（定义Z轴范围）
+	 * 2. 创建Stratum对象引用ShapeElement和StratumTechnology
+	 * 3. 创建Layer Item (single)引用Stratum
+	 * 4. 创建Layer Stackup Item (assembly)包含所有层实例
+	 */
+	private processLayerStackupTraditional(layerStackup: ECADLayerStackup): void {
+		const { id: layerStackEcadId, name: layerStackName } = layerStackup;
+
+		// # 验证层数据
+		const validLayers = this.validateAndPrepareLayers(layerStackup);
+		if (!validLayers) {
+			return;
 		}
 
+		// # 计算层的Z轴位置并创建完整的传统层次结构
+		const { boundsMap, totalThickness } = this.calculateLayerBounds(validLayers);
+		const layerItemIds: string[] = [];
+
+		validLayers.forEach(({ ecadId, layer }) => {
+			const { name: layerName } = layer;
+			const layerBounds = boundsMap.get(ecadId)!;
+
+			// ## 1. 创建层的CurveSet2D（定义Z轴范围）
+			const layerCurveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
+			const layerCurveSet: EDMDCurveSet2D = {
+				id: layerCurveSetId,
+				ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
+				LowerBound: layerBounds.LowerBound,
+				UpperBound: layerBounds.UpperBound,
+				DetailedGeometricModelElements: [], // 层本身没有具体几何，由其上的对象定义
+			};
+			this.curveSets.push(layerCurveSet);
+
+			// ## 2. 创建层的ShapeElement
+			const layerShapeElementId = this.generateId(IDXBuilderIDPre.ShapeElement);
+			const layerShapeElement: EDMDShapeElement = {
+				id: layerShapeElementId,
+				ShapeElementType: ShapeElementType.DesignLayerStratum,
+				Inverted: false,
+				DefiningShape: layerCurveSetId,
+			};
+			this.shapeElements.push(layerShapeElement);
+
+			// ## 3. 创建Stratum对象（传统方式）
+			const stratumId = this.generateId(IDXBuilderIDPre.Stratum);
+			const stratumTechnologyId = this.layerIdMap.get(ecadId);
+			const stratum: EDMDStratum = {
+				id: stratumId,
+				type: IDXPDMTag.EDMDStratum,
+				ShapeElements: [layerShapeElementId], // 引用ShapeElement
+				StratumType: StratumType.DesignLayerStratum,
+				StratumSurfaceDesignation: StratumSurfaceDesignation.PrimarySurface,
+				...(stratumTechnologyId && {
+					StratumTechnology: stratumTechnologyId,
+				}), // 引用StratumTechnology
+			};
+			this.thirdItems.push(stratum);
+
+			// ## 4. 创建Layer Item (single)
+			const layerSingleId = this.generateId(IDXBuilderIDPre.ItemSingle);
+			const layerSingle: EDMDItemSingle = {
+				id: layerSingleId,
+				Name: layerName,
+				Description: `Layer definition: ${layerName}`,
+				Identifier: this.createIdentifier(`${ecadId}_LAYER`),
+				ItemType: ItemType.SINGLE,
+				Shape: stratumId, // 引用Stratum（Third Item）
+				ReferenceName: layerName,
+			};
+			this.itemsSingle.push(layerSingle);
+			layerItemIds.push(layerSingleId);
+		});
+
+		// ## 5. 创建Layer Stackup Item (assembly)
+		const layerStackupAssemblyId = this.generateId(IDXBuilderIDPre.ItemAssembly);
+		const layerStackupInstances: EDMDItemInstance[] = [];
+
+		// 为每个层创建实例
+		validLayers.forEach(({ ecadId, layer }, index) => {
+			const layerSingleId = layerItemIds[index];
+			if (!layerSingleId) {
+				console.warn(
+					`Missing layer single ID for layer ${ecadId}`
+				);
+				return;
+			}
+
+			const instanceId = this.generateId(IDXBuilderIDPre.ItemInstance);
+			const instance: EDMDItemInstance = {
+				id: instanceId,
+				Item: layerSingleId,
+				InstanceName: this.createEDMDName(
+					`${layer.name}_Instance`
+				),
+			};
+			layerStackupInstances.push(instance);
+		});
+
+		const layerStackupAssembly: EDMDItemAssembly = {
+			id: layerStackupAssemblyId,
+			Name: layerStackName,
+			Description: `Layer stackup definition: ${validLayers.length} layers, ${totalThickness.toFixed(3)}mm total thickness`,
+			Identifier: this.createIdentifier(`${layerStackEcadId}_STACKUP`),
+			ItemType: ItemType.ASSEMBLY,
+			ReferenceName: layerStackName,
+			ItemInstances: layerStackupInstances,
+		};
 		this.itemsAssembly.push(layerStackupAssembly);
-		this.layerStackMap.set(layerStackEcadId, layerStackup);
-		this.layerStackThicknessMap.set(layerStackEcadId, totalThickness);
+
+		// # 保存层堆叠信息
+		this.saveLayerStackupInfo(layerStackEcadId, layerStackup, boundsMap, totalThickness);
 	}
 
 	// ------------ 构建几何数据 ------------
@@ -1012,11 +1294,8 @@ export class IDXBuilder {
 		// ## 计算Z轴边界
 		const boardZBounds: EDMDZBounds = {
 			LowerBound: this.createLengthProperty(0),
-			UpperBound: this.createLengthProperty(0),
+			UpperBound: this.createLengthProperty(boardThickness),
 		};
-		if (!assembleToName) {
-			boardZBounds.UpperBound = this.createLengthProperty(boardThickness);
-		}
 
 		// ## 创建曲线集
 		const curveSetId = this.generateId(IDXBuilderIDPre.CurveSet);
@@ -1208,7 +1487,7 @@ export class IDXBuilder {
 			StratumSurfaceDesignation: StratumSurfaceDesignation.PrimarySurface,
 		};
 
-		this.strata.push(stratum);
+		this.thirdItems.push(stratum);
 		return stratumId;
 	}
 
