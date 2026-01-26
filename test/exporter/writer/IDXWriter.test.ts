@@ -1,6 +1,11 @@
 import { describe, test, expect } from 'vitest';
 import { IDXWriter } from '../../../src/exporter/writer/IDXWriter';
-import { EDMDDataSet, GlobalUnit, GeometryType, ItemType, ShapeElementType, IDXComputationalTag, IDXD2Tag } from '../../../src/types/core';
+import { GlobalUnit } from '../../../src/types/edmd/base.types';
+import { EDMDDataSet } from '../../../src/types/edmd/dataset.types';
+import { EDMDGeometryType, ItemType } from '../../../src/types/edmd/item.types';
+import { IDXD2Tag, IDXComputationalTag } from '../../../src/types/edmd/namespace.types';
+import { ShapeElementType } from '../../../src/types/edmd/shape-element.types';
+import { CurveSet2DShapeDescType } from '../../../src/types/edmd/geometry.types';
 
 describe('IDXWriter', () => {
 	test('应该能够序列化简单的数据集', () => {
@@ -52,7 +57,7 @@ describe('IDXWriter', () => {
 				CurveSets: [
 					{
 						id: 'CURVESET_BOARD',
-						ShapeDescriptionType: 'GeometricModel',
+						ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 						LowerBound: 0,
 						UpperBound: 1.6,
 						DetailedGeometricModelElements:
@@ -62,7 +67,7 @@ describe('IDXWriter', () => {
 					},
 					{
 						id: 'CURVESET_HOLE',
-						ShapeDescriptionType: 'GeometricModel',
+						ShapeDescriptionType: CurveSet2DShapeDescType.GeometricModel,
 						LowerBound: 0,
 						UpperBound: 0, // 贯穿孔
 						DetailedGeometricModelElements:
@@ -107,7 +112,7 @@ describe('IDXWriter', () => {
 					{
 						id: 'ITEM_BOARD_ASSY',
 						ItemType: ItemType.ASSEMBLY,
-						geometryType: GeometryType.BOARD_OUTLINE,
+						geometryType: EDMDGeometryType.BOARD_OUTLINE,
 						Name: 'Main PCB Board',
 						ItemInstances: [
 							{
@@ -132,7 +137,7 @@ describe('IDXWriter', () => {
 					{
 						id: 'ITEM_HOLE_ASSY',
 						ItemType: ItemType.ASSEMBLY,
-						geometryType: GeometryType.HOLE_NON_PLATED,
+						geometryType: EDMDGeometryType.HOLE_NON_PLATED,
 						Name: 'Mounting Hole',
 						ItemInstances: [
 							{

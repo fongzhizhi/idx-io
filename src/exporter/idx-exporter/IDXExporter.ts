@@ -1,5 +1,5 @@
 import { ECADData } from '../../types/ecad/ecad.interface';
-import { IDXExportConfig, IDXExportResult } from '../../types/exporter/idx-exporter/idx-exporter.interface';
+import { IDXExportConfig, IDXExportResult, IDXFileMetadata, IDXStatistics } from '../../types/exporter/idx-exporter/idx-exporter.interface';
 import { IDXBuilder } from '../builder/IDXBuilder';
 import { IDXWriter } from '../writer/IDXWriter';
 import { DefaultIDXExportConfig } from './config/idx-exporter.config';
@@ -40,7 +40,28 @@ export class IDXExporter {
 		const idxSource = this.writer.serialize(dataSet);
 
 		// # 组织导出结果
-		const exportResult: IDXExportResult = null; // TODO: 待实现
+		const idxFile: IDXFileMetadata = {
+			name: '',
+			source: idxSource,
+			timestamp: '',
+			sequence: 0,
+			designName: '',
+		};
+		const statistics: IDXStatistics = {
+			layers: 0,
+			totalItems: 0,
+			components: 0,
+			holes: 0,
+			keepouts: 0,
+			fileSize: 0,
+			exportDuration: 0,
+		};
+		const exportResult: IDXExportResult = {
+			success: true,
+			file: idxFile,
+			statistics,
+			issues: [],
+		};
 		return exportResult;
 	}
 }

@@ -54,7 +54,7 @@ export interface IDXExportResult {
 	/** 是否成功 */
 	success: boolean;
 	/** 导出的文件信息 */
-	files: IDXFileMetadata;
+	file: IDXFileMetadata;
 	/** 统计信息 */
 	statistics: IDXStatistics;
 	/** 错误和警告 */
@@ -72,8 +72,10 @@ export interface IDXExportResult {
 export interface IDXFileMetadata {
 	/** 文件名（不包含扩展名） */
 	name: string;
-	/** 完整文件路径 */
-	path: string;
+	/** 文件源码(与path互斥) */
+	source?: string;
+	/** 完整文件路径(与source互斥) */
+	path?: string;
 	/** 创建时间戳 */
 	timestamp: string;
 	/** 序列号 */
