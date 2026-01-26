@@ -162,7 +162,7 @@ export function createBaseMetadata(designName: string, description: string) {
 export function shouldExecuteExample(filename: string, targetName: string): boolean {
     // 检查是否直接运行此文件
     const isDirectRun = require.main === module || 
-                       (process.argv[1]?.includes(targetName));
+                       Boolean(process.argv[1]?.includes(targetName));
     return isDirectRun;
 }
 

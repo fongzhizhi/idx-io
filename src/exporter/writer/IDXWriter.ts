@@ -1,6 +1,17 @@
 import { create } from 'xmlbuilder2';
 import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
-import { getIDXTagName, isIDXNameSpace, XsiTypeAttrName, PropAttrChanedAttrName, PropValueAttrName } from '../../edmd/utils/idx-namespace.utils';
+import {
+	isIDXNameSpace,
+	XsiTypeAttrName,
+	PropAttrChanedAttrName,
+	PropValueAttrName,
+	getIDXFoundationTagName,
+	getIDXPDMTagName,
+	getIDXD2TagName,
+	getIDXPropertyTagName,
+	getIDXComputationalTagName,
+	getIDXTagName,
+} from '../../edmd/utils/idx-namespace.utils';
 import {
 	EDMDObject,
 	EDMDIdentifier,
@@ -32,6 +43,7 @@ import {
 	IDXPDMTag,
 	IDXComputationalTag,
 	IDXTag,
+	IDXNameSpace,
 } from '../../types/edmd/namespace.types';
 import {
 	EDMDAssemblyComponent,
@@ -141,7 +153,7 @@ export class IDXWriter {
 		}
 		const namespaces = this.config.namespaces;
 
-		const dataSetTagName = getIDXTagName(IDXFoundationTag.EDMDDataSet);
+		const dataSetTagName = getIDXFoundationTagName(IDXFoundationTag.EDMDDataSet);
 		const dataSetNameSpaces = IDXNameSpaceLinks;
 
 		// # 构建节点
@@ -202,38 +214,52 @@ export class IDXWriter {
 			);
 			datasetEle.com(headerComment);
 		}
-		const headerTagName = getIDXTagName(IDXFoundationTag.Header);
+		const headerTagName = getIDXFoundationTagName(IDXFoundationTag.Header);
 		const headerAttrs: Record<string, string> = {
-			[XsiTypeAttrName]: getIDXTagName(IDXFoundationTag.EDMDHeader),
+			[XsiTypeAttrName]: getIDXFoundationTagName(IDXFoundationTag.EDMDHeader),
 		};
 		const headerElement = datasetEle.ele(headerTagName, headerAttrs);
 
 		// # 创建元数据信息
 		const Header = dataset.Header;
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.Description)).txt(toString(Header.Description));
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.Description)).txt(
+			toString(Header.Description)
+		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.CreatorName)).txt(toString(Header.CreatorName));
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.CreatorName)).txt(
+			toString(Header.CreatorName)
+		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.CreatorCompany)).txt(
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.CreatorCompany)).txt(
 			toString(Header.CreatorCompany)
 		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.CreatorSystem)).txt(toString(Header.CreatorSystem));
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.CreatorSystem)).txt(
+			toString(Header.CreatorSystem)
+		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.Creator)).txt(toString(Header.Creator));
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.Creator)).txt(toString(Header.Creator));
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.PostProcessor)).txt(toString(Header.PostProcessor));
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.PostProcessor)).txt(
+			toString(Header.PostProcessor)
+		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.PostProcessorVersion)).txt(
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.PostProcessorVersion)).txt(
 			toString(Header.PostProcessorVersion)
 		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.GlobalUnitLength)).txt(Header.GlobalUnitLength);
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.GlobalUnitLength)).txt(
+			Header.GlobalUnitLength
+		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.CreationDateTime)).txt(Header.CreationDateTime);
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.CreationDateTime)).txt(
+			Header.CreationDateTime
+		);
 
-		headerElement.ele(getIDXTagName(IDXFoundationTag.ModifiedDateTime)).txt(Header.ModifiedDateTime);
+		headerElement.ele(getIDXFoundationTagName(IDXFoundationTag.ModifiedDateTime)).txt(
+			Header.ModifiedDateTime
+		);
 	}
 
 	// ============= 序列化 Body =============
@@ -254,9 +280,9 @@ export class IDXWriter {
 			);
 			datasetEle.com(bodyComment);
 		}
-		const bodyTagName = getIDXTagName(IDXFoundationTag.Body);
+		const bodyTagName = getIDXFoundationTagName(IDXFoundationTag.Body);
 		const bodyAttrs: Record<string, string> = {
-			[XsiTypeAttrName]: getIDXTagName(IDXFoundationTag.EDMDDataSetBody),
+			[XsiTypeAttrName]: getIDXFoundationTagName(IDXFoundationTag.EDMDDataSetBody),
 		};
 		const bodyEle = datasetEle.ele(bodyTagName, bodyAttrs);
 		this.bodyEle = bodyEle;
@@ -320,10 +346,12 @@ export class IDXWriter {
 		const { Name, Description, UserProperties } = baseObj;
 
 		if (Name) {
-			targetEle.ele(getIDXTagName(IDXFoundationTag.Name)).txt(Name);
+			targetEle.ele(getIDXFoundationTagName(IDXFoundationTag.Name)).txt(Name);
 		}
 		if (Description) {
-			targetEle.ele(getIDXTagName(IDXFoundationTag.Description)).txt(Description);
+			targetEle.ele(getIDXFoundationTagName(IDXFoundationTag.Description)).txt(
+				Description
+			);
 		}
 		this.buildUserProperties(targetEle, UserProperties);
 	}
@@ -331,6 +359,12 @@ export class IDXWriter {
 	/** 构建属性值 */
 	private buildPropValue(targetEle: XMLBuilder, value: number | boolean | string) {
 		targetEle.ele(PropValueAttrName).txt(toString(value));
+	}
+
+	/** 构建长度属性值（带xsi:type声明） */
+	private buildLengthProperty(targetEle: XMLBuilder, value: number) {
+		targetEle.att(XsiTypeAttrName, getIDXPropertyTagName(IDXPropertyTag.EDMDLengthProperty));
+		this.buildPropValue(targetEle, value);
 	}
 
 	// ------------ 构建几何 ------------
@@ -362,12 +396,12 @@ export class IDXWriter {
 		const { X, Y } = point;
 
 		// # 构建节点
-		const pointTagName = getIDXTagName(IDXFoundationTag.CartesianPoint);
+		const pointTagName = getIDXFoundationTagName(IDXFoundationTag.CartesianPoint);
 
 		// ## 构建属性
 		const pointAttrs: Record<string, string> = {
 			...this.buildBasicAttr(point),
-			[XsiTypeAttrName]: getIDXTagName(IDXD2Tag.EDMDCartesianPoint),
+			[XsiTypeAttrName]: getIDXD2TagName(IDXD2Tag.EDMDCartesianPoint),
 		};
 
 		const pointEle = bodyEle.ele(pointTagName, pointAttrs);
@@ -376,11 +410,11 @@ export class IDXWriter {
 		this.buildBasicData(pointEle, point);
 
 		// ## 创建坐标
-		const xEle = pointEle.ele(getIDXTagName(IDXD2Tag.X));
-		this.buildPropValue(xEle, X);
+		const xEle = pointEle.ele(getIDXD2TagName(IDXD2Tag.X));
+		this.buildLengthProperty(xEle, X);
 
-		const yEle = pointEle.ele(getIDXTagName(IDXD2Tag.Y));
-		this.buildPropValue(yEle, Y);
+		const yEle = pointEle.ele(getIDXD2TagName(IDXD2Tag.Y));
+		this.buildLengthProperty(yEle, Y);
 	}
 
 	/** 批量构建几何元素 */
@@ -454,12 +488,12 @@ export class IDXWriter {
 		const { type, Thickness, Points } = polyLine;
 
 		// # 构建节点
-		const polyLineTagName = getIDXTagName(IDXD2Tag.PolyLine);
+		const polyLineTagName = getIDXD2TagName(IDXD2Tag.PolyLine);
 
 		// ## 构建属性
 		const polyLineAttrs: Record<string, string> = {
 			...this.buildBasicAttr(polyLine),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const polyLineEle = bodyEle.ele(polyLineTagName, polyLineAttrs);
@@ -469,13 +503,13 @@ export class IDXWriter {
 
 		// ## 构建厚度
 		if (Thickness && isValidNumber(Thickness)) {
-			const thicknessEle = polyLineEle.ele(getIDXTagName(IDXD2Tag.Thickness));
-			this.buildPropValue(thicknessEle, Thickness);
+			const thicknessEle = polyLineEle.ele(getIDXD2TagName(IDXD2Tag.Thickness));
+			this.buildLengthProperty(thicknessEle, Thickness);
 		}
 
 		// ## 构建点序列
 		iterateArr(Points, pointId => {
-			polyLineEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(pointId);
+			polyLineEle.ele(getIDXD2TagName(IDXD2Tag.Point)).txt(pointId);
 		});
 	}
 
@@ -486,12 +520,12 @@ export class IDXWriter {
 		const { type, Point, Vector } = line;
 
 		// # 构建节点
-		const lineTagName = getIDXTagName(IDXD2Tag.Line);
+		const lineTagName = getIDXD2TagName(IDXD2Tag.Line);
 
 		// ## 构建属性
 		const lineAttrs: Record<string, string> = {
 			...this.buildBasicAttr(line),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const lineEle = bodyEle.ele(lineTagName, lineAttrs);
@@ -500,8 +534,8 @@ export class IDXWriter {
 		this.buildBasicData(lineEle, line);
 
 		// ## 构建坐标点
-		lineEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(Point);
-		lineEle.ele(getIDXTagName(IDXD2Tag.Vector)).txt(Vector);
+		lineEle.ele(getIDXD2TagName(IDXD2Tag.Point)).txt(Point);
+		lineEle.ele(getIDXD2TagName(IDXD2Tag.Vector)).txt(Vector);
 	}
 
 	/** 构建圆弧 */
@@ -511,12 +545,12 @@ export class IDXWriter {
 		const { type, StartPoint, MidPoint, EndPoint } = arc;
 
 		// # 构建节点
-		const arcTagName = getIDXTagName(IDXD2Tag.Arc);
+		const arcTagName = getIDXD2TagName(IDXD2Tag.Arc);
 
 		// ## 构建属性
 		const arcAttrs: Record<string, string> = {
 			...this.buildBasicAttr(arc),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const arcEle = bodyEle.ele(arcTagName, arcAttrs);
@@ -525,9 +559,9 @@ export class IDXWriter {
 		this.buildBasicData(arcEle, arc);
 
 		// ## 构建坐标点
-		arcEle.ele(getIDXTagName(IDXD2Tag.StartPoint)).txt(StartPoint);
-		arcEle.ele(getIDXTagName(IDXD2Tag.MidPoint)).txt(MidPoint);
-		arcEle.ele(getIDXTagName(IDXD2Tag.EndPoint)).txt(EndPoint);
+		arcEle.ele(getIDXD2TagName(IDXD2Tag.StartPoint)).txt(StartPoint);
+		arcEle.ele(getIDXD2TagName(IDXD2Tag.MidPoint)).txt(MidPoint);
+		arcEle.ele(getIDXD2TagName(IDXD2Tag.EndPoint)).txt(EndPoint);
 	}
 
 	/** 构建圆心式圆 */
@@ -537,12 +571,12 @@ export class IDXWriter {
 		const { type, CenterPoint, Diameter } = circle;
 
 		// # 构建节点
-		const circleTagName = getIDXTagName(IDXD2Tag.CircleCenter);
+		const circleTagName = getIDXD2TagName(IDXD2Tag.CircleCenter);
 
 		// ## 构建属性
 		const circleAttrs: Record<string, string> = {
 			...this.buildBasicAttr(circle),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const circleEle = bodyEle.ele(circleTagName, circleAttrs);
@@ -551,11 +585,11 @@ export class IDXWriter {
 		this.buildBasicData(circleEle, circle);
 
 		// ## 构建圆心点
-		circleEle.ele(getIDXTagName(IDXD2Tag.CenterPoint)).txt(CenterPoint);
+		circleEle.ele(getIDXD2TagName(IDXD2Tag.CenterPoint)).txt(CenterPoint);
 
 		// ## 构建直径
-		const diameterEle = circleEle.ele(getIDXTagName(IDXD2Tag.Diameter));
-		this.buildPropValue(diameterEle, Diameter);
+		const diameterEle = circleEle.ele(getIDXD2TagName(IDXD2Tag.Diameter));
+		this.buildLengthProperty(diameterEle, Diameter);
 	}
 
 	/** 构建三点式圆 */
@@ -565,12 +599,12 @@ export class IDXWriter {
 		const { type, Point1, Point2, Point3 } = circle;
 
 		// # 构建节点
-		const circleTagName = getIDXTagName(IDXD2Tag.Circle3Point);
+		const circleTagName = getIDXD2TagName(IDXD2Tag.Circle3Point);
 
 		// ## 构建属性
 		const circleAttrs: Record<string, string> = {
 			...this.buildBasicAttr(circle),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const circleEle = bodyEle.ele(circleTagName, circleAttrs);
@@ -579,9 +613,9 @@ export class IDXWriter {
 		this.buildBasicData(circleEle, circle);
 
 		// ## 构建三个点
-		circleEle.ele(getIDXTagName(IDXD2Tag.Point1)).txt(Point1);
-		circleEle.ele(getIDXTagName(IDXD2Tag.Point2)).txt(Point2);
-		circleEle.ele(getIDXTagName(IDXD2Tag.Point3)).txt(Point3);
+		circleEle.ele(getIDXD2TagName(IDXD2Tag.Point1)).txt(Point1);
+		circleEle.ele(getIDXD2TagName(IDXD2Tag.Point2)).txt(Point2);
+		circleEle.ele(getIDXD2TagName(IDXD2Tag.Point3)).txt(Point3);
 	}
 
 	/** 构建椭圆 */
@@ -591,12 +625,12 @@ export class IDXWriter {
 		const { type, CenterPoint, SemiMajorAxis, SemiMinorAxis } = ellipse;
 
 		// # 构建节点
-		const ellipseTagName = getIDXTagName(IDXD2Tag.Ellipse);
+		const ellipseTagName = getIDXD2TagName(IDXD2Tag.Ellipse);
 
 		// ## 构建属性
 		const ellipseAttrs: Record<string, string> = {
 			...this.buildBasicAttr(ellipse),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const ellipseEle = bodyEle.ele(ellipseTagName, ellipseAttrs);
@@ -605,15 +639,15 @@ export class IDXWriter {
 		this.buildBasicData(ellipseEle, ellipse);
 
 		// ## 构建中心点
-		ellipseEle.ele(getIDXTagName(IDXD2Tag.CenterPoint)).txt(CenterPoint);
+		ellipseEle.ele(getIDXD2TagName(IDXD2Tag.CenterPoint)).txt(CenterPoint);
 
 		// ## 构建长半轴
-		const semiMajorAxisEle = ellipseEle.ele(getIDXTagName(IDXD2Tag.SemiMajorAxis));
-		this.buildPropValue(semiMajorAxisEle, SemiMajorAxis);
+		const semiMajorAxisEle = ellipseEle.ele(getIDXD2TagName(IDXD2Tag.SemiMajorAxis));
+		this.buildLengthProperty(semiMajorAxisEle, SemiMajorAxis);
 
 		// ## 构建短半轴
-		const semiMinorAxisEle = ellipseEle.ele(getIDXTagName(IDXD2Tag.SemiMinorAxis));
-		this.buildPropValue(semiMinorAxisEle, SemiMinorAxis);
+		const semiMinorAxisEle = ellipseEle.ele(getIDXD2TagName(IDXD2Tag.SemiMinorAxis));
+		this.buildLengthProperty(semiMinorAxisEle, SemiMinorAxis);
 	}
 
 	/** 构建B样条曲线 */
@@ -623,12 +657,12 @@ export class IDXWriter {
 		const { type, ControlPoints, Degree, ClosedCurve, SelfIntersect, CurveForm } = bSpline;
 
 		// # 构建节点
-		const bSplineTagName = getIDXTagName(IDXD2Tag.BSplineCurve);
+		const bSplineTagName = getIDXD2TagName(IDXD2Tag.BSplineCurve);
 
 		// ## 构建属性
 		const bSplineAttrs: Record<string, string> = {
 			...this.buildBasicAttr(bSpline),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const bSplineEle = bodyEle.ele(bSplineTagName, bSplineAttrs);
@@ -638,28 +672,28 @@ export class IDXWriter {
 
 		// ## 构建控制点
 		iterateArr(ControlPoints, pointId => {
-			bSplineEle.ele(getIDXTagName(IDXD2Tag.ControlPoint)).txt(pointId);
+			bSplineEle.ele(getIDXD2TagName(IDXD2Tag.ControlPoint)).txt(pointId);
 		});
 
 		// ## 构建阶数
-		bSplineEle.ele(getIDXTagName(IDXD2Tag.Degree)).txt(toString(Degree));
+		bSplineEle.ele(getIDXD2TagName(IDXD2Tag.Degree)).txt(toString(Degree));
 
 		// 构建可选数据
 		const closedCurve = ClosedCurve;
 		if (isValidBool(closedCurve)) {
-			bSplineEle.ele(getIDXTagName(IDXD2Tag.ClosedCurve)).txt(
+			bSplineEle.ele(getIDXD2TagName(IDXD2Tag.ClosedCurve)).txt(
 				toString(closedCurve)
 			);
 		}
 		const selfIntersect = SelfIntersect;
 		if (isValidBool(selfIntersect)) {
-			bSplineEle.ele(getIDXTagName(IDXD2Tag.SelfIntersect)).txt(
+			bSplineEle.ele(getIDXD2TagName(IDXD2Tag.SelfIntersect)).txt(
 				toString(selfIntersect)
 			);
 		}
 		const curveForm = CurveForm;
 		if (curveForm) {
-			bSplineEle.ele(getIDXTagName(IDXD2Tag.CurveForm)).txt(curveForm);
+			bSplineEle.ele(getIDXD2TagName(IDXD2Tag.CurveForm)).txt(curveForm);
 		}
 	}
 
@@ -670,19 +704,19 @@ export class IDXWriter {
 		const { type, Curves } = compositeCurve;
 
 		// # 构建节点
-		const compositeTagName = getIDXTagName(IDXD2Tag.CompositeCurve);
+		const compositeTagName = getIDXD2TagName(IDXD2Tag.CompositeCurve);
 
 		// ## 构建属性
 		const compositeAttrs: Record<string, string> = {
 			...this.buildBasicAttr(compositeCurve),
-			[XsiTypeAttrName]: getIDXTagName(type),
+			[XsiTypeAttrName]: getIDXD2TagName(type),
 		};
 
 		const compositeEle = bodyEle.ele(compositeTagName, compositeAttrs);
 
 		// ## 构建曲线序列
 		iterateArr(Curves, curveId => {
-			compositeEle.ele(getIDXTagName(IDXD2Tag.Curve)).txt(curveId);
+			compositeEle.ele(getIDXD2TagName(IDXD2Tag.Curve)).txt(curveId);
 		});
 
 		// ## 构建基础数据
@@ -718,12 +752,12 @@ export class IDXWriter {
 		const { LowerBound, UpperBound, ShapeDescriptionType, DetailedGeometricModelElements } = curveSet;
 
 		// # 构建节点
-		const curveSetTagName = getIDXTagName(IDXFoundationTag.CurveSet2d);
+		const curveSetTagName = getIDXFoundationTagName(IDXFoundationTag.CurveSet2d);
 
 		// ## 构建属性
 		const curveSetAttrs: Record<string, string> = {
 			...this.buildBasicAttr(curveSet),
-			[XsiTypeAttrName]: getIDXTagName(IDXD2Tag.EDMDCurveSet2d),
+			[XsiTypeAttrName]: getIDXD2TagName(IDXD2Tag.EDMDCurveSet2d),
 		};
 
 		const curveSetEle = bodyEle.ele(curveSetTagName, curveSetAttrs);
@@ -732,19 +766,19 @@ export class IDXWriter {
 		this.buildBasicData(curveSetEle, curveSet);
 
 		// ## 构建形状描述类型
-		curveSetEle.ele(getIDXTagName(IDXPDMTag.ShapeDescriptionType)).txt(ShapeDescriptionType);
+		curveSetEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeDescriptionType)).txt(ShapeDescriptionType);
 
 		// ## 构建下边界
-		const lowerBoundEle = curveSetEle.ele(getIDXTagName(IDXD2Tag.LowerBound));
-		this.buildPropValue(lowerBoundEle, LowerBound);
+		const lowerBoundEle = curveSetEle.ele(getIDXD2TagName(IDXD2Tag.LowerBound));
+		this.buildLengthProperty(lowerBoundEle, LowerBound);
 
 		// ## 构建上边界
-		const upperBoundEle = curveSetEle.ele(getIDXTagName(IDXD2Tag.UpperBound));
-		this.buildPropValue(upperBoundEle, UpperBound);
+		const upperBoundEle = curveSetEle.ele(getIDXD2TagName(IDXD2Tag.UpperBound));
+		this.buildLengthProperty(upperBoundEle, UpperBound);
 
 		// ## 构建几何元素引用
 		iterateArr(DetailedGeometricModelElements, geometryId => {
-			curveSetEle.ele(getIDXTagName(IDXD2Tag.DetailedGeometricModelElement)).txt(
+			curveSetEle.ele(getIDXD2TagName(IDXD2Tag.DetailedGeometricModelElement)).txt(
 				geometryId
 			);
 		});
@@ -780,12 +814,12 @@ export class IDXWriter {
 		const { ShapeElementType, Inverted, DefiningShape } = shapeElement;
 
 		// # 构建节点
-		const shapeElementTagName = getIDXTagName(IDXFoundationTag.ShapeElement);
+		const shapeElementTagName = getIDXFoundationTagName(IDXFoundationTag.ShapeElement);
 
 		// ## 构建属性
 		const shapeElementAttrs: Record<string, string> = {
 			...this.buildBasicAttr(shapeElement),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDShapeElement),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDShapeElement),
 		};
 
 		const shapeElementEle = bodyEle.ele(shapeElementTagName, shapeElementAttrs);
@@ -794,13 +828,13 @@ export class IDXWriter {
 		this.buildBasicData(shapeElementEle, shapeElement);
 
 		// ## 构建形状元素类型
-		shapeElementEle.ele(getIDXTagName(IDXPDMTag.ShapeElementType)).txt(ShapeElementType);
+		shapeElementEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeElementType)).txt(ShapeElementType);
 
 		// ## 构建反转标记（布尔运算）
-		shapeElementEle.ele(getIDXTagName(IDXPDMTag.Inverted)).txt(toString(Inverted));
+		shapeElementEle.ele(getIDXPDMTagName(IDXPDMTag.Inverted)).txt(toString(Inverted));
 
 		// ## 构建定义形状（引用曲线集）
-		shapeElementEle.ele(getIDXTagName(IDXPDMTag.DefiningShape)).txt(DefiningShape);
+		shapeElementEle.ele(getIDXPDMTagName(IDXPDMTag.DefiningShape)).txt(DefiningShape);
 	}
 
 	// ------------ 构建传统Third Item层次 ------------
@@ -869,12 +903,12 @@ export class IDXWriter {
 		const { ShapeElements, StratumType, StratumSurfaceDesignation, StratumTechnology } = stratum;
 
 		// # 构建节点
-		const stratumTagName = getIDXTagName(IDXFoundationTag.Stratum);
+		const stratumTagName = getIDXFoundationTagName(IDXFoundationTag.Stratum);
 
 		// ## 构建属性
 		const stratumAttrs: Record<string, string> = {
 			...this.buildBasicAttr(stratum),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDStratum),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDStratum),
 		};
 
 		const stratumEle = bodyEle.ele(stratumTagName, stratumAttrs);
@@ -884,22 +918,22 @@ export class IDXWriter {
 
 		// ## 构建形状元素引用
 		iterateArr(ShapeElements, shapeElementId => {
-			stratumEle.ele(getIDXTagName(IDXPDMTag.ShapeElement)).txt(shapeElementId);
+			stratumEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeElement)).txt(shapeElementId);
 		});
 
 		// ## 构建层类型
-		stratumEle.ele(getIDXTagName(IDXPDMTag.StratumType)).txt(StratumType);
+		stratumEle.ele(getIDXPDMTagName(IDXPDMTag.StratumType)).txt(StratumType);
 
 		// ## 构建层表面指定（可选）
 		if (StratumSurfaceDesignation) {
-			stratumEle.ele(getIDXTagName(IDXPDMTag.StratumSurfaceDesignation)).txt(
+			stratumEle.ele(getIDXPDMTagName(IDXPDMTag.StratumSurfaceDesignation)).txt(
 				StratumSurfaceDesignation
 			);
 		}
 
 		// ## 构建层技术引用（可选）
 		if (StratumTechnology) {
-			stratumEle.ele(getIDXTagName(IDXPDMTag.StratumTechnology)).txt(
+			stratumEle.ele(getIDXPDMTagName(IDXPDMTag.StratumTechnology)).txt(
 				StratumTechnology
 			);
 		}
@@ -912,12 +946,12 @@ export class IDXWriter {
 		const { ShapeElement, AssemblyComponentType } = assemblyComponent;
 
 		// # 构建节点
-		const assemblyComponentTagName = getIDXTagName(IDXFoundationTag.AssemblyComponent);
+		const assemblyComponentTagName = getIDXFoundationTagName(IDXFoundationTag.AssemblyComponent);
 
 		// ## 构建属性
 		const assemblyComponentAttrs: Record<string, string> = {
 			...this.buildBasicAttr(assemblyComponent),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDAssemblyComponent),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDAssemblyComponent),
 		};
 
 		const assemblyComponentEle = bodyEle.ele(assemblyComponentTagName, assemblyComponentAttrs);
@@ -926,10 +960,12 @@ export class IDXWriter {
 		this.buildBasicData(assemblyComponentEle, assemblyComponent);
 
 		// ## 构建形状元素引用
-		assemblyComponentEle.ele(getIDXTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
+		assemblyComponentEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
 
 		// ## 构建组件类型
-		assemblyComponentEle.ele(getIDXTagName(IDXPDMTag.AssemblyComponentType)).txt(AssemblyComponentType);
+		assemblyComponentEle.ele(getIDXPDMTagName(IDXPDMTag.AssemblyComponentType)).txt(
+			AssemblyComponentType
+		);
 	}
 
 	/** 构建跨层特征（InterStratumFeature） */
@@ -939,12 +975,12 @@ export class IDXWriter {
 		const { ShapeElement, InterStratumFeatureType, Stratum } = interStratumFeature;
 
 		// # 构建节点
-		const interStratumFeatureTagName = getIDXTagName(IDXFoundationTag.InterStratumFeature);
+		const interStratumFeatureTagName = getIDXFoundationTagName(IDXFoundationTag.InterStratumFeature);
 
 		// ## 构建属性
 		const interStratumFeatureAttrs: Record<string, string> = {
 			...this.buildBasicAttr(interStratumFeature),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDInterStratumFeature),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDInterStratumFeature),
 		};
 
 		const interStratumFeatureEle = bodyEle.ele(interStratumFeatureTagName, interStratumFeatureAttrs);
@@ -953,15 +989,15 @@ export class IDXWriter {
 		this.buildBasicData(interStratumFeatureEle, interStratumFeature);
 
 		// ## 构建形状元素引用
-		interStratumFeatureEle.ele(getIDXTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
+		interStratumFeatureEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
 
 		// ## 构建跨层特征类型
-		interStratumFeatureEle.ele(getIDXTagName(IDXPDMTag.InterStratumFeatureType)).txt(
+		interStratumFeatureEle.ele(getIDXPDMTagName(IDXPDMTag.InterStratumFeatureType)).txt(
 			InterStratumFeatureType
 		);
 
 		// ## 构建关联层引用
-		interStratumFeatureEle.ele(getIDXTagName(IDXPDMTag.Stratum)).txt(Stratum);
+		interStratumFeatureEle.ele(getIDXPDMTagName(IDXPDMTag.Stratum)).txt(Stratum);
 	}
 
 	/** 构建禁布区（KeepOut） */
@@ -971,12 +1007,12 @@ export class IDXWriter {
 		const { ShapeElement, Purpose } = keepOut;
 
 		// # 构建节点
-		const keepOutTagName = getIDXTagName(IDXFoundationTag.KeepOut);
+		const keepOutTagName = getIDXFoundationTagName(IDXFoundationTag.KeepOut);
 
 		// ## 构建属性
 		const keepOutAttrs: Record<string, string> = {
 			...this.buildBasicAttr(keepOut),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDKeepOut),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDKeepOut),
 		};
 
 		const keepOutEle = bodyEle.ele(keepOutTagName, keepOutAttrs);
@@ -985,10 +1021,10 @@ export class IDXWriter {
 		this.buildBasicData(keepOutEle, keepOut);
 
 		// ## 构建形状元素引用
-		keepOutEle.ele(getIDXTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
+		keepOutEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
 
 		// ## 构建禁布目的
-		keepOutEle.ele(getIDXTagName(IDXPDMTag.Purpose)).txt(Purpose);
+		keepOutEle.ele(getIDXPDMTagName(IDXPDMTag.Purpose)).txt(Purpose);
 	}
 
 	/** 构建保留区（KeepIn） */
@@ -998,12 +1034,12 @@ export class IDXWriter {
 		const { ShapeElement, Purpose } = keepIn;
 
 		// # 构建节点
-		const keepInTagName = getIDXTagName(IDXFoundationTag.KeepIn);
+		const keepInTagName = getIDXFoundationTagName(IDXFoundationTag.KeepIn);
 
 		// ## 构建属性
 		const keepInAttrs: Record<string, string> = {
 			...this.buildBasicAttr(keepIn),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDKeepIn),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDKeepIn),
 		};
 
 		const keepInEle = bodyEle.ele(keepInTagName, keepInAttrs);
@@ -1012,10 +1048,10 @@ export class IDXWriter {
 		this.buildBasicData(keepInEle, keepIn);
 
 		// ## 构建形状元素引用
-		keepInEle.ele(getIDXTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
+		keepInEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
 
 		// ## 构建保留目的
-		keepInEle.ele(getIDXTagName(IDXPDMTag.Purpose)).txt(Purpose);
+		keepInEle.ele(getIDXPDMTagName(IDXPDMTag.Purpose)).txt(Purpose);
 	}
 
 	/** 构建功能区（FunctionalItemShape） */
@@ -1025,12 +1061,12 @@ export class IDXWriter {
 		const { ShapeElement, FunctionalItemShapeType } = functionalItemShape;
 
 		// # 构建节点
-		const functionalItemShapeTagName = getIDXTagName(IDXFoundationTag.FunctionalItemShape);
+		const functionalItemShapeTagName = getIDXFoundationTagName(IDXFoundationTag.FunctionalItemShape);
 
 		// ## 构建属性
 		const functionalItemShapeAttrs: Record<string, string> = {
 			...this.buildBasicAttr(functionalItemShape),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDFunctionalItemShape),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDFunctionalItemShape),
 		};
 
 		const functionalItemShapeEle = bodyEle.ele(functionalItemShapeTagName, functionalItemShapeAttrs);
@@ -1039,10 +1075,10 @@ export class IDXWriter {
 		this.buildBasicData(functionalItemShapeEle, functionalItemShape);
 
 		// ## 构建形状元素引用
-		functionalItemShapeEle.ele(getIDXTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
+		functionalItemShapeEle.ele(getIDXPDMTagName(IDXPDMTag.ShapeElement)).txt(ShapeElement);
 
 		// ## 构建功能区类型
-		functionalItemShapeEle.ele(getIDXTagName(IDXPDMTag.FunctionalItemShapeType)).txt(
+		functionalItemShapeEle.ele(getIDXPDMTagName(IDXPDMTag.FunctionalItemShapeType)).txt(
 			FunctionalItemShapeType
 		);
 	}
@@ -1054,12 +1090,12 @@ export class IDXWriter {
 		const { TechnologyType, LayerPurpose } = stratumTechnology;
 
 		// # 构建节点
-		const stratumTechnologyTagName = getIDXTagName(IDXFoundationTag.StratumTechnology);
+		const stratumTechnologyTagName = getIDXFoundationTagName(IDXFoundationTag.StratumTechnology);
 
 		// ## 构建属性
 		const stratumTechnologyAttrs: Record<string, string> = {
 			...this.buildBasicAttr(stratumTechnology),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDStratumTechnology),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDStratumTechnology),
 		};
 
 		const stratumTechnologyEle = bodyEle.ele(stratumTechnologyTagName, stratumTechnologyAttrs);
@@ -1068,10 +1104,10 @@ export class IDXWriter {
 		this.buildBasicData(stratumTechnologyEle, stratumTechnology);
 
 		// ## 构建技术类型
-		stratumTechnologyEle.ele(getIDXTagName(IDXPDMTag.TechnologyType)).txt(TechnologyType);
+		stratumTechnologyEle.ele(getIDXPDMTagName(IDXPDMTag.TechnologyType)).txt(TechnologyType);
 
 		// ## 构建层用途
-		stratumTechnologyEle.ele(getIDXTagName(IDXPDMTag.LayerPurpose)).txt(LayerPurpose);
+		stratumTechnologyEle.ele(getIDXPDMTagName(IDXPDMTag.LayerPurpose)).txt(LayerPurpose);
 	}
 
 	// ------------ 构建物理层和层堆叠------------
@@ -1138,7 +1174,7 @@ export class IDXWriter {
 		} = layer;
 
 		// # 构建节点
-		const layerTagName = getIDXTagName(IDXFoundationTag.Item);
+		const layerTagName = getIDXFoundationTagName(IDXFoundationTag.Item);
 
 		// ## 构建属性
 		const layerAttrs: Record<string, string> = {
@@ -1149,17 +1185,19 @@ export class IDXWriter {
 		const layerEle = bodyEle.ele(layerTagName, layerAttrs);
 
 		// ## 构建基础数据
-		layerEle.ele(getIDXTagName(IDXFoundationTag.Name)).txt(name);
+		layerEle.ele(getIDXFoundationTagName(IDXFoundationTag.Name)).txt(name);
 		if (description) {
-			layerEle.ele(getIDXTagName(IDXFoundationTag.Description)).txt(description);
+			layerEle.ele(getIDXFoundationTagName(IDXFoundationTag.Description)).txt(
+				description
+			);
 		}
 
 		// ## 构建项目类型
-		layerEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(ItemType.ASSEMBLY);
+		layerEle.ele(getIDXPDMTagName(IDXPDMTag.ItemType)).txt(ItemType.ASSEMBLY);
 
 		// ## 构建形状引用（可选）
 		if (referenceName) {
-			layerEle.ele(getIDXTagName(IDXPDMTag.ReferenceName)).txt(referenceName);
+			layerEle.ele(getIDXPDMTagName(IDXPDMTag.ReferenceName)).txt(referenceName);
 		}
 
 		// ## 构建用户属性：Z轴范围
@@ -1200,7 +1238,7 @@ export class IDXWriter {
 		const { id, name, description, referenceName, layers } = stackup;
 
 		// # 构建节点
-		const stackupTagName = getIDXTagName(IDXFoundationTag.Item);
+		const stackupTagName = getIDXFoundationTagName(IDXFoundationTag.Item);
 
 		// ## 构建属性
 		const stackupAttrs: Record<string, string> = {
@@ -1211,17 +1249,19 @@ export class IDXWriter {
 		const stackupEle = bodyEle.ele(stackupTagName, stackupAttrs);
 
 		// ## 构建基础数据
-		stackupEle.ele(getIDXTagName(IDXFoundationTag.Name)).txt(name);
+		stackupEle.ele(getIDXFoundationTagName(IDXFoundationTag.Name)).txt(name);
 		if (description) {
-			stackupEle.ele(getIDXTagName(IDXFoundationTag.Description)).txt(description);
+			stackupEle.ele(getIDXFoundationTagName(IDXFoundationTag.Description)).txt(
+				description
+			);
 		}
 
 		// ## 构建项目类型
-		stackupEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(ItemType.ASSEMBLY);
+		stackupEle.ele(getIDXPDMTagName(IDXPDMTag.ItemType)).txt(ItemType.ASSEMBLY);
 
 		// ## 构建参考名称
 		if (referenceName) {
-			stackupEle.ele(getIDXTagName(IDXPDMTag.ReferenceName)).txt(referenceName);
+			stackupEle.ele(getIDXPDMTagName(IDXPDMTag.ReferenceName)).txt(referenceName);
 		}
 
 		// ## 构建层实例
@@ -1230,15 +1270,17 @@ export class IDXWriter {
 				id: `INST_${layer.layerReferenceName}`,
 			};
 			const instanceEle = stackupEle.ele(
-				getIDXTagName(IDXPDMTag.ItemInstance),
+				getIDXPDMTagName(IDXPDMTag.ItemInstance),
 				instanceAttrs
 			);
 
 			// 引用层
-			instanceEle.ele(getIDXTagName(IDXPDMTag.Item)).txt(layer.layerReferenceName);
+			instanceEle.ele(getIDXPDMTagName(IDXPDMTag.Item)).txt(
+				layer.layerReferenceName
+			);
 
 			// 实例名称
-			instanceEle.ele(getIDXTagName(IDXPDMTag.InstanceName)).txt(
+			instanceEle.ele(getIDXPDMTagName(IDXPDMTag.InstanceName)).txt(
 				layer.layerReferenceName
 			);
 
@@ -1311,12 +1353,12 @@ export class IDXWriter {
 		} = model3D;
 
 		// # 构建节点
-		const model3DTagName = getIDXTagName(IDXFoundationTag.Model3D);
+		const model3DTagName = getIDXFoundationTagName(IDXFoundationTag.Model3D);
 
 		// ## 构建属性
 		const model3DAttrs: Record<string, string> = {
 			...this.buildBasicAttr(model3D),
-			[XsiTypeAttrName]: getIDXTagName(IDXPDMTag.EDMDModel3D),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDModel3D),
 		};
 
 		const model3DEle = bodyEle.ele(model3DTagName, model3DAttrs);
@@ -1325,24 +1367,24 @@ export class IDXWriter {
 		this.buildBasicData(model3DEle, model3D);
 
 		// ## 构建模型标识符
-		model3DEle.ele(getIDXTagName(IDXPDMTag.ModelIdentifier)).txt(ModelIdentifier);
+		model3DEle.ele(getIDXPDMTagName(IDXPDMTag.ModelIdentifier)).txt(ModelIdentifier);
 
 		// ## 构建MCAD格式
-		model3DEle.ele(getIDXTagName(IDXPDMTag.MCADFormat)).txt(MCADFormat);
+		model3DEle.ele(getIDXPDMTagName(IDXPDMTag.MCADFormat)).txt(MCADFormat);
 
 		// ## 构建模型版本（可选）
 		if (ModelVersion) {
-			model3DEle.ele(getIDXTagName(IDXPDMTag.ModelVersion)).txt(ModelVersion);
+			model3DEle.ele(getIDXPDMTagName(IDXPDMTag.ModelVersion)).txt(ModelVersion);
 		}
 
 		// ## 构建模型位置（可选）
 		if (ModelLocation) {
-			model3DEle.ele(getIDXTagName(IDXPDMTag.ModelLocation)).txt(ModelLocation);
+			model3DEle.ele(getIDXPDMTagName(IDXPDMTag.ModelLocation)).txt(ModelLocation);
 		}
 
 		// ## 构建MCAD格式版本（可选）
 		if (MCADFormatVersion) {
-			model3DEle.ele(getIDXTagName(IDXPDMTag.MCADFormatVersion)).txt(
+			model3DEle.ele(getIDXPDMTagName(IDXPDMTag.MCADFormatVersion)).txt(
 				MCADFormatVersion
 			);
 		}
@@ -1352,7 +1394,7 @@ export class IDXWriter {
 
 		// ## 构建变换参考（可选）
 		if (TransformationReference) {
-			model3DEle.ele(getIDXTagName(IDXPDMTag.TransformationReference)).txt(
+			model3DEle.ele(getIDXPDMTagName(IDXPDMTag.TransformationReference)).txt(
 				TransformationReference
 			);
 		}
@@ -1405,11 +1447,12 @@ export class IDXWriter {
 		} = itemSingle;
 
 		// # 构建节点
-		const itemTagName = getIDXTagName(IDXFoundationTag.Item);
+		const itemTagName = getIDXFoundationTagName(IDXFoundationTag.Item);
 
 		// ## 构建属性
 		const itemSingleAttrs: Record<string, string> = {
 			...this.buildBasicAttr(itemSingle),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDItem),
 		};
 
 		// ### 添加几何类型属性（简化建模的关键）
@@ -1423,30 +1466,37 @@ export class IDXWriter {
 		this.buildBasicData(itemSingleEle, itemSingle);
 
 		// ## 构建项目类型（必须为single）
-		itemSingleEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(ItemType);
+		itemSingleEle.ele(getIDXPDMTagName(IDXPDMTag.ItemType)).txt(ItemType);
 
 		// ## 构建标识符（可选）
 		this.buildItemIdentifier(itemSingleEle, Identifier);
 
 		// ## 构建包名称（可选）
 		if (PackageName) {
-			this.buildItemEDMName(itemSingleEle, PackageName, IDXPDMTag.PackageName);
+			this.buildItemEDMName(
+				itemSingleEle,
+				PackageName,
+				IDXPDMTag.PackageName,
+				IDXNameSpace.PDM
+			);
 		}
 
 		// ## 构建参考名称（可选）
 		if (ReferenceName) {
-			itemSingleEle.ele(getIDXTagName(IDXPDMTag.ReferenceName)).txt(ReferenceName);
+			itemSingleEle.ele(getIDXPDMTagName(IDXPDMTag.ReferenceName)).txt(
+				ReferenceName
+			);
 		}
 
 		// ## 构建形状引用
-		itemSingleEle.ele(getIDXTagName(IDXPDMTag.Shape)).txt(Shape);
+		itemSingleEle.ele(getIDXPDMTagName(IDXPDMTag.Shape)).txt(Shape);
 
 		// ## 构建包引脚定义（可选）
 		this.buildItemPackagePins(itemSingleEle, PackagePins);
 
 		// ## 构建3D模型引用（可选）
 		if (EDMD3DModel) {
-			itemSingleEle.ele(getIDXTagName(IDXPDMTag.EDMD3DModel)).txt(EDMD3DModel);
+			itemSingleEle.ele(getIDXPDMTagName(IDXPDMTag.EDMD3DModel)).txt(EDMD3DModel);
 		}
 
 		// ## 构建基线标记（可选）
@@ -1454,7 +1504,7 @@ export class IDXWriter {
 
 		// ## 构建组装到名称（可选）
 		if (AssembleToName) {
-			itemSingleEle.ele(getIDXTagName(IDXPDMTag.AssembleToName)).txt(
+			itemSingleEle.ele(getIDXPDMTagName(IDXPDMTag.AssembleToName)).txt(
 				AssembleToName
 			);
 		}
@@ -1465,22 +1515,36 @@ export class IDXWriter {
 		if (!targetEle || !identifier) {
 			return;
 		}
-		const identifierEle = targetEle.ele(getIDXTagName(IDXPDMTag.Identifier));
-		identifierEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(identifier.SystemScope);
-		identifierEle.ele(getIDXTagName(IDXFoundationTag.Number)).txt(identifier.Number);
-		identifierEle.ele(getIDXTagName(IDXFoundationTag.Version)).txt(toString(identifier.Version));
-		identifierEle.ele(getIDXTagName(IDXFoundationTag.Revision)).txt(toString(identifier.Revision));
-		identifierEle.ele(getIDXTagName(IDXFoundationTag.Sequence)).txt(toString(identifier.Sequence));
+		const identifierEle = targetEle.ele(getIDXPDMTagName(IDXPDMTag.Identifier));
+		identifierEle.ele(getIDXFoundationTagName(IDXFoundationTag.SystemScope)).txt(identifier.SystemScope);
+		identifierEle.ele(getIDXFoundationTagName(IDXFoundationTag.Number)).txt(identifier.Number);
+		identifierEle.ele(getIDXFoundationTagName(IDXFoundationTag.Version)).txt(
+			toString(identifier.Version)
+		);
+		identifierEle.ele(getIDXFoundationTagName(IDXFoundationTag.Revision)).txt(
+			toString(identifier.Revision)
+		);
+		identifierEle.ele(getIDXFoundationTagName(IDXFoundationTag.Sequence)).txt(
+			toString(identifier.Sequence)
+		);
 	}
 
 	/** 构建项目对象名称 */
-	private buildItemEDMName(targetEle: XMLBuilder, edaName?: EDMDName, tagName: IDXTag = IDXPDMTag.PackageName) {
+	private buildItemEDMName(
+		targetEle: XMLBuilder,
+		edaName?: EDMDName,
+		tagName: IDXTag = IDXPDMTag.PackageName,
+		nameSpace = IDXNameSpace.PDM
+	) {
 		if (!targetEle || !edaName) {
 			return;
 		}
-		const packageNameEle = targetEle.ele(getIDXTagName(tagName));
-		packageNameEle.ele(getIDXTagName(IDXFoundationTag.SystemScope)).txt(edaName.SystemScope);
-		packageNameEle.ele(getIDXTagName(IDXFoundationTag.ObjectName)).txt(edaName.ObjectName);
+		const packageNameAttrs: Record<string, string> = {
+			[XsiTypeAttrName]: getIDXFoundationTagName(IDXFoundationTag.EDMDName),
+		};
+		const packageNameEle = targetEle.ele(getIDXTagName(tagName, nameSpace), packageNameAttrs);
+		packageNameEle.ele(getIDXFoundationTagName(IDXFoundationTag.SystemScope)).txt(edaName.SystemScope);
+		packageNameEle.ele(getIDXFoundationTagName(IDXFoundationTag.ObjectName)).txt(edaName.ObjectName);
 	}
 
 	/** 构建包引脚 */
@@ -1493,12 +1557,15 @@ export class IDXWriter {
 				pinNumber: pin.pinNumber,
 				primary: toString(pin.primary),
 			};
-			const pinEle = targetEle.ele(getIDXTagName(IDXPDMTag.PackagePin), pinAttrs);
-			pinEle.ele(getIDXTagName(IDXD2Tag.Point)).txt(pin.Point);
+			const pinEle = targetEle.ele(
+				getIDXPDMTagName(IDXPDMTag.PackagePin),
+				pinAttrs
+			);
+			pinEle.ele(getIDXD2TagName(IDXD2Tag.Point)).txt(pin.Point);
 
 			const pinShape = pin.Shape;
 			if (pinShape) {
-				pinEle.ele(getIDXTagName(IDXPDMTag.Shape)).txt(
+				pinEle.ele(getIDXPDMTagName(IDXPDMTag.Shape)).txt(
 					pinShape
 				);
 			}
@@ -1508,7 +1575,7 @@ export class IDXWriter {
 	/** 构建自定义属性 */
 	private buildItemBaseLine(targetEle: XMLBuilder, baseLine?: boolean) {
 		if (targetEle && isValidBool(baseLine)) {
-			const baseLineEle = targetEle.ele(getIDXTagName(IDXPDMTag.BaseLine));
+			const baseLineEle = targetEle.ele(getIDXPDMTagName(IDXPDMTag.BaseLine));
 			this.buildPropValue(baseLineEle, baseLine);
 		}
 	}
@@ -1541,7 +1608,7 @@ export class IDXWriter {
 		}
 
 		// # 构建节点
-		const userPropTagName = getIDXTagName(IDXPropertyTag.EDMDUserSimpleProperty);
+		const userPropTagName = getIDXPropertyTagName(IDXPropertyTag.EDMDUserSimpleProperty);
 
 		// ## 构建属性
 		const userPropAttrs: Record<string, string> = {};
@@ -1558,7 +1625,7 @@ export class IDXWriter {
 		const userPropEle = targetEle.ele(userPropTagName, userPropAttrs);
 
 		// ## 构建键
-		this.buildItemEDMName(userPropEle, userProp.Key, IDXPropertyTag.Key);
+		this.buildItemEDMName(userPropEle, userProp.Key, IDXPropertyTag.Key, IDXNameSpace.Property);
 
 		// ## 构建值
 		this.buildPropValue(userPropEle, userProp.Value);
@@ -1593,11 +1660,12 @@ export class IDXWriter {
 		if (!bodyEle) return;
 
 		// ## 构建名称
-		const itemTagName = getIDXTagName(IDXFoundationTag.Item);
+		const itemTagName = getIDXFoundationTagName(IDXFoundationTag.Item);
 
 		// ## 构建属性
 		const itemAttrs: Record<string, string> = {
 			...this.buildBasicAttr(itemAssembly),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDItem),
 		};
 		// ### 构建几何类型属性（简化方式的关键）
 		if (itemAssembly.geometryType) {
@@ -1610,7 +1678,7 @@ export class IDXWriter {
 		this.buildBasicData(itemAssemblyEle, itemAssembly);
 
 		// ## 构建项目类型（必须为assembly）
-		itemAssemblyEle.ele(getIDXTagName(IDXPDMTag.ItemType)).txt(itemAssembly.ItemType);
+		itemAssemblyEle.ele(getIDXPDMTagName(IDXPDMTag.ItemType)).txt(itemAssembly.ItemType);
 
 		// ## 构建标识符（可选）
 		this.buildItemIdentifier(itemAssemblyEle, itemAssembly.Identifier);
@@ -1623,7 +1691,7 @@ export class IDXWriter {
 		// ## 构建装配到名称（用于相对定位）
 		const assembleToName = itemAssembly.AssembleToName;
 		if (assembleToName) {
-			itemAssemblyEle.ele(getIDXTagName(IDXPDMTag.AssembleToName)).txt(
+			itemAssemblyEle.ele(getIDXPDMTagName(IDXPDMTag.AssembleToName)).txt(
 				assembleToName
 			);
 		}
@@ -1631,7 +1699,7 @@ export class IDXWriter {
 		// ## 构建参考名称（可选）
 		const referenceName = itemAssembly.ReferenceName;
 		if (referenceName) {
-			itemAssemblyEle.ele(getIDXTagName(IDXPDMTag.ReferenceName)).txt(
+			itemAssemblyEle.ele(getIDXPDMTagName(IDXPDMTag.ReferenceName)).txt(
 				referenceName
 			);
 		}
@@ -1659,11 +1727,12 @@ export class IDXWriter {
 		} = itemInstance;
 
 		// # 构建节点
-		const instanceTagName = getIDXTagName(IDXPDMTag.ItemInstance);
+		const instanceTagName = getIDXPDMTagName(IDXPDMTag.ItemInstance);
 
 		// ## 构建属性
 		const instanceAttrs: Record<string, string> = {
 			...this.buildBasicAttr(itemInstance),
+			[XsiTypeAttrName]: getIDXPDMTagName(IDXPDMTag.EDMDItemInstance),
 		};
 
 		const instanceEle = itemAssemblyEle.ele(instanceTagName, instanceAttrs);
@@ -1672,11 +1741,16 @@ export class IDXWriter {
 		this.buildBasicData(instanceEle, itemInstance);
 
 		// ## 构建引用的项目定义
-		instanceEle.ele(getIDXTagName(IDXPDMTag.Item)).txt(Item);
+		instanceEle.ele(getIDXPDMTagName(IDXPDMTag.Item)).txt(Item);
 
 		// ## 构建实例名称（可选）
 		if (InstanceName) {
-			this.buildItemEDMName(instanceEle, InstanceName, IDXPDMTag.InstanceName);
+			this.buildItemEDMName(
+				instanceEle,
+				InstanceName,
+				IDXPDMTag.InstanceName,
+				IDXNameSpace.PDM
+			);
 		}
 
 		// ## 构建变换矩阵（可选）
@@ -1700,7 +1774,8 @@ export class IDXWriter {
 			this.buildItemEDMName(
 				instanceEle,
 				InstanceUserAreaLayerName,
-				IDXPDMTag.InstanceUserAreaLayerName
+				IDXPDMTag.InstanceUserAreaLayerName,
+				IDXNameSpace.PDM
 			);
 		}
 	}
@@ -1713,47 +1788,47 @@ export class IDXWriter {
 		const { TransformationType } = transformation;
 
 		// # 构建节点
-		const transformationEle = instanceEle.ele(getIDXTagName(IDXPDMTag.Transformation));
+		const transformationEle = instanceEle.ele(getIDXPDMTagName(IDXPDMTag.Transformation));
 
 		// ## 构建变换类型
-		transformationEle.ele(getIDXTagName(IDXPDMTag.TransformationType)).txt(TransformationType);
+		transformationEle.ele(getIDXPDMTagName(IDXPDMTag.TransformationType)).txt(TransformationType);
 
 		if (TransformationType === 'd2') {
 			// ## 构建 2D 变换
 			const d2 = transformation;
-			transformationEle.ele(getIDXTagName(IDXPDMTag.XX)).txt(toString(d2.xx));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.XY)).txt(toString(d2.xy));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.YX)).txt(toString(d2.yx));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.YY)).txt(toString(d2.yy));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.XX)).txt(toString(d2.xx));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.XY)).txt(toString(d2.xy));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.YX)).txt(toString(d2.yx));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.YY)).txt(toString(d2.yy));
 
 			// 平移分量使用 property:Value 包装
-			const txEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TX));
-			this.buildPropValue(txEle, d2.tx);
+			const txEle = transformationEle.ele(getIDXPDMTagName(IDXPDMTag.TX));
+			this.buildLengthProperty(txEle, d2.tx);
 
-			const tyEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TY));
-			this.buildPropValue(tyEle, d2.ty);
+			const tyEle = transformationEle.ele(getIDXPDMTagName(IDXPDMTag.TY));
+			this.buildLengthProperty(tyEle, d2.ty);
 		} else {
 			// ## 构建 3D 变换
 			const d3 = transformation;
-			transformationEle.ele(getIDXTagName(IDXPDMTag.XX)).txt(toString(d3.xx));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.XY)).txt(toString(d3.xy));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.XZ)).txt(toString(d3.xz));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.YX)).txt(toString(d3.yx));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.YY)).txt(toString(d3.yy));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.YZ)).txt(toString(d3.yz));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.ZX)).txt(toString(d3.zx));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.ZY)).txt(toString(d3.zy));
-			transformationEle.ele(getIDXTagName(IDXPDMTag.ZZ)).txt(toString(d3.zz));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.XX)).txt(toString(d3.xx));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.XY)).txt(toString(d3.xy));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.XZ)).txt(toString(d3.xz));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.YX)).txt(toString(d3.yx));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.YY)).txt(toString(d3.yy));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.YZ)).txt(toString(d3.yz));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.ZX)).txt(toString(d3.zx));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.ZY)).txt(toString(d3.zy));
+			transformationEle.ele(getIDXPDMTagName(IDXPDMTag.ZZ)).txt(toString(d3.zz));
 
 			// 平移分量使用 property:Value 包装
-			const txEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TX));
-			this.buildPropValue(txEle, d3.tx);
+			const txEle = transformationEle.ele(getIDXPDMTagName(IDXPDMTag.TX));
+			this.buildLengthProperty(txEle, d3.tx);
 
-			const tyEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TY));
-			this.buildPropValue(tyEle, d3.ty);
+			const tyEle = transformationEle.ele(getIDXPDMTagName(IDXPDMTag.TY));
+			this.buildLengthProperty(tyEle, d3.ty);
 
-			const tzEle = transformationEle.ele(getIDXTagName(IDXPDMTag.TZ));
-			this.buildPropValue(tzEle, d3.tz);
+			const tzEle = transformationEle.ele(getIDXPDMTagName(IDXPDMTag.TZ));
+			this.buildLengthProperty(tzEle, d3.tz);
 		}
 	}
 
@@ -1779,9 +1854,9 @@ export class IDXWriter {
 		}
 
 		// ## 属性
-		const instructionTagName = getIDXTagName(IDXFoundationTag.ProcessInstruction);
+		const instructionTagName = getIDXFoundationTagName(IDXFoundationTag.ProcessInstruction);
 		const instructionType = ProcessInstruction.type;
-		const instructionXsiType = getIDXTagName(instructionType);
+		const instructionXsiType = getIDXComputationalTagName(instructionType);
 		const instructionAttrs: Record<string, string> = {
 			[XsiTypeAttrName]: instructionXsiType,
 		};
@@ -1790,7 +1865,9 @@ export class IDXWriter {
 		// ## 添加执行者
 		const actor = ProcessInstruction.Actor;
 		if (actor) {
-			instructionEle.ele(getIDXTagName(IDXComputationalTag.Actor)).txt(actor);
+			instructionEle.ele(getIDXComputationalTagName(IDXComputationalTag.Actor)).txt(
+				actor
+			);
 		}
 
 		if (instructionType == IDXComputationalTag.SendInformation) {
@@ -1798,7 +1875,7 @@ export class IDXWriter {
 			const description = ProcessInstruction.Description;
 			if (description) {
 				instructionEle.ele(
-					getIDXTagName(
+					getIDXFoundationTagName(
 						IDXFoundationTag.Description
 					)
 				).txt(description);

@@ -1,32 +1,25 @@
 import {
-	IDXNameSpace,
 	IDXFoundationTag,
-	IDXPDMTag,
-	IDXD2Tag,
+	IDXNameSpace,
 	IDXPropertyTag,
-	IDXComputationalTag,
-	IDXAdministrationTag,
 	IDXTag,
 	IDXXSITag,
+	IDXPDMTag,
+	IDXD2Tag,
+	IDXComputationalTag,
+	IDXAdministrationTag,
 } from '../../types/edmd/namespace.types';
 import { hasOwnProperty } from '../../utils/object.utils';
 
-// ------------ 数据缓存 ------------
-const IDXFoundationTagSet = new Set(Object.values(IDXFoundationTag));
-const IDXPDMTagSet = new Set(Object.values(IDXPDMTag));
-const IDXD2TagSet = new Set(Object.values(IDXD2Tag));
-const IDXPropertyTagSet = new Set(Object.values(IDXPropertyTag));
-const IDXComputationalTagSet = new Set(Object.values(IDXComputationalTag));
-const IDXAdministrationTagSet = new Set(Object.values(IDXAdministrationTag));
-const IDXXSITagSet = new Set(Object.values(IDXXSITag));
-
+// ============= 缓存一些使用频率较高的标签名 =============
 /** XML类型声明属性名 */
-export const XsiTypeAttrName = getIDXTagName(IDXXSITag.type);
+export const XsiTypeAttrName = getIDXXSITagName(IDXXSITag.type);
 /** 属性变更属性名 */
-export const PropAttrChanedAttrName = getIDXTagName(IDXPropertyTag.IsAttributeChanged);
+export const PropAttrChanedAttrName = getIDXPropertyTagName(IDXPropertyTag.IsAttributeChanged);
 /** 属性值标签名 */
-export const PropValueAttrName = getIDXTagName(IDXPropertyTag.Value);
+export const PropValueAttrName = getIDXPropertyTagName(IDXPropertyTag.Value);
 
+// ============= 工具函数 =============
 /**
  * 创建命名空间标签
  * @param tag 标签名（不带命名空间前缀）
@@ -40,48 +33,46 @@ export function createNameSpaceTag(tag: string, nameSpace?: string): string {
 /**
  * 获取 IDX 标签的完整命名空间标签
  * @param tagName 标签枚举值
- * @param nameSpace 命名空间（避免 tagName 重复的情况, 手动指定）
+ * @param nameSpace 命名空间（必选, 明确指定，避免标签重复导致的命名空间冲突）
  * @returns 完整的命名空间标签字符串
  */
-export function getIDXTagName(tagName: IDXTag, nameSpace?: IDXNameSpace): string {
-	if (!nameSpace) {
-		nameSpace = getIDXNamespaceForTag(tagName);
-	}
+export function getIDXTagName(tagName: IDXTag, nameSpace: IDXNameSpace): string {
 	return createNameSpaceTag(tagName, nameSpace);
 }
 
-/**
- * 根据 IDX 标签获取对应的命名空间前缀
- * @param tag 标签枚举值
- * @returns 对应的命名空间前缀
- */
-function getIDXNamespaceForTag(tag: IDXTag): IDXNameSpace {
-	// # 检查标签属于哪个命名空间的枚举
-	// WARN: 如果标签命名重复, 会判断失败
-	if (IDXFoundationTagSet.has(tag as IDXFoundationTag)) {
-		return IDXNameSpace.Foundation;
-	}
-	if (IDXPDMTagSet.has(tag as IDXPDMTag)) {
-		return IDXNameSpace.PDM;
-	}
-	if (IDXD2TagSet.has(tag as IDXD2Tag)) {
-		return IDXNameSpace.D2;
-	}
-	if (IDXPropertyTagSet.has(tag as IDXPropertyTag)) {
-		return IDXNameSpace.Property;
-	}
-	if (IDXComputationalTagSet.has(tag as IDXComputationalTag)) {
-		return IDXNameSpace.Computational;
-	}
-	if (IDXAdministrationTagSet.has(tag as IDXAdministrationTag)) {
-		return IDXNameSpace.Administration;
-	}
-	if (IDXXSITagSet.has(tag as IDXXSITag)) {
-		return IDXNameSpace.XSI;
-	}
+/** 获取IDX-Foundation完整命名空间标签 */
+export function getIDXFoundationTagName(tagName: IDXFoundationTag) {
+	return getIDXTagName(tagName, IDXNameSpace.Foundation);
+}
 
-	// # 默认返回 Foundation 命名空间
-	return IDXNameSpace.Foundation;
+/** 获取IDX-PDM完整命名空间标签 */
+export function getIDXPDMTagName(tagName: IDXPDMTag) {
+	return getIDXTagName(tagName, IDXNameSpace.PDM);
+}
+
+/** 获取IDX-D2完整命名空间标签 */
+export function getIDXD2TagName(tagName: IDXD2Tag) {
+	return getIDXTagName(tagName, IDXNameSpace.D2);
+}
+
+/** 获取IDX-Property完整命名空间标签 */
+export function getIDXPropertyTagName(tagName: IDXPropertyTag) {
+	return getIDXTagName(tagName, IDXNameSpace.Property);
+}
+
+/** 获取IDX-XSI完整命名空间标签 */
+export function getIDXXSITagName(tagName: IDXXSITag) {
+	return getIDXTagName(tagName, IDXNameSpace.XSI);
+}
+
+/** 获取IDX-Computational完整命名空间标签 */
+export function getIDXComputationalTagName(tagName: IDXComputationalTag) {
+	return getIDXTagName(tagName, IDXNameSpace.Computational);
+}
+
+/** 获取IDX-Administration完整命名空间标签 */
+export function getIDXAdministrationTagName(tagName: IDXAdministrationTag) {
+	return getIDXTagName(tagName, IDXNameSpace.Administration);
 }
 
 /** 是否为 IDX 官方命名空间 */

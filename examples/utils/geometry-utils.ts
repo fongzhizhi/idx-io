@@ -85,8 +85,11 @@ export function createPolygonalKeepin(points: Vector2[]): Polyline {
     
     // 确保多边形闭合
     const closedPoints = [...points];
-    if (!points[0].equals(points[points.length - 1])) {
-        closedPoints.push(points[0]);
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    
+    if (firstPoint && lastPoint && !firstPoint.equals(lastPoint)) {
+        closedPoints.push(firstPoint);
     }
     
     return Polyline.fromPoints(closedPoints);

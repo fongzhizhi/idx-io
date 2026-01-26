@@ -129,6 +129,8 @@ export enum IDXFoundationTag {
 	FunctionalItemShape = 'FunctionalItemShape',
 	/** 3D模型 */
 	Model3D = 'Model3D',
+	/** EDMD 名称标识 */
+	EDMDName = 'EDMDName',
 }
 
 /**
@@ -273,6 +275,10 @@ export enum IDXPDMTag {
 	EDMDFunctionalItemShape = 'EDMDFunctionalItemShape',
 	/** EDMD 3D模型标识 */
 	EDMDModel3D = 'EDMDModel3D',
+	/** EDMD 项目标识 */
+	EDMDItem = 'EDMDItem',
+	/** EDMD 项目实例标识 */
+	EDMDItemInstance = 'EDMDItemInstance',
 }
 
 /**

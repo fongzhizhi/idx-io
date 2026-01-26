@@ -28,7 +28,9 @@
     "ts-check": "tsc --noEmit",
     "ts-check:watch": "tsc --noEmit --watch",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm run test:run"
+    "prepublishOnly": "npm run clean && npm run build && npm run test:run",
+    "example": "node examples/run-example.js",
+    "example:01": "cd examples && npx ts-node 01.simple-board.ts"
   },
   "keywords": [
     "idx",
