@@ -107,13 +107,13 @@ graph TD
 
 ## 技术选型
 
-本项目采用`TypeScript`实现，使用`xmlbuilder2`进行`IDX`格式编码，使用`fast-xml-parser`进行`IDX`格式解析，支持单元测试，因此基本的`package.json`依赖如下所示：
+本项目采用`TypeScript`实现，使用`xmlbuilder`进行`IDX`格式编码，使用`fast-xml-parser`进行`IDX`格式解析，支持单元测试，因此基本的`package.json`依赖如下所示：
 
 ```json
 {
 	"dependencies": {
 		"fast-xml-parser": "^5.3.3",
-		"xmlbuilder2": "^4.0.3"
+		"xmlbuilder": "^15.1.1"
 	},
 	"devDependencies": {
 		"@types/node": "^20.0.0",

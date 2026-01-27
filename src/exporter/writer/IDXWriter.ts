@@ -1,5 +1,4 @@
-import { create } from 'xmlbuilder2';
-import { XMLBuilder, XMLWriterOptions } from 'xmlbuilder2/lib/interfaces';
+import { create, XMLElement, XMLToStringOptions } from 'xmlbuilder';
 import {
 	isIDXNameSpace,
 	XsiTypeAttrName,
@@ -14,15 +13,7 @@ import {
 	createXmlNameSpaceTag,
 	getIDXXSITagName,
 } from '../../edmd/utils/idx-namespace.utils';
-import {
-	EDMDObject,
-	EDMDIdentifier,
-	EDMDName,
-	EDMDUserSimpleProperty,
-	EDMDTransformation,
-	EDMDCartesianPoint,
-	UserSimpleProperty,
-} from '../../types/edmd/base.types';
+import { EDMDObject, EDMDIdentifier, EDMDName, EDMDUserSimpleProperty, EDMDTransformation, EDMDCartesianPoint } from '../../types/edmd/base.types';
 import { EDMDDataSet, EDMDHistory } from '../../types/edmd/dataset.types';
 import {
 	EDMDGeometry,
@@ -79,17 +70,18 @@ export class IDXWriter {
 	// ------------ 序列化状态量 ------------
 	/** 数据集 */
 	private dataset: EDMDDataSet | undefined;
-	/** 文档根节点 */
-	private doc: XMLBuilder | undefined;
 	/** 数据集节点 */
-	private datasetEle: XMLBuilder | undefined;
+	private datasetEle: XMLElement | undefined;
 	/** 数据体节点 */
-	private bodyEle: XMLBuilder | undefined;
+	private bodyEle: XMLElement | undefined;
 
 	/** IDX 格式生成器 */
-	constructor(config?: IDXWriteConfig) {
+	constructor(config?: Partial<IDXWriteConfig>) {
 		if (config) {
-			this.config = config;
+			this.config = {
+				...DefaultIDXWriteConfig,
+				...config,
+			};
 		}
 	}
 
@@ -100,7 +92,6 @@ export class IDXWriter {
 			return '';
 		}
 		this.dataset = dataset;
-		this.createDoc();
 
 		// # 构建 IDX
 		this.building();
@@ -122,15 +113,6 @@ export class IDXWriter {
 	}
 
 	// ============= 序列化流程相关 =============
-	/** 创建 IDX 文档 */
-	private createDoc() {
-		const doc = create({
-			version: '1.0',
-			encoding: 'utf-8',
-		});
-		this.doc = doc;
-	}
-
 	/** 构建 IDX */
 	private building() {
 		// # 构建 EDMDDataSet
@@ -151,10 +133,6 @@ export class IDXWriter {
 
 	/** 构建 EDMDDataSet */
 	private buildEDMDDataSet() {
-		const doc = this.doc;
-		if (!doc) {
-			return;
-		}
 		const namespaces = this.config.namespaces;
 
 		// # 添加官方命名空间
@@ -181,31 +159,36 @@ export class IDXWriter {
 		dataSetAttrs[schemaTagName] = IDXSchemaURL;
 
 		// # 构建节点
-		const datasetEle = doc.ele(dataSetTagName, dataSetAttrs);
+		const datasetEle = create(dataSetTagName, {
+			version: '1.0',
+			encoding: 'utf-8',
+		});
+		iterateObject(dataSetAttrs, (value, key) => {
+			datasetEle.att(key, value);
+		});
 
 		this.datasetEle = datasetEle;
 	}
 
 	/** 生成 IDX 源码 */
 	private createIDXSource(): string {
-		const doc = this.doc;
-		if (!doc) {
+		const datasetEle = this.datasetEle;
+		if (!datasetEle) {
 			return '';
 		}
 		const formatting = this.config.formatting;
 
 		const prettyPrint = toBoolean(formatting?.prettyPrint);
-		const idxWriterOpts: XMLWriterOptions = {
-			prettyPrint,
+		const idxWriterOpts: XMLToStringOptions = {
+			pretty: prettyPrint,
 		};
 
-		return doc.end(idxWriterOpts);
+		return datasetEle.end(idxWriterOpts);
 	}
 
 	/** 内存回收 */
 	private memoryCycle() {
 		this.dataset = undefined;
-		this.doc = undefined;
 		this.datasetEle = undefined;
 		this.bodyEle = undefined;
 	}
@@ -377,7 +360,7 @@ export class IDXWriter {
 	}
 
 	/** 构建基础数据 */
-	private buildBasicData(targetEle: XMLBuilder, baseObj: EDMDObject) {
+	private buildBasicData(targetEle: XMLElement, baseObj: EDMDObject) {
 		if (!baseObj || !targetEle) {
 			return;
 		}
@@ -395,7 +378,7 @@ export class IDXWriter {
 	}
 
 	/** 构建属性值 */
-	private buildPropValue(targetEle: XMLBuilder, value: number | boolean | string) {
+	private buildPropValue(targetEle: XMLElement, value: number | boolean | string) {
 		let formattedValue: string;
 		if (typeof value === 'number') {
 			formattedValue = this.formatNumber(value);
@@ -406,7 +389,7 @@ export class IDXWriter {
 	}
 
 	/** 构建长度属性值（带xsi:type声明） */
-	private buildLengthProperty(targetEle: XMLBuilder, value: number) {
+	private buildLengthProperty(targetEle: XMLElement, value: number) {
 		targetEle.att(XsiTypeAttrName, getIDXPropertyTagName(IDXPropertyTag.EDMDLengthProperty));
 		this.buildPropValue(targetEle, value);
 	}
@@ -1349,7 +1332,7 @@ export class IDXWriter {
 	 * 构建正确的用户属性结构
 	 * 使用 <foundation:UserProperty xsi:type="property:EDMDUserSimpleProperty">
 	 */
-	private buildCorrectUserProperty(targetEle: XMLBuilder, key: string, value: string | number) {
+	private buildCorrectUserProperty(targetEle: XMLElement, key: string, value: string | number) {
 		if (!targetEle) return;
 
 		// 创建 foundation:UserProperty 元素
@@ -1572,7 +1555,7 @@ export class IDXWriter {
 	}
 
 	/** 构建项目构建标识符 */
-	private buildItemIdentifier(targetEle: XMLBuilder, identifier?: EDMDIdentifier) {
+	private buildItemIdentifier(targetEle: XMLElement, identifier?: EDMDIdentifier) {
 		if (!targetEle || !identifier) {
 			return;
 		}
@@ -1592,7 +1575,7 @@ export class IDXWriter {
 
 	/** 构建项目对象名称 */
 	private buildItemEDMName(
-		targetEle: XMLBuilder,
+		targetEle: XMLElement,
 		edaName?: EDMDName,
 		tagName: IDXTag = IDXPDMTag.PackageName,
 		nameSpace = IDXNameSpace.PDM
@@ -1609,7 +1592,7 @@ export class IDXWriter {
 	}
 
 	/** 构建包引脚 */
-	private buildItemPackagePins(targetEle: XMLBuilder, packagePins?: EDMPackagePin[]) {
+	private buildItemPackagePins(targetEle: XMLElement, packagePins?: EDMPackagePin[]) {
 		if (!targetEle || !packagePins) {
 			return;
 		}
@@ -1634,7 +1617,7 @@ export class IDXWriter {
 	}
 
 	/** 构建自定义属性 */
-	private buildItemBaseLine(targetEle: XMLBuilder, baseLine?: boolean) {
+	private buildItemBaseLine(targetEle: XMLElement, baseLine?: boolean) {
 		if (targetEle && isValidBool(baseLine)) {
 			const baseLineEle = targetEle.ele(getIDXPDMTagName(IDXPDMTag.BaseLine));
 			this.buildPropValue(baseLineEle, baseLine);
@@ -1653,7 +1636,7 @@ export class IDXWriter {
 	}
 
 	/** 批量构建自定义属性 */
-	private buildUserProperties(targetEle: XMLBuilder, userProperties?: EDMDUserSimpleProperty[]) {
+	private buildUserProperties(targetEle: XMLElement, userProperties?: EDMDUserSimpleProperty[]) {
 		if (!targetEle || !userProperties || userProperties.length == 0) {
 			return;
 		}
@@ -1663,7 +1646,7 @@ export class IDXWriter {
 	}
 
 	/** 构建用户属性 */
-	private buildUserProperty(targetEle: XMLBuilder, userProp: EDMDUserSimpleProperty) {
+	private buildUserProperty(targetEle: XMLElement, userProp: EDMDUserSimpleProperty) {
 		if (!targetEle || !userProp) {
 			return;
 		}
@@ -1778,7 +1761,7 @@ export class IDXWriter {
 	}
 
 	/** 构建项目实例 */
-	private buildItemInstance(itemAssemblyEle: XMLBuilder, itemInstance: EDMDItemInstance) {
+	private buildItemInstance(itemAssemblyEle: XMLElement, itemInstance: EDMDItemInstance) {
 		if (!itemAssemblyEle) {
 			return;
 		}
@@ -1847,7 +1830,7 @@ export class IDXWriter {
 	}
 
 	/** 构建变换矩阵 */
-	private buildTransformation(instanceEle: XMLBuilder, transformation?: EDMDTransformation) {
+	private buildTransformation(instanceEle: XMLElement, transformation?: EDMDTransformation) {
 		if (!instanceEle || !transformation) {
 			return;
 		}

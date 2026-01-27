@@ -12,7 +12,7 @@ export class IDXExporter {
 	// ============= 状态量 =============
 	// ------------ 私有变量 ------------
 	/** 配置 */
-	private config = DefaultIDXExportConfig;
+	readonly config = DefaultIDXExportConfig;
 	/** 模型构建器 */
 	private readonly builder: IDXBuilder;
 	/** 格式生成器 */
@@ -21,9 +21,12 @@ export class IDXExporter {
 	// ------------ 导出状态量 ------------
 
 	/** IDX 格式导出器 */
-	constructor(config?: IDXExportConfig) {
+	constructor(config?: Partial<IDXExportConfig>) {
 		if (config) {
-			this.config = config;
+			this.config = {
+				...DefaultIDXExportConfig,
+				...config,
+			};
 		}
 		const finalConfig = this.config;
 		this.builder = new IDXBuilder(finalConfig.buildConfig);
