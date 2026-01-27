@@ -30,6 +30,11 @@ export function createNameSpaceTag(tag: string, nameSpace?: string): string {
 	return nameSpace ? `${nameSpace}:${tag}` : tag;
 }
 
+/** 创建XML命名空间标签 */
+export function createXmlNameSpaceTag(tagName: string) {
+	return createNameSpaceTag(tagName, 'xmlns');
+}
+
 /**
  * 获取 IDX 标签的完整命名空间标签
  * @param tagName 标签枚举值

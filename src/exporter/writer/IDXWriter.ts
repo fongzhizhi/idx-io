@@ -11,6 +11,8 @@ import {
 	getIDXPropertyTagName,
 	getIDXComputationalTagName,
 	getIDXTagName,
+	createXmlNameSpaceTag,
+	getIDXXSITagName,
 } from '../../edmd/utils/idx-namespace.utils';
 import {
 	EDMDObject,
@@ -44,6 +46,8 @@ import {
 	IDXComputationalTag,
 	IDXTag,
 	IDXNameSpace,
+	IDXXSITag,
+	IDXSchemaURL,
 } from '../../types/edmd/namespace.types';
 import {
 	EDMDAssemblyComponent,
@@ -153,11 +157,13 @@ export class IDXWriter {
 		}
 		const namespaces = this.config.namespaces;
 
+		// # 添加官方命名空间
 		const dataSetTagName = getIDXFoundationTagName(IDXFoundationTag.EDMDDataSet);
-		const dataSetNameSpaces = IDXNameSpaceLinks;
-
-		// # 构建节点
-		const datasetEle = doc.ele(dataSetTagName, dataSetNameSpaces);
+		const dataSetAttrs: Record<string, string> = {};
+		iterateObject(IDXNameSpaceLinks, (url, nameSpace) => {
+			const tagName = createXmlNameSpaceTag(nameSpace);
+			dataSetAttrs[tagName] = url;
+		});
 
 		// # 添加自定义命名空间
 		iterateObject(namespaces, (url, nameSpace) => {
@@ -166,8 +172,16 @@ export class IDXWriter {
 				return;
 			}
 			// TODO: 检测 url 的合法性
-			doc.att(nameSpace, url);
+			const tagName = createXmlNameSpaceTag(nameSpace);
+			dataSetAttrs[tagName] = url;
 		});
+
+		// # XSI 校验地址
+		const schemaTagName = getIDXXSITagName(IDXXSITag.schemaLocation);
+		dataSetAttrs[schemaTagName] = IDXSchemaURL;
+
+		// # 构建节点
+		const datasetEle = doc.ele(dataSetTagName, dataSetAttrs);
 
 		this.datasetEle = datasetEle;
 	}

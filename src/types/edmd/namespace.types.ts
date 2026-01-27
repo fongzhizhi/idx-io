@@ -54,6 +54,9 @@ export const IDXNameSpaceLinks: Record<IDXNameSpace, string> = {
 	[IDXNameSpace.XSI]: 'http://www.w3.org/2001/XMLSchema-instance',
 } as const;
 
+/** IDX 校验地址 */
+export const IDXSchemaURL = 'http://www.prostep.org/EDMDSchema/foundation EDMDSchema.xsd' as const;
+
 /**
  * IDX-Foundation-命名空间标签枚举
  * 包含核心数据结构元素，位于 foundation 命名空间
