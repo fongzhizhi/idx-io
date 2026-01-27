@@ -150,6 +150,9 @@ export class IDXBuilder {
 	/** 层堆叠定义集合 */
 	private layerStackupDefinitions: LayerStackupDefinition[] = [];
 
+	/** 3D模型集合 */
+	private models3D: EDMDModel3D[] = [];
+
 	/** 历史记录集合 */
 	private histories: EDMDHistory[] = [];
 
@@ -222,6 +225,8 @@ export class IDXBuilder {
 
 		this.layerDefinitions = [];
 		this.layerStackupDefinitions = [];
+
+		this.models3D = [];
 
 		this.histories = [];
 	}
@@ -453,6 +458,11 @@ export class IDXBuilder {
 		// 收集层堆叠定义
 		if (this.layerStackupDefinitions.length > 0) {
 			body.LayerStackups = this.layerStackupDefinitions;
+		}
+
+		// 收集3D模型
+		if (this.models3D.length > 0) {
+			body.Models3D = this.models3D;
 		}
 
 		// 收集项目定义
@@ -1779,6 +1789,7 @@ export class IDXBuilder {
 		}
 
 		this.model3DIdMap.set(identifier, modelId);
+		this.models3D.push(idxModel);
 		return modelId;
 	}
 

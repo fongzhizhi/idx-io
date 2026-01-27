@@ -31,7 +31,11 @@
     "prepublishOnly": "npm run clean && npm run build && npm run test:run",
     "example": "node examples/run-example.js",
     "example:01": "cd examples && npx ts-node 01.simple-board.ts",
-    "example:02": "cd examples && npx ts-node 02.layer-and-layer-stackup.ts"
+    "example:02": "cd examples && npx ts-node 02.layer-and-layer-stackup.ts",
+    "example:03": "cd examples && npx ts-node 03.components.ts",
+    "example:04": "cd examples && npx ts-node 04.vias.ts",
+    "example:05": "cd examples && npx ts-node 05.keepout-and-keepin.ts",
+    "example:06": "cd examples && npx ts-node 06.complete-multi-board.ts"
   },
   "keywords": [
     "idx",

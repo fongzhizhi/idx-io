@@ -12,6 +12,29 @@ import { Polyline } from '../../src/libs/geometry/Polyline';
 import { Line } from '../../src/libs/geometry/Line';
 
 /**
+ * 创建矩形几何
+ * 
+ * @param width 宽度（mm）
+ * @param height 高度（mm）
+ * @param center 中心点位置
+ * @returns 矩形几何
+ */
+export function createRectangleGeometry(width: number, height: number, center: Vector2 = Vector2.ORIGIN): Rect {
+    return createRectangularFootprint(width, height, center);
+}
+
+/**
+ * 创建圆形几何
+ * 
+ * @param diameter 直径（mm）
+ * @param center 中心点位置
+ * @returns 圆形几何
+ */
+export function createCircleGeometry(diameter: number, center: Vector2 = Vector2.ORIGIN): Circle {
+    return createCircularFootprint(diameter, center);
+}
+
+/**
  * 创建标准PCB板轮廓
  * 
  * @param width 宽度（mm）
