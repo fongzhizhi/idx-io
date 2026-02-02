@@ -130,6 +130,14 @@ export class IDXBuilder {
 
 	/** 点集合(pointHash -> EDMDCartesianPoint) */
 	private pointMap = new Map<number, EDMDCartesianPoint>();
+	/** 直线ID表(lineHash -> lineId) */
+	private lineGeometryIdMap = new Map<string, string>();
+	/** Arc ID表(arcHash -> lineId) */
+	private arcGeometryIdMap = new Map<string, string>();
+	/** Circle ID表(circleHash -> lineId) */
+	private circleGeometryIdMap = new Map<string, string>();
+	/** Polyline ID表(polyHash -> lineId) */
+	private polyGeometryIdMap = new Map<string, string>();
 	/** 几何表(idxId -> EDMDGeometry) */
 	private geometryMap = new Map<string, EDMDGeometry>();
 	/** 曲线集集合 */
@@ -214,6 +222,10 @@ export class IDXBuilder {
 		this.footprintSingleMap.clear();
 
 		this.pointMap.clear();
+		this.lineGeometryIdMap.clear();
+		this.arcGeometryIdMap.clear();
+		this.circleGeometryIdMap.clear();
+		this.polyGeometryIdMap.clear();
 		this.geometryMap.clear();
 		this.curveSets = [];
 
@@ -1138,6 +1150,14 @@ export class IDXBuilder {
 		const startPointId = this.createPoint(line.start);
 		const endPointId = this.createPoint(line.end);
 
+		// # 去重
+		const lineGeometryIdMap = this.lineGeometryIdMap;
+		const lineHash = [startPointId, endPointId].join('-');
+		const existingLineId = lineGeometryIdMap.get(lineHash);
+		if (existingLineId) {
+			return existingLineId;
+		}
+
 		// # 创建直线几何
 		const lineId = this.generateId(IDXBuilderIDPre.Geometry);
 		const lineGeometry: EDMDLine = {
@@ -1147,6 +1167,7 @@ export class IDXBuilder {
 			Vector: endPointId,
 		};
 		this.geometryMap.set(lineId, lineGeometry);
+		lineGeometryIdMap.set(lineHash, lineId);
 
 		return lineId;
 	}
@@ -1166,6 +1187,14 @@ export class IDXBuilder {
 		const midPointId = this.createPoint(arc.midPoint);
 		const endPointId = this.createPoint(arc.endPoint);
 
+		// # 去重
+		const arcGeometryIdMap = this.arcGeometryIdMap;
+		const arcHash = [startPointId, midPointId, endPointId].join('-');
+		const existingArcId = arcGeometryIdMap.get(arcHash);
+		if (existingArcId) {
+			return existingArcId;
+		}
+
 		// # 创建圆弧几何
 		const arcId = this.generateId(IDXBuilderIDPre.Geometry);
 		const arcGeometry: EDMDArc = {
@@ -1176,6 +1205,7 @@ export class IDXBuilder {
 			EndPoint: endPointId,
 		};
 		this.geometryMap.set(arcId, arcGeometry);
+		arcGeometryIdMap.set(arcHash, arcId);
 
 		return arcId;
 	}
@@ -1186,6 +1216,15 @@ export class IDXBuilder {
 	private processCircle(circle: Circle): string {
 		// # 创建圆心点
 		const centerPointId = this.createPoint(circle.center);
+		const diameter = this.createLengthProperty(circle.radius * 2);
+
+		// # 去重
+		const circleGeometryIdMap = this.circleGeometryIdMap;
+		const circleHash = [centerPointId, diameter].join('-');
+		const existingCircleId = circleGeometryIdMap.get(circleHash);
+		if (existingCircleId) {
+			return existingCircleId;
+		}
 
 		// # 创建圆形几何
 		const circleId = this.generateId(IDXBuilderIDPre.Geometry);
@@ -1193,9 +1232,10 @@ export class IDXBuilder {
 			id: circleId,
 			type: IDXD2Tag.EDMDCircleCenter,
 			CenterPoint: centerPointId,
-			Diameter: this.createLengthProperty(circle.radius * 2),
+			Diameter: diameter,
 		};
 		this.geometryMap.set(circleId, circleGeometry);
+		circleGeometryIdMap.set(circleHash, circleId);
 
 		return circleId;
 	}
@@ -1204,6 +1244,13 @@ export class IDXBuilder {
 	 * 处理复合曲线|多段线几何
 	 */
 	private processPolyline(polyline: Polyline, asClose?: boolean): string {
+		if (polyline.primitives.length == 1) {
+			const primitive = polyline.primitives[0];
+			if (primitive) {
+				return this.processGeometry(primitive);
+			}
+		}
+
 		if (asClose) {
 			polyline = polyline.close();
 		}
@@ -1226,6 +1273,14 @@ export class IDXBuilder {
 			});
 		}
 
+		// # 去重
+		const polyGeometryIdMap = this.polyGeometryIdMap;
+		const polyHash = geometryIds.join('-');
+		const existingpolyId = polyGeometryIdMap.get(polyHash);
+		if (existingpolyId) {
+			return existingpolyId;
+		}
+
 		// ## 创建多复合曲线或多段线
 		const polylineId = this.generateId(IDXBuilderIDPre.Geometry);
 		let polylineGeometry: EDMDPolyLine | EDMDCompositeCurve;
@@ -1242,8 +1297,8 @@ export class IDXBuilder {
 				Points: geometryIds,
 			};
 		}
-
 		this.geometryMap.set(polylineId, polylineGeometry);
+		polyGeometryIdMap.set(polyHash, polylineId);
 
 		return polylineId;
 	}
@@ -2150,7 +2205,7 @@ export class IDXBuilder {
 			ShapeElementType: isMilled
 				? ShapeElementType.PartMountingFeature
 				: ShapeElementType.FeatureShapeElement,
-			Inverted: type === ECADHoleType.NPTH ? false : true,
+			Inverted: true,
 			DefiningShape: curveSetId,
 		};
 		this.shapeElements.push(shapeElement);
