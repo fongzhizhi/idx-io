@@ -129,7 +129,7 @@ export class IDXBuilder {
 	private footprintSingleMap = new Map<string, EDMDItemSingle>();
 
 	/** 点集合(pointHash -> EDMDCartesianPoint) */
-	private pointMap = new Map<number, EDMDCartesianPoint>();
+	private pointMap = new Map<string, EDMDCartesianPoint>();
 	/** 直线ID表(lineHash -> lineId) */
 	private lineGeometryIdMap = new Map<string, string>();
 	/** Arc ID表(arcHash -> lineId) */
@@ -203,6 +203,12 @@ export class IDXBuilder {
 		};
 	}
 
+	// ============= 私有工具函数 =============
+	/** 计算坐标点唯一标识 */
+	private calculatePointHash(point: Vector2): string {
+		return [point.x, point.y].join('-'); // NOTE: 使用Hash化算法仍然容易重复, 直接使用字符串作为hash值
+	}
+
 	// ============= 构建相关通用函数 =============
 	/**
 	 * 重置构建器内部状态
@@ -256,6 +262,23 @@ export class IDXBuilder {
 		idCounterMap.set(prefix, nextIdCounter);
 
 		return `${prefix}_${nextIdCounter}`;
+	}
+
+	/**
+	 * 格式化数字
+	 * 统一处理数字的小数位数和格式化，避免浮点精度问题
+	 */
+	private formatNumber(value: number): number {
+		const { precision } = this.config;
+		const decimalPlaces = precision ?? 3;
+
+		// 处理浮点精度问题：先四舍五入到指定精度
+		const roundedValue = Math.round(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces);
+
+		// 格式化到指定小数位数
+		const formatted = roundedValue.toFixed(decimalPlaces);
+
+		return parseFloat(formatted);
 	}
 
 	/**
@@ -344,8 +367,8 @@ export class IDXBuilder {
 
 	/** 创建长度属性 */
 	private createLengthProperty(value: number): EDMDLengthProperty {
-		// return { Value: value };
-		return value;
+		// return { Value: this.formatNumber(value) };
+		return this.formatNumber(value);
 	}
 
 	/** 获取层名称 */
@@ -367,7 +390,7 @@ export class IDXBuilder {
 	}
 
 	/** 获取堆叠层厚度 */
-	private getlayerStackThickness(layerStackId: string, thickness: number) {
+	private getLayerStackThickness(layerStackId: string, thickness: number) {
 		return this.layerStackThicknessMap.get(layerStackId) || thickness;
 	}
 
@@ -1122,9 +1145,12 @@ export class IDXBuilder {
 	 * 创建点
 	 */
 	private createPoint(point: Vector2): string {
+		// # 坐标点格式化
+		point = new Vector2(this.formatNumber(point.x), this.formatNumber(point.y));
+
 		// # 检测点是否已存在
 		const pointMap = this.pointMap;
-		const pointHash = point.hash;
+		const pointHash = this.calculatePointHash(point);
 		const existingPoint = pointMap.get(pointHash);
 		if (existingPoint) {
 			return existingPoint.id;
@@ -1347,7 +1373,7 @@ export class IDXBuilder {
 		const { name: boardName, outline, thickness, stackupId, features, zones, bends } = board;
 		this.boardLayerStackId = stackupId;
 		const assembleToName = this.getLayerStackName(stackupId);
-		const boardThickness = this.getlayerStackThickness(
+		const boardThickness = this.getLayerStackThickness(
 			stackupId || '',
 			thickness && thickness > 0 ? thickness : 0
 		);
